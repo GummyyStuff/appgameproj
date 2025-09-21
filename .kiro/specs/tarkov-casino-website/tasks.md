@@ -174,3 +174,53 @@
   - Implement logging and error tracking
   - Create deployment documentation and scripts
   - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5_
+
+## Additional Enhancement Tasks
+
+- [x] 20.1. Fix CORS and HTTPS configuration for production deployment
+  - Configure backend CORS settings to allow requests from production domain
+  - Update Supabase configuration to use HTTPS endpoints
+  - Fix mixed content issues by ensuring all API calls use HTTPS
+  - Update environment variables for production deployment
+  - Test authentication flow with proper HTTPS configuration
+  - _Requirements: 1.3, 1.4, 8.1, 8.2_
+
+- [-] 21. Enhance user experience and polish
+  - Add loading states and skeleton screens for better UX
+  - Implement toast notifications for user actions
+  - Add confirmation dialogs for significant actions (large bets, etc.)
+  - Enhance mobile responsiveness and touch interactions
+  - Add keyboard shortcuts for power users
+  - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5_
+
+- [ ] 22. Implement advanced game features
+  - Add game tutorials and help modals for new players
+  - Implement betting limits and responsible gaming features
+  - Add game replay functionality to review past games
+  - Create achievement system with Tarkov-themed badges
+  - Add social features like leaderboards and player comparisons
+  - _Requirements: 3.1, 4.1, 5.1, 7.1, 7.2, 7.3_
+
+- [ ] 23. Performance optimization and monitoring
+  - Implement client-side caching strategies for game data
+  - Add performance monitoring and analytics
+  - Optimize bundle size and implement code splitting
+  - Add error tracking and user feedback collection
+  - Implement A/B testing framework for game features
+  - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5_
+
+- [ ] 24. Security hardening and compliance
+  - Implement rate limiting for game actions
+  - Add CAPTCHA for suspicious activity detection
+  - Enhance input validation and sanitization
+  - Add audit logging for administrative actions
+  - Implement session timeout and security headers
+  - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_
+
+- [ ] 25. Documentation and maintenance
+  - Create comprehensive API documentation
+  - Write user guides and game rules documentation
+  - Set up automated testing in CI/CD pipeline
+  - Create database backup and recovery procedures
+  - Document deployment and maintenance procedures
+  - _Requirements: All requirements validation_

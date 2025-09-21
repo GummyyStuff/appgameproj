@@ -24,7 +24,7 @@ if (config.enableRequestLogging) {
 // CORS configuration
 app.use('*', cors({
   origin: isProduction 
-    ? ['https://your-domain.com'] // Update with your production domain
+    ? ['https://tarkov.juanis.cool'] // Production domain
     : ['http://localhost:5173', 'http://localhost:3000'],
   credentials: true,
 }))
