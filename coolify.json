@@ -23,15 +23,22 @@
     "RATE_LIMIT_WINDOW": "900000",
     "RATE_LIMIT_MAX": "100",
     "STARTING_BALANCE": "10000",
-    "DAILY_BONUS": "1000"
+    "DAILY_BONUS": "1000",
+    "SUPABASE_URL": "${SUPABASE_URL}",
+    "SUPABASE_ANON_KEY": "${SUPABASE_ANON_KEY}",
+    "SUPABASE_SERVICE_ROLE_KEY": "${SUPABASE_SERVICE_ROLE_KEY}",
+    "JWT_SECRET": "${JWT_SECRET}",
+    "VITE_SUPABASE_URL": "${VITE_SUPABASE_URL}",
+    "VITE_SUPABASE_ANON_KEY": "${VITE_SUPABASE_ANON_KEY}",
+    "VITE_API_URL": "${VITE_API_URL}"
   },
   "build": {
     "context": ".",
     "dockerfile": "Dockerfile",
     "args": {
-      "VITE_SUPABASE_URL": "${SUPABASE_URL}",
-      "VITE_SUPABASE_ANON_KEY": "${SUPABASE_ANON_KEY}",
-      "VITE_API_URL": "/api"
+      "VITE_SUPABASE_URL": "${VITE_SUPABASE_URL}",
+      "VITE_SUPABASE_ANON_KEY": "${VITE_SUPABASE_ANON_KEY}",
+      "VITE_API_URL": "${VITE_API_URL}"
     }
   },
   "deploy": {
