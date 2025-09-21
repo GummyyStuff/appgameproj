@@ -1,16 +1,27 @@
-import React from 'react'
+import React, { Suspense, lazy } from 'react'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import AppLayout from '../components/layout/AppLayout'
 import HomePage from '../pages/HomePage'
 import LoginPage from '../pages/LoginPage'
 import RegisterPage from '../pages/RegisterPage'
 import ForgotPasswordPage from '../pages/ForgotPasswordPage'
-import ProfilePage from '../pages/ProfilePage'
-import RoulettePage from '../pages/RoulettePage'
-import BlackjackPage from '../pages/BlackjackPage'
-
-import HistoryPage from '../pages/HistoryPage'
 import ProtectedRoute from '../components/auth/ProtectedRoute'
+
+// Lazy load game pages for better performance
+const RoulettePage = lazy(() => import('../pages/RoulettePage'))
+const BlackjackPage = lazy(() => import('../pages/BlackjackPage'))
+const ProfilePage = lazy(() => import('../pages/ProfilePage'))
+const HistoryPage = lazy(() => import('../pages/HistoryPage'))
+
+// Loading component for lazy routes
+const PageLoader = () => (
+  <div className="min-h-screen bg-tarkov-darker flex items-center justify-center">
+    <div className="text-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-tarkov-accent mx-auto mb-4"></div>
+      <p className="text-tarkov-accent">Loading...</p>
+    </div>
+  </div>
+)
 
 const router = createBrowserRouter([
   {
@@ -37,7 +48,9 @@ const router = createBrowserRouter([
         path: 'profile',
         element: (
           <ProtectedRoute>
-            <ProfilePage />
+            <Suspense fallback={<PageLoader />}>
+              <ProfilePage />
+            </Suspense>
           </ProtectedRoute>
         ),
       },
@@ -45,7 +58,9 @@ const router = createBrowserRouter([
         path: 'roulette',
         element: (
           <ProtectedRoute>
-            <RoulettePage />
+            <Suspense fallback={<PageLoader />}>
+              <RoulettePage />
+            </Suspense>
           </ProtectedRoute>
         ),
       },
@@ -53,16 +68,19 @@ const router = createBrowserRouter([
         path: 'blackjack',
         element: (
           <ProtectedRoute>
-            <BlackjackPage />
+            <Suspense fallback={<PageLoader />}>
+              <BlackjackPage />
+            </Suspense>
           </ProtectedRoute>
         ),
       },
-
       {
         path: 'history',
         element: (
           <ProtectedRoute>
-            <HistoryPage />
+            <Suspense fallback={<PageLoader />}>
+              <HistoryPage />
+            </Suspense>
           </ProtectedRoute>
         ),
       },

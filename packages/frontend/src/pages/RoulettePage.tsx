@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react'
-import { AnimatePresence } from 'framer-motion'
+import React, { useState, useEffect, Suspense } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useBalance, useBalanceUpdates } from '../hooks/useBalance'
 import { useRouletteRealtime } from '../hooks/useRouletteRealtime'
@@ -9,11 +8,21 @@ import { useGameShortcuts } from '../hooks/useKeyboardShortcuts'
 import { useAdvancedFeatures } from '../hooks/useAdvancedFeatures'
 import { supabase } from '../lib/supabase'
 import { formatCurrency } from '../utils/currency'
-import RouletteWheel from '../components/games/RouletteWheel'
-import BettingPanel from '../components/games/BettingPanel'
-import ResultDisplay from '../components/games/ResultDisplay'
-import GameHistory from '../components/games/GameHistory'
+import { trackRoulettePerformance } from '../utils/roulette-performance'
+import RoulettePreloader from '../components/games/RoulettePreloader'
+import { 
+  LazyRouletteWheel, 
+  LazyBettingPanel, 
+  LazyResultDisplay, 
+  LazyGameHistory,
+  preloadRouletteComponents 
+} from '../components/games/LazyRouletteComponents'
 import { SkeletonGameCard, SkeletonCard } from '../components/ui/Skeleton'
+
+// Lazy load AnimatePresence only when needed
+const LazyAnimatePresence = React.lazy(() => 
+  import('framer-motion').then(module => ({ default: module.AnimatePresence }))
+)
 
 interface RouletteBet {
   betType: 'number' | 'red' | 'black' | 'odd' | 'even' | 'low' | 'high' | 'dozen' | 'column'
@@ -55,6 +64,9 @@ const RoulettePage: React.FC = () => {
   const toast = useToastContext()
   const [isInitialLoading, setIsInitialLoading] = useState(true)
   
+  // Performance tracking
+  const performanceTracker = React.useMemo(() => trackRoulettePerformance(), [])
+  
   const [gameState, setGameState] = useState<GameState>({
     isSpinning: false,
     winningNumber: null,
@@ -80,13 +92,22 @@ const RoulettePage: React.FC = () => {
 
   const redNumbers = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]
 
-  // Simulate initial loading
+  // Initialize loading state based on actual data loading and preload components
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsInitialLoading(false)
-    }, 1500)
-    return () => clearTimeout(timer)
-  }, [])
+    if (!balanceLoading && user) {
+      // Preload components while showing initial loading
+      preloadRouletteComponents()
+      performanceTracker.markComponentLoaded('core-hooks')
+      
+      // Small delay to ensure components are preloaded
+      const timer = setTimeout(() => {
+        setIsInitialLoading(false)
+        performanceTracker.markInteractionReady()
+      }, 100)
+      
+      return () => clearTimeout(timer)
+    }
+  }, [balanceLoading, user, performanceTracker])
 
   const getNumberColor = (num: number): 'red' | 'black' | 'green' => {
     if (num === 0) return 'green'
@@ -112,7 +133,12 @@ const RoulettePage: React.FC = () => {
     }
 
     setError(null)
-    setGameState(prev => ({ ...prev, isSpinning: true }))
+    setGameState(prev => ({ 
+      ...prev, 
+      isSpinning: true, 
+      winningNumber: null, // Reset winning number for new spin
+      lastResult: null 
+    }))
 
     // Play bet sound
     playBetSound()
@@ -278,6 +304,12 @@ const RoulettePage: React.FC = () => {
                 }`}></div>
                 <span>{isConnected ? 'Live' : 'Offline'}</span>
               </div>
+              {!isInitialLoading && (
+                <div className="flex items-center space-x-2 px-3 py-1 rounded-full text-sm bg-tarkov-accent/20 text-tarkov-accent">
+                  <div className="w-2 h-2 rounded-full bg-tarkov-accent"></div>
+                  <span>Ready</span>
+                </div>
+              )}
               <button
                 onClick={toggleSound}
                 className={`p-2 rounded-full transition-colors hover:scale-110 active:scale-95 ${
@@ -306,39 +338,62 @@ const RoulettePage: React.FC = () => {
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 lg:gap-8">
           {/* Roulette Wheel */}
           <div className="xl:col-span-2 order-1 xl:order-1">
-            <RouletteWheel 
-              isSpinning={gameState.isSpinning}
-              winningNumber={gameState.winningNumber}
-              wheelNumbers={wheelNumbers}
-              getNumberColor={getNumberColor}
-            />
-            
-            {/* Result Display */}
-            <AnimatePresence>
-              {showResult && gameState.lastResult && (
-                <ResultDisplay result={gameState.lastResult} />
-              )}
-            </AnimatePresence>
+            {isInitialLoading ? (
+              <RoulettePreloader />
+            ) : (
+              <>
+                <Suspense fallback={<RoulettePreloader />}>
+                  <LazyRouletteWheel 
+                    isSpinning={gameState.isSpinning}
+                    winningNumber={gameState.winningNumber}
+                    wheelNumbers={wheelNumbers}
+                    getNumberColor={getNumberColor}
+                  />
+                </Suspense>
+                
+                {/* Result Display */}
+                <Suspense fallback={null}>
+                  <LazyAnimatePresence>
+                    {showResult && gameState.lastResult && (
+                      <LazyResultDisplay result={gameState.lastResult} />
+                    )}
+                  </LazyAnimatePresence>
+                </Suspense>
+              </>
+            )}
           </div>
 
           {/* Betting Panel and History */}
           <div className="space-y-6 order-2 xl:order-2">
-            <BettingPanel
-              currentBet={currentBet}
-              setCurrentBet={setCurrentBet}
-              betAmount={betAmount}
-              setBetAmount={setBetAmount}
-              balance={balance}
-              betTypeOptions={betTypeOptions}
-              onPlaceBet={placeBet}
-              isSpinning={gameState.isSpinning}
-              error={error}
-            />
+            {isInitialLoading ? (
+              <>
+                <SkeletonCard />
+                <SkeletonCard className="h-64" />
+              </>
+            ) : (
+              <>
+                <Suspense fallback={<SkeletonCard />}>
+                  <LazyBettingPanel
+                    currentBet={currentBet}
+                    setCurrentBet={setCurrentBet}
+                    betAmount={betAmount}
+                    setBetAmount={setBetAmount}
+                    balance={balance}
+                    betTypeOptions={betTypeOptions}
+                    onPlaceBet={placeBet}
+                    isSpinning={gameState.isSpinning}
+                    error={error}
+                  />
+                </Suspense>
 
-            {/* Game History - Hidden on mobile when spinning to save space */}
-            <div className={`${gameState.isSpinning ? 'hidden md:block' : 'block'}`}>
-              <GameHistory history={gameState.gameHistory} getNumberColor={getNumberColor} />
-            </div>
+                {/* Game History - Hidden on mobile when spinning to save space */}
+                <div className={`${gameState.isSpinning ? 'hidden md:block' : 'block'}`}>
+                  <Suspense fallback={<SkeletonCard className="h-64" />}>
+                    <LazyGameHistory history={gameState.gameHistory} getNumberColor={getNumberColor} />
+                  </Suspense>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>

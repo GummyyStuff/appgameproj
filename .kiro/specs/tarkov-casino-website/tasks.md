@@ -259,3 +259,12 @@
   - Modify navigation to remove leaderboard menu item
   - Update leaderboard styling to fit within profile page layout
   - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_
+#
+# Bug Fixes
+
+- [x] 32. Fix roulette wheel visual accuracy
+  - Correct the wheel rotation calculation to ensure the visual wheel stops on the actual winning number
+  - Fix the pointer alignment and segment positioning
+  - Ensure the winning number visually aligns with the wheel pointer
+  - Test wheel accuracy across all numbers (0-36)
+  - _Requirements: 3.1, 3.3, 3.4_
