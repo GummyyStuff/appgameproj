@@ -15,11 +15,11 @@ export function securityHeadersMiddleware() {
     // Content Security Policy
     const csp = [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Allow inline scripts for React
-      "style-src 'self' 'unsafe-inline'", // Allow inline styles for Tailwind
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com", // Allow inline scripts for React and Cloudflare
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com", // Allow inline styles for Tailwind and Google Fonts
       "img-src 'self' data: https:",
-      "font-src 'self' data:",
-      "connect-src 'self' wss: https:",
+      "font-src 'self' data: https://fonts.gstatic.com", // Allow Google Fonts
+      "connect-src 'self' wss: https: https://static.cloudflareinsights.com", // Allow Cloudflare Insights
       "media-src 'self'",
       "object-src 'none'",
       "base-uri 'self'",

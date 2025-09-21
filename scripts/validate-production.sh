@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Production Environment Validation Script
-# This script validates that all production requirements are met
+# Production Validation Script
+# Validates that the production deployment is working correctly
 
 set -e
 
@@ -12,351 +12,204 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Functions
-log_info() {
-    echo -e "${BLUE}[INFO]${NC} $1"
-}
+# Configuration
+DOMAIN=${1:-"https://tarkov.juanis.cool"}
+TIMEOUT=10
 
-log_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
-}
+echo -e "${BLUE}🔍 Validating production deployment at: $DOMAIN${NC}"
+echo ""
 
-log_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
-
-log_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
-
-# Validation functions
-validate_environment_variables() {
-    log_info "Validating environment variables..."
+# Function to check HTTP status
+check_endpoint() {
+    local url="$1"
+    local expected_status="$2"
+    local description="$3"
     
-    local required_vars=(
-        "NODE_ENV"
-        "PORT"
-        "SUPABASE_URL"
-        "SUPABASE_ANON_KEY"
-        "SUPABASE_SERVICE_ROLE_KEY"
-        "JWT_SECRET"
-    )
+    echo -n "Checking $description... "
     
-    local warnings=()
-    local errors=()
-    
-    # Check required variables
-    for var in "${required_vars[@]}"; do
-        if [[ -z "${!var}" ]]; then
-            errors+=("$var is not set")
-        else
-            case $var in
-                "NODE_ENV")
-                    if [[ "${!var}" != "production" ]]; then
-                        warnings+=("NODE_ENV is not set to 'production' (current: ${!var})")
-                    fi
-                    ;;
-                "SUPABASE_URL")
-                    if [[ "${!var}" == *"localhost"* ]] || [[ "${!var}" == *"127.0.0.1"* ]]; then
-                        errors+=("SUPABASE_URL appears to be a local URL: ${!var}")
-                    fi
-                    ;;
-                "JWT_SECRET")
-                    if [[ ${#JWT_SECRET} -lt 32 ]]; then
-                        errors+=("JWT_SECRET must be at least 32 characters long (current: ${#JWT_SECRET})")
-                    fi
-                    ;;
-            esac
-        fi
-    done
-    
-    # Check optional but recommended variables
-    local recommended_vars=(
-        "LOG_LEVEL"
-        "ENABLE_REQUEST_LOGGING"
-        "ENABLE_GAME_LOGGING"
-        "ENABLE_SECURITY_LOGGING"
-        "METRICS_ENABLED"
-        "STARTING_BALANCE"
-        "DAILY_BONUS"
-    )
-    
-    for var in "${recommended_vars[@]}"; do
-        if [[ -z "${!var}" ]]; then
-            warnings+=("$var is not set (will use default)")
-        fi
-    done
-    
-    # Report results
-    if [[ ${#errors[@]} -gt 0 ]]; then
-        log_error "Environment validation failed:"
-        for error in "${errors[@]}"; do
-            echo "  ❌ $error"
-        done
+    if command -v curl >/dev/null 2>&1; then
+        status=$(curl -s -o /dev/null -w "%{http_code}" --max-time $TIMEOUT "$url" || echo "000")
+    else
+        echo -e "${RED}❌ curl not available${NC}"
         return 1
     fi
     
-    if [[ ${#warnings[@]} -gt 0 ]]; then
-        log_warning "Environment validation warnings:"
-        for warning in "${warnings[@]}"; do
-            echo "  ⚠️  $warning"
-        done
-    fi
-    
-    log_success "Environment variables validation passed"
-    return 0
-}
-
-validate_supabase_connection() {
-    log_info "Validating Supabase connection..."
-    
-    if [[ -z "$SUPABASE_URL" ]] || [[ -z "$SUPABASE_ANON_KEY" ]]; then
-        log_error "Supabase credentials not configured"
-        return 1
-    fi
-    
-    # Test Supabase connection
-    local response
-    local status_code
-    
-    response=$(curl -s -w "\n%{http_code}" \
-        -H "apikey: $SUPABASE_ANON_KEY" \
-        -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
-        "$SUPABASE_URL/rest/v1/" 2>/dev/null) || {
-        log_error "Failed to connect to Supabase"
-        return 1
-    }
-    
-    status_code=$(echo "$response" | tail -n1)
-    
-    if [[ "$status_code" == "200" ]]; then
-        log_success "Supabase connection successful"
+    if [ "$status" = "$expected_status" ]; then
+        echo -e "${GREEN}✅ OK ($status)${NC}"
         return 0
     else
-        log_error "Supabase connection failed (HTTP $status_code)"
+        echo -e "${RED}❌ Failed ($status, expected $expected_status)${NC}"
         return 1
     fi
 }
 
-validate_security_configuration() {
-    log_info "Validating security configuration..."
+# Function to check for specific content
+check_content() {
+    local url="$1"
+    local pattern="$2"
+    local description="$3"
     
-    local issues=()
+    echo -n "Checking $description... "
     
-    # Check JWT secret strength
-    if [[ ${#JWT_SECRET} -lt 32 ]]; then
-        issues+=("JWT_SECRET is too short (minimum 32 characters)")
-    fi
-    
-    # Check if using default/weak secrets
-    local weak_secrets=(
-        "your_jwt_secret_here"
-        "super-secret-jwt-token"
-        "development-secret"
-        "test-secret"
-        "secret"
-        "password"
-        "123456"
-    )
-    
-    for weak_secret in "${weak_secrets[@]}"; do
-        if [[ "$JWT_SECRET" == *"$weak_secret"* ]]; then
-            issues+=("JWT_SECRET appears to contain weak/default values")
-            break
-        fi
-    done
-    
-    # Check Supabase keys
-    if [[ "$SUPABASE_ANON_KEY" == *"your_"* ]] || [[ "$SUPABASE_SERVICE_ROLE_KEY" == *"your_"* ]]; then
-        issues+=("Supabase keys appear to be placeholder values")
-    fi
-    
-    if [[ ${#issues[@]} -gt 0 ]]; then
-        log_error "Security validation failed:"
-        for issue in "${issues[@]}"; do
-            echo "  ❌ $issue"
-        done
-        return 1
-    fi
-    
-    log_success "Security configuration validation passed"
-    return 0
-}
-
-validate_docker_configuration() {
-    log_info "Validating Docker configuration..."
-    
-    local issues=()
-    
-    # Check if Dockerfile exists
-    if [[ ! -f "Dockerfile" ]]; then
-        issues+=("Dockerfile not found")
+    if command -v curl >/dev/null 2>&1; then
+        content=$(curl -s --max-time $TIMEOUT "$url" || echo "")
     else
-        # Check Dockerfile content
-        if ! grep -q "HEALTHCHECK" Dockerfile; then
-            issues+=("Dockerfile missing HEALTHCHECK instruction")
+        echo -e "${RED}❌ curl not available${NC}"
+        return 1
+    fi
+    
+    if echo "$content" | grep -q "$pattern"; then
+        echo -e "${GREEN}✅ Found${NC}"
+        return 0
+    else
+        echo -e "${RED}❌ Not found${NC}"
+        return 1
+    fi
+}
+
+# Function to check CSP headers
+check_csp() {
+    local url="$1"
+    
+    echo -n "Checking CSP headers... "
+    
+    if command -v curl >/dev/null 2>&1; then
+        csp_header=$(curl -s -I --max-time $TIMEOUT "$url" | grep -i "content-security-policy" || echo "")
+    else
+        echo -e "${RED}❌ curl not available${NC}"
+        return 1
+    fi
+    
+    if [ -n "$csp_header" ]; then
+        echo -e "${GREEN}✅ Present${NC}"
+        
+        # Check for specific CSP directives
+        if echo "$csp_header" | grep -q "fonts.googleapis.com"; then
+            echo "  ✅ Google Fonts allowed"
+        else
+            echo -e "  ${YELLOW}⚠️  Google Fonts not in CSP${NC}"
         fi
         
-        if ! grep -q "USER" Dockerfile; then
-            issues+=("Dockerfile missing USER instruction (security risk)")
+        if echo "$csp_header" | grep -q "static.cloudflareinsights.com"; then
+            echo "  ✅ Cloudflare Insights allowed"
+        else
+            echo -e "  ${YELLOW}⚠️  Cloudflare Insights not in CSP${NC}"
         fi
         
-        if ! grep -q "EXPOSE 3000" Dockerfile; then
-            issues+=("Dockerfile missing EXPOSE instruction")
-        fi
-    fi
-    
-    # Check if coolify.json exists
-    if [[ ! -f "coolify.json" ]]; then
-        log_warning "coolify.json not found (optional but recommended)"
-    fi
-    
-    if [[ ${#issues[@]} -gt 0 ]]; then
-        log_error "Docker configuration validation failed:"
-        for issue in "${issues[@]}"; do
-            echo "  ❌ $issue"
-        done
-        return 1
-    fi
-    
-    log_success "Docker configuration validation passed"
-    return 0
-}
-
-validate_build_requirements() {
-    log_info "Validating build requirements..."
-    
-    local issues=()
-    
-    # Check if package.json exists
-    if [[ ! -f "package.json" ]]; then
-        issues+=("package.json not found")
-    fi
-    
-    # Check if backend package.json exists
-    if [[ ! -f "packages/backend/package.json" ]]; then
-        issues+=("Backend package.json not found")
-    fi
-    
-    # Check if frontend package.json exists
-    if [[ ! -f "packages/frontend/package.json" ]]; then
-        issues+=("Frontend package.json not found")
-    fi
-    
-    # Check if lock files exist
-    if [[ ! -f "bun.lock" ]] && [[ ! -f "package-lock.json" ]] && [[ ! -f "yarn.lock" ]]; then
-        log_warning "No lock file found (bun.lock, package-lock.json, or yarn.lock)")
-    fi
-    
-    if [[ ${#issues[@]} -gt 0 ]]; then
-        log_error "Build requirements validation failed:"
-        for issue in "${issues[@]}"; do
-            echo "  ❌ $issue"
-        done
-        return 1
-    fi
-    
-    log_success "Build requirements validation passed"
-    return 0
-}
-
-validate_production_readiness() {
-    log_info "Validating production readiness..."
-    
-    local warnings=()
-    
-    # Check for development files that shouldn't be in production
-    local dev_files=(
-        ".env"
-        ".env.local"
-        ".env.development"
-        "docker-compose.yml"
-    )
-    
-    for file in "${dev_files[@]}"; do
-        if [[ -f "$file" ]]; then
-            warnings+=("Development file present: $file")
-        fi
-    done
-    
-    # Check for production-specific files
-    if [[ ! -f ".env.production" ]]; then
-        warnings+=("No .env.production template found")
-    fi
-    
-    if [[ ! -f "DEPLOYMENT.md" ]]; then
-        warnings+=("No deployment documentation found")
-    fi
-    
-    if [[ ${#warnings[@]} -gt 0 ]]; then
-        log_warning "Production readiness warnings:"
-        for warning in "${warnings[@]}"; do
-            echo "  ⚠️  $warning"
-        done
-    fi
-    
-    log_success "Production readiness validation completed"
-    return 0
-}
-
-# Main validation function
-main() {
-    echo "========================================"
-    echo "  Production Environment Validation"
-    echo "========================================"
-    echo ""
-    
-    # Load environment variables if available
-    if [[ -f ".env.production" ]]; then
-        log_info "Loading environment variables from .env.production"
-        set -a
-        source .env.production
-        set +a
-    elif [[ -f ".env" ]]; then
-        log_info "Loading environment variables from .env"
-        set -a
-        source .env
-        set +a
-    fi
-    
-    local failed_validations=0
-    local total_validations=0
-    
-    # Run all validations
-    local validations=(
-        "validate_environment_variables"
-        "validate_supabase_connection"
-        "validate_security_configuration"
-        "validate_docker_configuration"
-        "validate_build_requirements"
-        "validate_production_readiness"
-    )
-    
-    for validation in "${validations[@]}"; do
-        total_validations=$((total_validations + 1))
-        if ! $validation; then
-            failed_validations=$((failed_validations + 1))
-        fi
-        echo ""
-    done
-    
-    # Summary
-    echo "========================================"
-    echo "Validation Summary"
-    echo "========================================"
-    echo "Total validations: $total_validations"
-    echo "Passed: $((total_validations - failed_validations))"
-    echo "Failed: $failed_validations"
-    echo ""
-    
-    if [[ $failed_validations -eq 0 ]]; then
-        log_success "All validations passed! Ready for production deployment 🚀"
-        exit 0
+        return 0
     else
-        log_error "$failed_validations validation(s) failed. Please fix the issues before deploying."
-        exit 1
+        echo -e "${RED}❌ Not found${NC}"
+        return 1
     fi
 }
 
-# Run main function
-main
+echo "=== Basic Connectivity ==="
+check_endpoint "$DOMAIN" "200" "Main page"
+check_endpoint "$DOMAIN/api/health" "200" "Health endpoint"
+
+echo ""
+echo "=== Frontend Validation ==="
+check_content "$DOMAIN" "Tarkov Casino" "Page title"
+check_content "$DOMAIN" "root" "React root element"
+
+echo ""
+echo "=== API Validation ==="
+check_endpoint "$DOMAIN/api/health/detailed" "200" "Detailed health check"
+check_endpoint "$DOMAIN/api/ready" "200" "Readiness probe"
+check_endpoint "$DOMAIN/api/live" "200" "Liveness probe"
+
+echo ""
+echo "=== Security Headers ==="
+check_csp "$DOMAIN"
+
+# Check for common security headers
+echo -n "Checking security headers... "
+if command -v curl >/dev/null 2>&1; then
+    headers=$(curl -s -I --max-time $TIMEOUT "$DOMAIN")
+    
+    security_score=0
+    total_checks=5
+    
+    if echo "$headers" | grep -qi "x-content-type-options"; then
+        echo "  ✅ X-Content-Type-Options"
+        ((security_score++))
+    else
+        echo -e "  ${YELLOW}⚠️  X-Content-Type-Options missing${NC}"
+    fi
+    
+    if echo "$headers" | grep -qi "x-frame-options"; then
+        echo "  ✅ X-Frame-Options"
+        ((security_score++))
+    else
+        echo -e "  ${YELLOW}⚠️  X-Frame-Options missing${NC}"
+    fi
+    
+    if echo "$headers" | grep -qi "x-xss-protection"; then
+        echo "  ✅ X-XSS-Protection"
+        ((security_score++))
+    else
+        echo -e "  ${YELLOW}⚠️  X-XSS-Protection missing${NC}"
+    fi
+    
+    if echo "$headers" | grep -qi "referrer-policy"; then
+        echo "  ✅ Referrer-Policy"
+        ((security_score++))
+    else
+        echo -e "  ${YELLOW}⚠️  Referrer-Policy missing${NC}"
+    fi
+    
+    if echo "$headers" | grep -qi "strict-transport-security"; then
+        echo "  ✅ HSTS"
+        ((security_score++))
+    else
+        echo -e "  ${YELLOW}⚠️  HSTS missing${NC}"
+    fi
+    
+    echo -e "${GREEN}Security Score: $security_score/$total_checks${NC}"
+fi
+
+echo ""
+echo "=== Performance Check ==="
+echo -n "Measuring response time... "
+if command -v curl >/dev/null 2>&1; then
+    response_time=$(curl -s -o /dev/null -w "%{time_total}" --max-time $TIMEOUT "$DOMAIN")
+    echo -e "${GREEN}${response_time}s${NC}"
+    
+    # Convert to milliseconds for comparison
+    response_ms=$(echo "$response_time * 1000" | bc 2>/dev/null || echo "0")
+    if [ "${response_ms%.*}" -lt 2000 ]; then
+        echo "  ✅ Response time good (< 2s)"
+    else
+        echo -e "  ${YELLOW}⚠️  Response time slow (> 2s)${NC}"
+    fi
+fi
+
+echo ""
+echo "=== Environment Variables Check ==="
+# Check if the frontend is getting proper environment variables
+echo -n "Checking for environment variable issues... "
+if command -v curl >/dev/null 2>&1; then
+    page_content=$(curl -s --max-time $TIMEOUT "$DOMAIN")
+    
+    if echo "$page_content" | grep -q "your-supabase-project-url"; then
+        echo -e "${RED}❌ Placeholder Supabase URL detected${NC}"
+        echo "  🚨 Production environment variables not properly configured"
+    elif echo "$page_content" | grep -q "localhost"; then
+        echo -e "${YELLOW}⚠️  Localhost references found${NC}"
+        echo "  🚨 Development URLs in production build"
+    else
+        echo -e "${GREEN}✅ No obvious environment issues${NC}"
+    fi
+fi
+
+echo ""
+echo "=== Summary ==="
+echo -e "${BLUE}Validation complete for: $DOMAIN${NC}"
+echo ""
+echo "If you see any ❌ or 🚨 issues above, please:"
+echo "1. Check your environment variables configuration"
+echo "2. Ensure proper build-time variables are set"
+echo "3. Rebuild and redeploy the application"
+echo "4. Check browser console for additional errors"
+echo ""
+echo -e "${GREEN}For detailed setup instructions, run: ./scripts/setup-production-env.sh${NC}"

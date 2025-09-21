@@ -3,11 +3,14 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [
     tailwindcss(),
     react(),
   ],
+  // Load environment variables based on mode
+  envDir: '.',
+  envPrefix: 'VITE_',
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -107,4 +110,4 @@ export default defineConfig({
       'socket.io-client'
     ],
   },
-})
+}))
