@@ -337,6 +337,6 @@ export const commonSchemas = {
   betAmount: z.number().min(1).max(100000).int(),
   gameId: z.string().min(10).max(200).regex(/^[a-zA-Z0-9\-_]+$/, 'Invalid game ID format'),
   riskLevel: z.enum(['low', 'medium', 'high']),
-  gameType: z.enum(['roulette', 'blackjack']),
+  gameType: z.enum(['roulette', 'blackjack', 'case_opening']),
   blackjackAction: z.enum(['hit', 'stand', 'double', 'split'])
 }

@@ -89,7 +89,8 @@ export async function runMigrations(): Promise<MigrationResult[]> {
     join(MIGRATIONS_DIR, '001_initial_schema_v2.sql'),
     join(MIGRATIONS_DIR, '002_rpc_functions_v2.sql'),
     join(MIGRATIONS_DIR, '003_fix_user_registration.sql'),
-    join(MIGRATIONS_DIR, '004_realtime_triggers.sql')
+    join(MIGRATIONS_DIR, '004_realtime_triggers.sql'),
+    join(MIGRATIONS_DIR, '006_case_opening_schema.sql')
   ]
 
   const results: MigrationResult[] = []
@@ -117,7 +118,8 @@ export async function runSeeds(): Promise<MigrationResult[]> {
   console.log('🌱 Running database seeds...')
 
   const seedFiles = [
-    join(SEEDS_DIR, '001_test_data.sql')
+    join(SEEDS_DIR, '001_test_data.sql'),
+    join(SEEDS_DIR, '002_case_opening_data.sql')
   ]
 
   const results: MigrationResult[] = []
@@ -193,14 +195,14 @@ export async function verifyDatabaseSetup(): Promise<boolean> {
       .from('information_schema.tables')
       .select('table_name')
       .eq('table_schema', 'public')
-      .in('table_name', ['user_profiles', 'game_history', 'daily_bonuses'])
+      .in('table_name', ['user_profiles', 'game_history', 'daily_bonuses', 'case_types', 'tarkov_items', 'case_item_pools'])
 
     if (error) {
       console.error('❌ Failed to verify tables:', error.message)
       return false
     }
 
-    const expectedTables = ['user_profiles', 'game_history', 'daily_bonuses']
+    const expectedTables = ['user_profiles', 'game_history', 'daily_bonuses', 'case_types', 'tarkov_items', 'case_item_pools']
     const existingTables = tables?.map(t => t.table_name) || []
     const missingTables = expectedTables.filter(t => !existingTables.includes(t))
 

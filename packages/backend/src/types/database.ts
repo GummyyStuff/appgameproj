@@ -20,7 +20,7 @@ export interface UserProfile {
 export interface GameHistory {
   id: string // UUID
   user_id: string // UUID
-  game_type: 'roulette' | 'blackjack'
+  game_type: 'roulette' | 'blackjack' | 'case_opening'
   bet_amount: number
   win_amount: number
   result_data: GameResultData
@@ -36,7 +36,7 @@ export interface DailyBonus {
 }
 
 // Game-specific result data types
-export type GameResultData = RouletteResult | BlackjackResult
+export type GameResultData = RouletteResult | BlackjackResult | CaseOpeningResult
 
 export interface RouletteResult {
   bet_type: 'number' | 'red' | 'black' | 'odd' | 'even' | 'low' | 'high' | 'dozen' | 'column'
@@ -55,6 +55,19 @@ export interface BlackjackResult {
 }
 
 
+
+export interface CaseOpeningResult {
+  case_type_id: string
+  case_name: string
+  case_price: number
+  item_id: string
+  item_name: string
+  item_rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary'
+  item_category: 'medical' | 'electronics' | 'consumables' | 'valuables' | 'keycards'
+  item_value: number
+  currency_awarded: number
+  opening_id: string
+}
 
 export interface Card {
   suit: 'hearts' | 'diamonds' | 'clubs' | 'spades'
@@ -132,7 +145,7 @@ export const GAME_CONFIG = {
   DAILY_BONUS_AMOUNT: 1000,
   MIN_BET_AMOUNT: 1,
   MAX_BET_AMOUNT: 10000,
-  GAME_TYPES: ['roulette', 'blackjack'] as const
+  GAME_TYPES: ['roulette', 'blackjack', 'case_opening'] as const
 } as const
 
 // Validation helpers

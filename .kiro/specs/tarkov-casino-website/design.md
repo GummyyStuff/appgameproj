@@ -11,7 +11,8 @@ The Tarkov Casino Website is a web-based gaming platform that provides casino-st
 The application features a simplified navigation structure:
 - **Home**: Landing page with game selection
 - **Roulette**: Roulette game page
-- **Blackjack**: Blackjack game page  
+- **Blackjack**: Blackjack game page
+- **Case Opening**: Case opening game page with Tarkov-themed items
 - **Profile**: User profile with statistics, history, and leaderboards
 - **Login/Register**: Authentication pages
 
@@ -87,6 +88,9 @@ graph TB
 #### Game Components
 - `RouletteGame`: Interactive roulette wheel with betting interface (no tutorials)
 - `BlackjackGame`: Card game interface with player actions (no tutorials)
+- `CaseOpeningGame`: Case opening interface with Tarkov-themed items and animations
+- `CaseSelector`: Display of available case types with prices and rarity information
+- `ItemReveal`: Animated item reveal component with Tarkov theming
 - `BettingPanel`: Reusable betting controls for all games
 - `GameHistory`: Display of recent game results (without replay functionality)
 
@@ -116,8 +120,45 @@ interface AuthService {
 interface GameEngine {
   playRoulette(bet: RouletteBet): Promise<RouletteResult>
   playBlackjack(action: BlackjackAction): Promise<BlackjackState>
+  openCase(caseType: CaseType): Promise<CaseOpeningResult>
   validateBet(userId: string, amount: number): Promise<boolean>
 }
+```
+
+#### Case Opening Service
+```typescript
+interface CaseOpeningService {
+  getCaseTypes(): Promise<CaseType[]>
+  openCase(userId: string, caseTypeId: string): Promise<CaseOpeningResult>
+  getItemPool(caseTypeId: string): Promise<TarkovItem[]>
+  calculateItemRarity(item: TarkovItem): ItemRarity
+}
+
+interface CaseType {
+  id: string
+  name: string
+  price: number
+  description: string
+  imageUrl: string
+  itemPool: TarkovItem[]
+}
+
+interface TarkovItem {
+  id: string
+  name: string
+  rarity: ItemRarity
+  value: number
+  imageUrl: string
+  description: string
+}
+
+interface CaseOpeningResult {
+  item: TarkovItem
+  currencyAwarded: number
+  caseType: CaseType
+}
+
+type ItemRarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary'
 ```
 
 #### Currency Service (Supabase Integration)
@@ -144,6 +185,8 @@ interface CurrencyService {
 - `POST /api/games/roulette/bet` - Place roulette bet
 - `POST /api/games/blackjack/start` - Start blackjack hand
 - `POST /api/games/blackjack/action` - Player action (hit/stand/etc)
+- `GET /api/games/cases/types` - Get available case types
+- `POST /api/games/cases/open` - Open a case and get item result
 
 #### User Endpoints
 - `GET /api/user/profile` - Get user profile
@@ -163,6 +206,79 @@ interface CurrencyService {
 - `game-update`: Real-time game state updates
 - `balance-update`: Currency balance changes
 - `game-result`: Final game outcomes
+
+## Case Opening Game Design
+
+### Item Pool Configuration
+
+The case opening system features Tarkov-themed items organized by rarity and category:
+
+**Medical Items:**
+- Common: Bandages, Painkillers, AI-2 Medkit
+- Uncommon: Salewa First Aid Kit, Car First Aid Kit
+- Rare: IFAK Personal Tactical First Aid Kit
+- Epic: Grizzly Medical Kit
+- Legendary: LEDX Skin Transilluminator
+
+**Electronics:**
+- Common: Broken LCD, Damaged Hard Drive
+- Uncommon: CPU Fan, RAM
+- Rare: SSD Drive, Graphics Card
+- Epic: Tetriz Portable Game, GreenBat lithium battery
+- Legendary: GPU (Graphics Processing Unit)
+
+**Consumables:**
+- Common: Crackers, Condensed Milk, Water Bottle
+- Uncommon: Tushonka Beef Stew, MRE, Energy Drink
+- Rare: Vodka, Whiskey, Aquamari Water
+- Epic: Moonshine, Superwater
+- Legendary: Meldonin Injector, Propital Injector
+
+**Valuables:**
+- Common: Bolts, Screws, Matches
+- Uncommon: Gold Chain, Silver Badge, Chainlet
+- Rare: Rolex, Prokill Medallion
+- Epic: Antique Axe, Golden Rooster, Skull Ring
+- Legendary: Intelligence Folder, Bitcoin
+
+**Keycards & Keys:**
+- Common: Factory Exit Key, Customs Office Key
+- Uncommon: Dorm Room Keys, Gas Station Storage Key
+- Rare: EMERCOM Medical Unit Key, Sanitär Key
+- Epic: Red Keycard, Violet Keycard, ULTRA Medical Storage Key
+- Legendary: Labs Access Keycard, Marked Room Key, Reserve Marked Key
+
+### Rarity System
+
+Each case type has configured drop rates:
+- **Common (60%)**: 1x-2x case price value
+- **Uncommon (25%)**: 2x-3x case price value  
+- **Rare (10%)**: 3x-5x case price value
+- **Epic (4%)**: 5x-8x case price value
+- **Legendary (1%)**: 10x-20x case price value
+
+### Case Types
+
+**Scav Case** (500 currency):
+- Basic items with standard rarity distribution
+- Focus on common medical and consumable items
+
+**PMC Case** (1500 currency):
+- Higher value items with better rarity chances
+- Increased electronics and valuables
+
+**Labs Case** (5000 currency):
+- Premium items with enhanced legendary chances
+- Exclusive high-value medical and electronic items
+
+### Animation Design
+
+The case opening uses a multi-phase animation system:
+
+1. **Selection Phase**: Player chooses case type
+2. **Opening Phase**: Suspenseful case opening animation (3-5 seconds)
+3. **Revealing Phase**: Item reveal with rarity-based effects
+4. **Completion Phase**: Currency conversion and balance update
 
 ## Data Models
 
@@ -185,11 +301,48 @@ interface User {
 interface GameHistory {
   id: string
   userId: string
-  gameType: 'roulette' | 'blackjack'
+  gameType: 'roulette' | 'blackjack' | 'case_opening'
   betAmount: number
   result: number
   winAmount: number
   gameData: object // Game-specific data
+  timestamp: Date
+}
+```
+
+### Case Opening Models
+```typescript
+interface CaseType {
+  id: string
+  name: string
+  price: number
+  description: string
+  imageUrl: string
+  rarityDistribution: RarityDistribution
+}
+
+interface TarkovItem {
+  id: string
+  name: string
+  rarity: ItemRarity
+  baseValue: number
+  imageUrl: string
+  description: string
+  category: 'medical' | 'electronics' | 'consumables' | 'valuables' | 'keycards'
+}
+
+interface RarityDistribution {
+  common: number    // 60% chance
+  uncommon: number  // 25% chance
+  rare: number      // 10% chance
+  epic: number      // 4% chance
+  legendary: number // 1% chance
+}
+
+interface CaseOpeningResult {
+  caseType: CaseType
+  itemWon: TarkovItem
+  currencyAwarded: number
   timestamp: Date
 }
 ```
@@ -209,6 +362,14 @@ interface BlackjackState {
   playerValue: number
   dealerValue: number
   gameStatus: 'playing' | 'won' | 'lost' | 'push'
+}
+
+interface CaseOpeningState {
+  caseType: CaseType
+  isOpening: boolean
+  itemRevealed: TarkovItem | null
+  currencyAwarded: number
+  animationPhase: 'selecting' | 'opening' | 'revealing' | 'complete'
 }
 ```
 

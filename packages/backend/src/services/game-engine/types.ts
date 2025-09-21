@@ -8,7 +8,7 @@ import { GameResultData } from '../../types/database'
 export interface GameBet {
   userId: string
   amount: number
-  gameType: 'roulette' | 'blackjack' | 'plinko'
+  gameType: 'roulette' | 'blackjack' | 'case_opening'
 }
 
 export interface GameResult {
@@ -100,7 +100,7 @@ export interface IGameStateManager {
 export interface IPayoutCalculator {
   calculateRoulettePayout(betType: string, betValue: number | string, winningNumber: number, betAmount: number): number
   calculateBlackjackPayout(result: string, betAmount: number): number
-  calculatePlinkoPayout(multiplier: number, betAmount: number): number
+  calculateCaseOpeningPayout(itemValue: number): number
 }
 
 // Game validation interface

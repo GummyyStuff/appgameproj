@@ -1,4 +1,4 @@
-import { Hono } from 'hono'
+import { Hono, type Context } from 'hono'
 import { authMiddleware } from '../middleware/auth'
 import { asyncHandler } from '../middleware/error'
 import { gameRateLimit } from '../middleware/rate-limit'
@@ -7,11 +7,10 @@ import { auditGame, auditLog } from '../middleware/audit'
 import { z } from 'zod'
 import { RouletteGame } from '../services/game-engine/roulette-game'
 import { BlackjackGame } from '../services/game-engine/blackjack-game'
+import { CaseOpeningService } from '../services/case-opening'
 
-import { gameEngine } from '../services/game-engine'
 import { CurrencyService } from '../services/currency'
 import { realtimeGameService } from '../services/realtime-game'
-import { isValidBetAmount } from '../types/database'
 
 export const gameRoutes = new Hono()
 
@@ -38,22 +37,27 @@ const blackjackActionSchema = z.object({
   handIndex: z.number().int().min(0).max(3).optional()
 })
 
+const caseOpeningSchema = z.object({
+  caseTypeId: z.string().min(1, 'Case type ID is required')
+})
+
 
 
 // Games overview endpoint
-gameRoutes.get('/', asyncHandler(async (c) => {
+gameRoutes.get('/', asyncHandler(async (c: Context) => {
   return c.json({
     message: 'Tarkov Casino Games API',
     available_games: {
       roulette: '/api/games/roulette',
-      blackjack: '/api/games/blackjack'
+      blackjack: '/api/games/blackjack',
+      case_opening: '/api/games/cases'
     },
     status: 'Games API ready'
   })
 }))
 
 // Roulette game endpoints
-gameRoutes.get('/roulette', asyncHandler(async (c) => {
+gameRoutes.get('/roulette', asyncHandler(async (c: Context) => {
   return c.json({
     message: 'Roulette game information',
     bet_types: RouletteGame.getBetTypes(),
@@ -66,7 +70,7 @@ gameRoutes.get('/roulette', asyncHandler(async (c) => {
 gameRoutes.post('/roulette/bet',
   validationMiddleware(rouletteBetSchema),
   auditGame('roulette_bet'),
-  asyncHandler(async (c) => {
+  asyncHandler(async (c: Context) => {
   const user = c.get('user')
   if (!user) {
     return c.json({ error: 'Authentication required' }, 401)
@@ -153,7 +157,7 @@ gameRoutes.post('/roulette/bet',
 }))
 
 // Blackjack game endpoints
-gameRoutes.get('/blackjack', asyncHandler(async (c) => {
+gameRoutes.get('/blackjack', asyncHandler(async (c: Context) => {
   return c.json({
     message: 'Blackjack game information',
     game_info: BlackjackGame.getGameInfo(),
@@ -165,7 +169,7 @@ gameRoutes.get('/blackjack', asyncHandler(async (c) => {
 gameRoutes.post('/blackjack/start',
   validationMiddleware(blackjackStartSchema),
   auditGame('blackjack_start'),
-  asyncHandler(async (c) => {
+  asyncHandler(async (c: Context) => {
   const user = c.get('user')
   if (!user) {
     return c.json({ error: 'Authentication required' }, 401)
@@ -222,7 +226,7 @@ gameRoutes.post('/blackjack/start',
 
 gameRoutes.post('/blackjack/action',
   validationMiddleware(blackjackActionSchema),
-  asyncHandler(async (c) => {
+  asyncHandler(async (c: Context) => {
   const user = c.get('user')
   if (!user) {
     return c.json({ error: 'Authentication required' }, 401)
@@ -304,6 +308,159 @@ gameRoutes.post('/blackjack/action',
   } catch (error) {
     console.error('Blackjack action error:', error)
     return c.json({ error: 'Internal server error' }, 500)
+  }
+}))
+
+// Case Opening game endpoints
+gameRoutes.get('/cases', asyncHandler(async (c: Context) => {
+  try {
+    const caseTypes = await CaseOpeningService.getCaseTypes()
+    
+    return c.json({
+      message: 'Case opening game information',
+      case_types: caseTypes,
+      total_cases: caseTypes.length
+    })
+  } catch (error) {
+    console.error('Error fetching case types:', error)
+    return c.json({ error: 'Failed to fetch case types' }, 500)
+  }
+}))
+
+gameRoutes.get('/cases/:caseTypeId', asyncHandler(async (c: Context) => {
+  const caseTypeId = c.req.param('caseTypeId')
+  
+  if (!caseTypeId) {
+    return c.json({ error: 'Case type ID is required' }, 400)
+  }
+
+  try {
+    const caseType = await CaseOpeningService.getCaseType(caseTypeId)
+    
+    if (!caseType) {
+      return c.json({ error: 'Case type not found' }, 404)
+    }
+
+    const itemPool = await CaseOpeningService.getItemPool(caseTypeId)
+    
+    return c.json({
+      case_type: caseType,
+      item_pool: itemPool,
+      total_items: itemPool.length
+    })
+  } catch (error) {
+    console.error('Error fetching case type details:', error)
+    return c.json({ error: 'Failed to fetch case type details' }, 500)
+  }
+}))
+
+gameRoutes.post('/cases/open',
+  validationMiddleware(caseOpeningSchema),
+  auditGame('case_opening'),
+  asyncHandler(async (c: Context) => {
+  const user = c.get('user')
+  if (!user) {
+    return c.json({ error: 'Authentication required' }, 401)
+  }
+
+  const { caseTypeId } = c.get('validatedData')
+
+  try {
+    // Validate case opening request
+    const validation = await CaseOpeningService.validateCaseOpening(user.id, caseTypeId)
+    if (!validation.isValid) {
+      return c.json({ error: validation.error }, 400)
+    }
+
+    const caseType = validation.caseType!
+
+    // Log game start
+    const ip = c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP')
+    await auditLog.gamePlayStarted(user.id, 'case_opening', caseType.price, ip)
+
+    // Open the case
+    const openingResult = await CaseOpeningService.openCase(user.id, caseTypeId)
+
+    // Process currency transaction
+    const transactionResult = await CurrencyService.processGameTransaction(
+      user.id,
+      'case_opening',
+      caseType.price, // bet amount (case price)
+      openingResult.currency_awarded, // win amount
+      {
+        case_type_id: openingResult.case_type.id,
+        case_name: openingResult.case_type.name,
+        case_price: openingResult.case_type.price,
+        item_id: openingResult.item_won.id,
+        item_name: openingResult.item_won.name,
+        item_rarity: openingResult.item_won.rarity,
+        item_category: openingResult.item_won.category,
+        item_value: openingResult.item_won.base_value,
+        currency_awarded: openingResult.currency_awarded,
+        opening_id: openingResult.opening_id
+      }
+    )
+
+    if (!transactionResult.success) {
+      return c.json({ error: 'Transaction failed' }, 500)
+    }
+
+    // Log game completion
+    await auditLog.gameCompleted(
+      user.id, 
+      'case_opening', 
+      caseType.price, 
+      openingResult.currency_awarded, 
+      ip
+    )
+
+    // Broadcast balance update
+    await realtimeGameService.handleBalanceUpdate(
+      user.id,
+      transactionResult.newBalance,
+      transactionResult.previousBalance
+    )
+
+    return c.json({
+      success: true,
+      opening_result: {
+        case_type: openingResult.case_type,
+        item_won: openingResult.item_won,
+        currency_awarded: openingResult.currency_awarded,
+        opening_id: openingResult.opening_id,
+        timestamp: openingResult.timestamp
+      },
+      case_price: caseType.price,
+      currency_awarded: openingResult.currency_awarded,
+      net_result: openingResult.currency_awarded - caseType.price,
+      new_balance: transactionResult.newBalance,
+      transaction_id: transactionResult.gameId
+    })
+  } catch (error) {
+    console.error('Case opening error:', error)
+    return c.json({ error: 'Internal server error' }, 500)
+  }
+}))
+
+gameRoutes.get('/cases/stats/:userId?', asyncHandler(async (c: Context) => {
+  const user = c.get('user')
+  if (!user) {
+    return c.json({ error: 'Authentication required' }, 401)
+  }
+
+  // Allow users to only view their own stats (userId param ignored for security)
+  const userId = user.id
+
+  try {
+    const stats = await CaseOpeningService.getCaseOpeningStats(userId)
+    
+    return c.json({
+      success: true,
+      stats
+    })
+  } catch (error) {
+    console.error('Error fetching case opening stats:', error)
+    return c.json({ error: 'Failed to fetch case opening statistics' }, 500)
   }
 }))
 

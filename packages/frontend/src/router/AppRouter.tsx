@@ -10,6 +10,7 @@ import ProtectedRoute from '../components/auth/ProtectedRoute'
 // Lazy load game pages for better performance
 const RoulettePage = lazy(() => import('../pages/RoulettePage'))
 const BlackjackPage = lazy(() => import('../pages/BlackjackPage'))
+const CaseOpeningPage = lazy(() => import('../pages/CaseOpeningPage'))
 const ProfilePage = lazy(() => import('../pages/ProfilePage'))
 const HistoryPage = lazy(() => import('../pages/HistoryPage'))
 
@@ -70,6 +71,16 @@ const router = createBrowserRouter([
           <ProtectedRoute>
             <Suspense fallback={<PageLoader />}>
               <BlackjackPage />
+            </Suspense>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'cases',
+        element: (
+          <ProtectedRoute>
+            <Suspense fallback={<PageLoader />}>
+              <CaseOpeningPage />
             </Suspense>
           </ProtectedRoute>
         ),

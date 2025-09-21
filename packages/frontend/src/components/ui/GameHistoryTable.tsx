@@ -177,7 +177,7 @@ const GameHistoryTable: React.FC<GameHistoryTableProps> = ({
     switch (gameType) {
       case 'roulette': return '🎰'
       case 'blackjack': return '🃏'
-
+      case 'case_opening': return '📦'
       default: return '🎮'
     }
   }
@@ -186,7 +186,7 @@ const GameHistoryTable: React.FC<GameHistoryTableProps> = ({
     switch (gameType) {
       case 'roulette': return 'Roulette'
       case 'blackjack': return 'Blackjack'
-
+      case 'case_opening': return 'Case Opening'
       default: return gameType.charAt(0).toUpperCase() + gameType.slice(1)
     }
   }
@@ -333,7 +333,7 @@ const GameHistoryTable: React.FC<GameHistoryTableProps> = ({
                 <option value="all">All Games</option>
                 <option value="roulette">Roulette</option>
                 <option value="blackjack">Blackjack</option>
-
+                <option value="case_opening">Case Opening</option>
               </select>
             </div>
 
@@ -497,7 +497,9 @@ const GameHistoryTable: React.FC<GameHistoryTableProps> = ({
                           {game.game_type === 'blackjack' && game.result_data.player_hand && (
                             <span>Player: {game.result_data.player_hand.join(', ')}</span>
                           )}
-
+                          {game.game_type === 'case_opening' && game.result_data.item_name && (
+                            <span>Item: {game.result_data.item_name}</span>
+                          )}
                         </>
                       )}
                     </td>

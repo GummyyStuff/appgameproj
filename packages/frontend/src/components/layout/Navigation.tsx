@@ -22,7 +22,7 @@ const Navigation: React.FC = () => {
     { path: '/', label: 'Home', icon: TarkovIcons.Helmet },
     { path: '/roulette', label: 'Roulette', icon: TarkovIcons.Roulette },
     { path: '/blackjack', label: 'Blackjack', icon: TarkovIcons.Blackjack },
-
+    { path: '/cases', label: 'Cases', icon: TarkovIcons.Weapon },
     { path: '/history', label: 'History', icon: TarkovIcons.Ammo },
   ]
 

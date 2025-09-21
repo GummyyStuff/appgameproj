@@ -92,7 +92,24 @@ A web-based casino gaming platform themed around Escape from Tarkov, offering cl
 4. WHEN leaderboard data updates THEN the system SHALL refresh rankings in real-time
 5. WHEN viewing leaderboards THEN the system SHALL provide filtering options by game type and time period
 
-### Requirement 8: Responsive Web Design
+### Requirement 8: Case Opening Game
+
+**User Story:** As a player, I want to open Tarkov-themed cases to win virtual currency based on the items revealed so that I can experience the excitement of item discovery without inventory management.
+
+#### Acceptance Criteria
+
+1. WHEN a player accesses case opening THEN the system SHALL display available case types with different rarity tiers and prices
+2. WHEN a player purchases a case THEN the system SHALL deduct the case cost from their virtual balance and initiate the opening animation
+3. WHEN a case is opened THEN the system SHALL use provably fair randomization to determine the item based on configured drop rates
+4. WHEN an item is revealed THEN the system SHALL display the item with Tarkov-themed visuals, rarity indication, and currency value
+5. WHEN a player receives an item THEN the system SHALL immediately convert it to virtual currency and add the amount to their balance
+6. WHEN displaying cases THEN the system SHALL show Tarkov-themed items including GPUs, LEDX, vodka, moonshine, and other recognizable game items
+7. WHEN showing item rarities THEN the system SHALL use color-coded tiers (common, uncommon, rare, epic, legendary) with appropriate drop rates and currency values
+8. WHEN case opening animations play THEN the system SHALL create suspenseful reveal sequences with Tarkov-themed sound effects
+9. WHEN an item is converted to currency THEN the system SHALL display both the item won and the currency amount received
+10. WHEN viewing case opening history THEN the system SHALL record the case type, item won, and currency received for statistics tracking
+
+### Requirement 9: Responsive Web Design
 
 **User Story:** As a player using different devices, I want the website to work well on desktop and mobile so that I can play anywhere.
 

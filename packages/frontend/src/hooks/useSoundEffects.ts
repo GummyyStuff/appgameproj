@@ -14,6 +14,11 @@ interface SoundEffects {
   playError: () => void
   playNotification: () => void
   playAmbient: () => void
+  
+  // Case opening specific sounds
+  playCaseOpen: () => void
+  playCaseReveal: () => void
+  playRarityReveal: (rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary') => void
 }
 
 export const useSoundEffects = (enabled: boolean = true): SoundEffects => {
@@ -131,6 +136,54 @@ export const useSoundEffects = (enabled: boolean = true): SoundEffects => {
     setTimeout(() => playTone(120, 1.5, 'triangle'), 500)
   }, [playTone])
 
+  // Case opening sounds
+  const playCaseOpen = useCallback(() => {
+    // Case opening sound - mechanical click and whoosh
+    playTone(400, 0.1, 'square')
+    setTimeout(() => playTone(600, 0.2, 'sawtooth'), 100)
+    setTimeout(() => playTone(800, 0.3, 'sine'), 300)
+  }, [playTone])
+
+  const playCaseReveal = useCallback(() => {
+    // Item reveal sound - magical chime
+    playTone(800, 0.2, 'sine')
+    setTimeout(() => playTone(1000, 0.2, 'sine'), 100)
+    setTimeout(() => playTone(1200, 0.3, 'sine'), 200)
+  }, [playTone])
+
+  const playRarityReveal = useCallback((rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary') => {
+    // Different sounds based on rarity
+    switch (rarity) {
+      case 'common':
+        playTone(400, 0.3, 'sine')
+        break
+      case 'uncommon':
+        playTone(500, 0.4, 'sine')
+        setTimeout(() => playTone(600, 0.2, 'sine'), 200)
+        break
+      case 'rare':
+        playTone(600, 0.4, 'sine')
+        setTimeout(() => playTone(800, 0.3, 'sine'), 150)
+        setTimeout(() => playTone(1000, 0.2, 'sine'), 300)
+        break
+      case 'epic':
+        playTone(700, 0.5, 'sine')
+        setTimeout(() => playTone(900, 0.4, 'sine'), 100)
+        setTimeout(() => playTone(1100, 0.3, 'sine'), 200)
+        setTimeout(() => playTone(1300, 0.2, 'sine'), 300)
+        break
+      case 'legendary':
+        // Epic legendary sound sequence
+        playTone(800, 0.6, 'sine')
+        setTimeout(() => playTone(1000, 0.5, 'sine'), 100)
+        setTimeout(() => playTone(1200, 0.4, 'sine'), 200)
+        setTimeout(() => playTone(1400, 0.3, 'sine'), 300)
+        setTimeout(() => playTone(1600, 0.4, 'sine'), 400)
+        setTimeout(() => playTone(1800, 0.5, 'sine'), 500)
+        break
+    }
+  }, [playTone])
+
   return {
     playSpinSound,
     playWinSound,
@@ -144,7 +197,12 @@ export const useSoundEffects = (enabled: boolean = true): SoundEffects => {
     playJackpot,
     playError,
     playNotification,
-    playAmbient
+    playAmbient,
+    
+    // Case opening sounds
+    playCaseOpen,
+    playCaseReveal,
+    playRarityReveal
   }
 }
 

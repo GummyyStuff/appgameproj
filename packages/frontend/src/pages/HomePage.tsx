@@ -29,7 +29,13 @@ const HomePage: React.FC = () => {
       path: '/blackjack',
       color: 'from-green-900 to-green-700',
     },
-
+    {
+      name: 'Case Opening',
+      icon: TarkovIcons.Weapon,
+      description: 'Open Tarkov-themed cases for valuable items',
+      path: '/cases',
+      color: 'from-purple-900 to-purple-700',
+    },
   ]
 
   return (

@@ -259,6 +259,58 @@
   - Modify navigation to remove leaderboard menu item
   - Update leaderboard styling to fit within profile page layout
   - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_
+
+# Case Opening Game Implementation
+
+- [x] 33. Set up case opening database schema and item configuration
+  - Create case_types table with case information (name, price, description, image)
+  - Create tarkov_items table with item details (name, rarity, value, category, image)
+  - Create case_item_pools junction table linking cases to their possible items
+  - Configure rarity distribution percentages for each case type
+  - Seed database with Tarkov-themed items across all categories (medical, electronics, consumables, valuables, keycards)
+  - _Requirements: 8.1, 8.6, 8.7_
+
+- [x] 34. Implement case opening backend logic and API endpoints
+  - Create case opening service with provably fair item selection algorithm
+  - Implement rarity-based random item selection using weighted probabilities
+  - Build API endpoint for retrieving available case types
+  - Create API endpoint for opening cases with balance validation and currency conversion
+  - Add case opening results to game history tracking
+  - Write unit tests for case opening logic and rarity distribution
+  - _Requirements: 8.2, 8.3, 8.4, 8.5, 8.10_
+
+- [x] 35. Build case opening frontend components
+  - Create CaseSelector component displaying available case types with prices and descriptions
+  - Implement CaseOpeningGame component with case selection and opening interface
+  - Build ItemReveal component with animated item reveal and rarity-based visual effects
+  - Create case opening animations with suspenseful timing and Tarkov theming
+  - Add sound effects and visual feedback for different item rarities
+  - _Requirements: 8.1, 8.4, 8.8, 8.9, 8.10_
+
+- [x] 36. Integrate case opening with existing systems
+  - Add case opening page to navigation and routing
+  - Connect case opening to virtual currency system for purchases and rewards
+  - Update game history to include case opening results
+  - Add case opening statistics to user profile and leaderboards
+  - Implement real-time balance updates after case opening
+  - _Requirements: 8.2, 8.5, 8.9, 8.10_
+
+- [x] 37. Add case opening animations and polish
+  - Create smooth case opening animation sequence with multiple phases
+  - Implement rarity-based visual effects (colors, particles, sounds)
+  - Add Tarkov-themed styling and imagery for cases and items
+  - Create responsive design for mobile case opening experience
+  - Add loading states and error handling for case opening operations
+  - _Requirements: 8.4, 8.8, 8.10_
+
+- [x] 38. Test and optimize case opening system
+  - Write comprehensive tests for case opening fairness and rarity distribution
+  - Test case opening performance under concurrent user load
+  - Validate currency transactions and balance updates
+  - Test case opening animations and user experience across devices
+  - Implement monitoring and logging for case opening operations
+  - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5_
+
 #
 # Bug Fixes
 
@@ -268,3 +320,11 @@
   - Ensure the winning number visually aligns with the wheel pointer
   - Test wheel accuracy across all numbers (0-36)
   - _Requirements: 3.1, 3.3, 3.4_
+
+- [x] 39. Fix case opening database setup and migration issues
+  - Investigate and fix database migration failures for case opening tables
+  - Ensure case_types, tarkov_items, and case_item_pools tables are created
+  - Verify database connection and Supabase configuration
+  - Run case opening seed data to populate tables with Tarkov-themed items
+  - Test case opening API endpoints to ensure they work correctly
+  - _Requirements: 8.1, 8.2, 8.6, 8.7_

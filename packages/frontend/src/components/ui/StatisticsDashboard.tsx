@@ -106,7 +106,7 @@ const StatisticsDashboard: React.FC = () => {
     const biggestLoss = Math.max(...gameHistory.map(game => game.bet_amount - game.win_amount))
 
     // Game type breakdown
-    const gameTypes = ['roulette', 'blackjack']
+    const gameTypes = ['roulette', 'blackjack', 'case_opening']
     const gameBreakdown = gameTypes.map(gameType => {
       const games = gameHistory.filter(game => game.game_type === gameType)
       const gamesCount = games.length
@@ -221,7 +221,7 @@ const StatisticsDashboard: React.FC = () => {
     switch (gameType) {
       case 'roulette': return '🎰'
       case 'blackjack': return '🃏'
-
+      case 'case_opening': return '📦'
       default: return '🎮'
     }
   }
@@ -230,7 +230,7 @@ const StatisticsDashboard: React.FC = () => {
     switch (gameType) {
       case 'roulette': return '#ef4444'
       case 'blackjack': return '#3b82f6'
-
+      case 'case_opening': return '#f59e0b'
       default: return '#6b7280'
     }
   }

@@ -417,3 +417,148 @@ a:focus-visible {
 .tarkov-border-glow {
   box-shadow: 0 0 10px #F6AD55, 0 0 20px #F6AD55;
 }
+
+/* Case opening specific animations */
+@keyframes case-shake {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  25% { transform: translateX(-2px) rotate(-1deg); }
+  75% { transform: translateX(2px) rotate(1deg); }
+}
+
+.animate-case-shake {
+  animation: case-shake 0.5s ease-in-out infinite;
+}
+
+@keyframes particle-float {
+  0% { 
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% { 
+    transform: translateY(-100px) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+.animate-particle-float {
+  animation: particle-float 3s ease-out infinite;
+}
+
+@keyframes rarity-pulse {
+  0%, 100% { 
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  50% { 
+    transform: scale(1.05);
+    filter: brightness(1.2);
+  }
+}
+
+.animate-rarity-pulse {
+  animation: rarity-pulse 2s ease-in-out infinite;
+}
+
+/* Enhanced mobile touch feedback */
+@media (hover: none) and (pointer: coarse) {
+  .touch-feedback {
+    transition: all 0.1s ease;
+  }
+  
+  .touch-feedback:active {
+    transform: scale(0.95);
+    filter: brightness(0.9);
+  }
+}
+
+/* Legendary item special effects */
+@keyframes legendary-sparkle {
+  0%, 100% { 
+    opacity: 0;
+    transform: scale(0) rotate(0deg);
+  }
+  50% { 
+    opacity: 1;
+    transform: scale(1) rotate(180deg);
+  }
+}
+
+.animate-legendary-sparkle {
+  animation: legendary-sparkle 2s ease-in-out infinite;
+}
+
+/* Case opening reveal sequence */
+@keyframes reveal-sequence {
+  0% { 
+    transform: scale(0) rotateY(180deg);
+    opacity: 0;
+  }
+  50% { 
+    transform: scale(1.1) rotateY(90deg);
+    opacity: 0.5;
+  }
+  100% { 
+    transform: scale(1) rotateY(0deg);
+    opacity: 1;
+  }
+}
+
+.animate-reveal-sequence {
+  animation: reveal-sequence 1s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* Improved loading shimmer for mobile */
+@keyframes mobile-shimmer {
+  0% {
+    background-position: -200px 0;
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+    opacity: 0.8;
+  }
+}
+
+.animate-mobile-shimmer {
+  background: linear-gradient(90deg, #2D3748 0%, #F6AD55 50%, #2D3748 100%);
+  background-size: 200px 100%;
+  animation: mobile-shimmer 2s ease-in-out infinite;
+}
+
+/* Responsive text scaling */
+@media (max-width: 640px) {
+  .text-responsive-xl {
+    font-size: 1.5rem;
+    line-height: 2rem;
+  }
+  
+  .text-responsive-2xl {
+    font-size: 1.875rem;
+    line-height: 2.25rem;
+  }
+  
+  .text-responsive-3xl {
+    font-size: 2.25rem;
+    line-height: 2.5rem;
+  }
+}
+
+/* Enhanced button press feedback */
+.btn-press-feedback {
+  transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-press-feedback:active {
+  transform: translateY(1px) scale(0.98);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Improved focus states for accessibility */
+.focus-tarkov:focus-visible {
+  outline: 2px solid #F6AD55;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(246, 173, 85, 0.2);
+}

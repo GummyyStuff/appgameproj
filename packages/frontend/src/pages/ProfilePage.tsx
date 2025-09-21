@@ -274,7 +274,7 @@ const ProfilePage: React.FC = () => {
                   <span className="text-2xl">
                     {stat.game_type === 'roulette' && '🎰'}
                     {stat.game_type === 'blackjack' && '🃏'}
-
+                    {stat.game_type === 'case_opening' && '📦'}
                   </span>
                   <h3 className="text-lg font-medium text-white capitalize">
                     {stat.game_type}
