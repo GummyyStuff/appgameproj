@@ -14,8 +14,16 @@ FROM base AS frontend-build
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY packages/frontend/ ./packages/frontend/
-COPY packages/frontend/package.json ./packages/frontend/
 WORKDIR /app/packages/frontend
+
+# Set build-time environment variables for Vite
+ARG VITE_SUPABASE_URL
+ARG VITE_SUPABASE_ANON_KEY
+ARG VITE_API_URL
+ENV VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
+ENV VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
+ENV VITE_API_URL=${VITE_API_URL}
+
 RUN bun run build
 
 # Build backend stage
@@ -38,7 +46,6 @@ RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 # Copy built backend
 COPY --from=backend-build /app/packages/backend/dist ./dist
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/packages/backend/node_modules ./packages/backend/node_modules
 COPY packages/backend/package.json ./
 
 # Copy built frontend (served by backend)
