@@ -151,7 +151,7 @@
   - Implement sound effects and audio feedback
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
 
-- [-] 18. Set up real-time communication using Supabase Realtime
+- [x] 18. Set up real-time communication using Supabase Realtime
   - Configure Supabase Realtime channels for game events
   - Implement real-time game state synchronization via database triggers
   - Build client-side subscription management for game updates

@@ -7,14 +7,14 @@ import { TarkovIcons } from '../ui/TarkovIcons'
 import { SoundControlPanel, useSoundManager } from '../ui/SoundManager'
 import TarkovButton from '../ui/TarkovButton'
 import RealtimeNotifications from '../ui/RealtimeNotifications'
-import { useBalance } from '../../hooks/useBalance'
+import { useBalanceUpdates } from '../../hooks/useBalance'
 
 const Navigation: React.FC = () => {
   const location = useLocation()
   const { user, signOut } = useAuth()
   const username = useUsername()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const { refreshBalance } = useBalance()
+  const { invalidateBalance } = useBalanceUpdates()
 
   const { playGameSound } = useSoundManager()
   
@@ -105,9 +105,9 @@ const Navigation: React.FC = () => {
               <>
                 <CurrencyDisplay />
                 <RealtimeNotifications 
-                  onBalanceUpdate={(update) => {
+                  onBalanceUpdate={(_update) => {
                     // Refresh balance when real-time update is received
-                    refreshBalance()
+                    invalidateBalance()
                     playGameSound('coin')
                   }}
                   showBigWins={true}
@@ -159,8 +159,8 @@ const Navigation: React.FC = () => {
             {user && (
               <>
                 <RealtimeNotifications 
-                  onBalanceUpdate={(update) => {
-                    refreshBalance()
+                  onBalanceUpdate={(_update) => {
+                    invalidateBalance()
                     playGameSound('coin')
                   }}
                   showBigWins={true}

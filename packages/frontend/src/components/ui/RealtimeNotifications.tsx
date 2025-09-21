@@ -3,7 +3,7 @@
  * Displays real-time notifications for game events, balance updates, and big wins
  */
 
-import React, { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useSupabaseRealtime, GameNotification, BalanceUpdate } from '../../hooks/useSupabaseRealtime'
 import { useAuth } from '../../hooks/useAuth'
 
