@@ -1,0 +1,438 @@
+/**
+ * Unit tests for Statistics Service
+ * Tests all statistics calculation methods with comprehensive test cases
+ */
+
+import { describe, it, expect, beforeEach } from '@jest/globals'
+import { StatisticsService } from './statistics'
+import { GameHistory } from '../types/database'
+
+describe('StatisticsService', () => {
+  let mockGameHistory: GameHistory[]
+
+  beforeEach(() => {
+    // Reset mock data before each test
+    mockGameHistory = [
+      {
+        id: '1',
+        user_id: 'test-user',
+        game_type: 'roulette',
+        bet_amount: 100,
+        win_amount: 200,
+        result_data: { bet_type: 'red', bet_value: 'red', winning_number: 7, multiplier: 2 },
+        created_at: '2024-01-15T10:00:00Z'
+      },
+      {
+        id: '2',
+        user_id: 'test-user',
+        game_type: 'blackjack',
+        bet_amount: 50,
+        win_amount: 0,
+        result_data: { 
+          player_hand: [{ suit: 'hearts', value: 'K' }, { suit: 'spades', value: '7' }],
+          dealer_hand: [{ suit: 'diamonds', value: 'A' }, { suit: 'clubs', value: 'K' }],
+          result: 'dealer_win'
+        },
+        created_at: '2024-01-15T11:00:00Z'
+      },
+      {
+        id: '3',
+        user_id: 'test-user',
+        game_type: 'plinko',
+        bet_amount: 25,
+        win_amount: 75,
+        result_data: { risk_level: 'medium', ball_path: [0, 1, 0, 1], multiplier: 3, landing_slot: 5 },
+        created_at: '2024-01-15T12:00:00Z'
+      },
+      {
+        id: '4',
+        user_id: 'test-user',
+        game_type: 'roulette',
+        bet_amount: 200,
+        win_amount: 0,
+        result_data: { bet_type: 'number', bet_value: 13, winning_number: 7, multiplier: 0 },
+        created_at: '2024-01-16T10:00:00Z'
+      }
+    ]
+  })
+
+  describe('calculateOverviewStatistics', () => {
+    it('should calculate correct overview statistics', () => {
+      const stats = StatisticsService.calculateOverviewStatistics(mockGameHistory)
+
+      expect(stats.totalGames).toBe(4)
+      expect(stats.totalWagered).toBe(375) // 100 + 50 + 25 + 200
+      expect(stats.totalWon).toBe(275) // 200 + 0 + 75 + 0
+      expect(stats.netProfit).toBe(-100) // 275 - 375
+      expect(stats.winRate).toBe(50) // 2 wins out of 4 games
+      expect(stats.biggestWin).toBe(200)
+      expect(stats.biggestLoss).toBe(200) // bet_amount - win_amount for game 4
+      expect(stats.averageBet).toBe(93.75) // 375 / 4
+      expect(stats.averageWin).toBe(68.75) // 275 / 4
+      expect(stats.profitMargin).toBeCloseTo(-26.67, 2) // (-100 / 375) * 100
+    })
+
+    it('should handle empty game history', () => {
+      const stats = StatisticsService.calculateOverviewStatistics([])
+
+      expect(stats.totalGames).toBe(0)
+      expect(stats.totalWagered).toBe(0)
+      expect(stats.totalWon).toBe(0)
+      expect(stats.netProfit).toBe(0)
+      expect(stats.winRate).toBe(0)
+      expect(stats.biggestWin).toBe(0) // Empty statistics return 0
+      expect(stats.biggestLoss).toBe(0)
+      expect(stats.averageBet).toBe(0) // Empty statistics return 0
+      expect(stats.averageWin).toBe(0)
+      expect(stats.profitMargin).toBe(0)
+    })
+
+    it('should handle single game correctly', () => {
+      const singleGame = [mockGameHistory[0]]
+      const stats = StatisticsService.calculateOverviewStatistics(singleGame)
+
+      expect(stats.totalGames).toBe(1)
+      expect(stats.totalWagered).toBe(100)
+      expect(stats.totalWon).toBe(200)
+      expect(stats.netProfit).toBe(100)
+      expect(stats.winRate).toBe(100) // 1 win out of 1 game
+      expect(stats.biggestWin).toBe(200)
+      expect(stats.biggestLoss).toBe(-100) // bet_amount - win_amount = 100 - 200 = -100 (negative because it's a win)
+      expect(stats.averageBet).toBe(100)
+      expect(stats.averageWin).toBe(200)
+      expect(stats.profitMargin).toBe(100)
+    })
+  })
+
+  describe('calculateGameTypeBreakdown', () => {
+    it('should calculate breakdown for all game types', () => {
+      const breakdown = StatisticsService.calculateGameTypeBreakdown(mockGameHistory)
+
+      expect(breakdown).toHaveLength(3)
+      expect(breakdown.map(b => b.gameType)).toEqual(expect.arrayContaining(['roulette', 'blackjack', 'plinko']))
+
+      // Find roulette breakdown
+      const rouletteBreakdown = breakdown.find(b => b.gameType === 'roulette')
+      expect(rouletteBreakdown).toBeDefined()
+      expect(rouletteBreakdown!.statistics.totalGames).toBe(2)
+      expect(rouletteBreakdown!.statistics.totalWagered).toBe(300) // 100 + 200
+      expect(rouletteBreakdown!.statistics.totalWon).toBe(200) // 200 + 0
+      expect(rouletteBreakdown!.statistics.winRate).toBe(50) // 1 win out of 2 games
+
+      // Find blackjack breakdown
+      const blackjackBreakdown = breakdown.find(b => b.gameType === 'blackjack')
+      expect(blackjackBreakdown).toBeDefined()
+      expect(blackjackBreakdown!.statistics.totalGames).toBe(1)
+      expect(blackjackBreakdown!.statistics.totalWagered).toBe(50)
+      expect(blackjackBreakdown!.statistics.totalWon).toBe(0)
+      expect(blackjackBreakdown!.statistics.winRate).toBe(0)
+
+      // Find plinko breakdown
+      const plinkoBreakdown = breakdown.find(b => b.gameType === 'plinko')
+      expect(plinkoBreakdown).toBeDefined()
+      expect(plinkoBreakdown!.statistics.totalGames).toBe(1)
+      expect(plinkoBreakdown!.statistics.totalWagered).toBe(25)
+      expect(plinkoBreakdown!.statistics.totalWon).toBe(75)
+      expect(plinkoBreakdown!.statistics.winRate).toBe(100)
+    })
+
+    it('should assign popularity ranks correctly', () => {
+      const breakdown = StatisticsService.calculateGameTypeBreakdown(mockGameHistory)
+
+      // Roulette should be most popular (2 games)
+      const rouletteBreakdown = breakdown.find(b => b.gameType === 'roulette')
+      expect(rouletteBreakdown!.popularityRank).toBe(1)
+
+      // Blackjack and Plinko should be tied for second (1 game each)
+      const blackjackBreakdown = breakdown.find(b => b.gameType === 'blackjack')
+      const plinkoBreakdown = breakdown.find(b => b.gameType === 'plinko')
+      expect([blackjackBreakdown!.popularityRank, plinkoBreakdown!.popularityRank]).toEqual(expect.arrayContaining([2, 3]))
+    })
+
+    it('should handle empty game history', () => {
+      const breakdown = StatisticsService.calculateGameTypeBreakdown([])
+
+      expect(breakdown).toHaveLength(3)
+      breakdown.forEach(gameBreakdown => {
+        expect(gameBreakdown.statistics.totalGames).toBe(0)
+        expect(gameBreakdown.statistics.totalWagered).toBe(0)
+        expect(gameBreakdown.statistics.totalWon).toBe(0)
+        expect(gameBreakdown.statistics.winRate).toBe(0)
+      })
+    })
+  })
+
+  describe('calculateTimeSeriesData', () => {
+    it('should group games by date correctly', () => {
+      const timeSeries = StatisticsService.calculateTimeSeriesData(mockGameHistory)
+
+      expect(timeSeries).toHaveLength(2) // 2 different dates
+
+      // Check first date (2024-01-15)
+      const day1 = timeSeries.find(d => d.date === '2024-01-15')
+      expect(day1).toBeDefined()
+      expect(day1!.games).toBe(3) // 3 games on this date
+      expect(day1!.wagered).toBe(175) // 100 + 50 + 25
+      expect(day1!.won).toBe(275) // 200 + 0 + 75
+      expect(day1!.profit).toBe(100) // 275 - 175
+
+      // Check second date (2024-01-16)
+      const day2 = timeSeries.find(d => d.date === '2024-01-16')
+      expect(day2).toBeDefined()
+      expect(day2!.games).toBe(1)
+      expect(day2!.wagered).toBe(200)
+      expect(day2!.won).toBe(0)
+      expect(day2!.profit).toBe(-200)
+    })
+
+    it('should sort dates chronologically', () => {
+      const timeSeries = StatisticsService.calculateTimeSeriesData(mockGameHistory)
+
+      for (let i = 1; i < timeSeries.length; i++) {
+        const prevDate = new Date(timeSeries[i - 1].date)
+        const currDate = new Date(timeSeries[i].date)
+        expect(currDate.getTime()).toBeGreaterThanOrEqual(prevDate.getTime())
+      }
+    })
+
+    it('should handle empty game history', () => {
+      const timeSeries = StatisticsService.calculateTimeSeriesData([])
+      expect(timeSeries).toHaveLength(0)
+    })
+  })
+
+  describe('calculateWinStreaks', () => {
+    it('should calculate win streaks correctly', () => {
+      // Create a specific sequence for streak testing
+      // Array is in DESC order (most recent first) - this is how games come from the database
+      const streakTestGames: GameHistory[] = [
+        { ...mockGameHistory[0], win_amount: 200, bet_amount: 100, created_at: '2024-01-15T13:00:00Z' }, // Win (most recent)
+        { ...mockGameHistory[1], win_amount: 100, bet_amount: 50, created_at: '2024-01-15T12:00:00Z' }, // Win
+        { ...mockGameHistory[2], win_amount: 0, bet_amount: 25, created_at: '2024-01-15T11:00:00Z' }, // Loss
+        { ...mockGameHistory[3], win_amount: 0, bet_amount: 200, created_at: '2024-01-15T10:00:00Z' }, // Loss (oldest)
+      ]
+
+      const streaks = StatisticsService.calculateWinStreaks(streakTestGames)
+
+      expect(streaks.longest).toBe(2) // 2 consecutive wins when sorted chronologically
+      expect(streaks.longestLoss).toBe(2) // 2 consecutive losses when sorted chronologically  
+      expect(streaks.current).toBe(2) // Currently on a 2-game winning streak (first two games in DESC array)
+    })
+
+    it('should handle all wins correctly', () => {
+      const allWins = mockGameHistory.map(game => ({
+        ...game,
+        win_amount: game.bet_amount * 2 // All games are wins
+      }))
+
+      const streaks = StatisticsService.calculateWinStreaks(allWins)
+
+      expect(streaks.longest).toBe(4)
+      expect(streaks.longestLoss).toBe(0)
+      expect(streaks.current).toBe(4)
+    })
+
+    it('should handle all losses correctly', () => {
+      const allLosses = mockGameHistory.map(game => ({
+        ...game,
+        win_amount: 0 // All games are losses
+      }))
+
+      const streaks = StatisticsService.calculateWinStreaks(allLosses)
+
+      expect(streaks.longest).toBe(0)
+      expect(streaks.longestLoss).toBe(4)
+      expect(streaks.current).toBe(-4)
+    })
+
+    it('should handle empty game history', () => {
+      const streaks = StatisticsService.calculateWinStreaks([])
+
+      expect(streaks.current).toBe(0)
+      expect(streaks.longest).toBe(0)
+      expect(streaks.longestLoss).toBe(0)
+    })
+  })
+
+  describe('calculateBetPatterns', () => {
+    it('should identify most common bet amount', () => {
+      // Add more games with repeated bet amounts
+      const extendedHistory = [
+        ...mockGameHistory,
+        { ...mockGameHistory[0], id: '5', bet_amount: 100 }, // Another 100 bet
+        { ...mockGameHistory[0], id: '6', bet_amount: 100 }, // Another 100 bet
+      ]
+
+      const patterns = StatisticsService.calculateBetPatterns(extendedHistory)
+
+      expect(patterns.mostCommonBet).toBe(100) // 100 appears 3 times
+    })
+
+    it('should create correct bet distribution', () => {
+      const patterns = StatisticsService.calculateBetPatterns(mockGameHistory)
+
+      expect(patterns.betDistribution).toEqual(expect.arrayContaining([
+        expect.objectContaining({ range: '11-50', count: 2, percentage: 50 }), // 50 and 25
+        expect.objectContaining({ range: '51-100', count: 1, percentage: 25 }), // 100
+        expect.objectContaining({ range: '101-500', count: 1, percentage: 25 }) // 200
+      ]))
+    })
+
+    it('should handle empty game history', () => {
+      const patterns = StatisticsService.calculateBetPatterns([])
+
+      expect(patterns.mostCommonBet).toBe(0)
+      expect(patterns.betDistribution).toHaveLength(0)
+    })
+  })
+
+  describe('calculatePlayingHabits', () => {
+    it('should identify most active hour and day', () => {
+      const habits = StatisticsService.calculatePlayingHabits(mockGameHistory)
+
+      expect(typeof habits.mostActiveHour).toBe('number')
+      expect(habits.mostActiveHour).toBeGreaterThanOrEqual(0)
+      expect(habits.mostActiveHour).toBeLessThan(24)
+
+      expect(typeof habits.mostActiveDay).toBe('string')
+      expect(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'])
+        .toContain(habits.mostActiveDay)
+
+      expect(typeof habits.averageSessionLength).toBe('number')
+      expect(habits.averageSessionLength).toBeGreaterThanOrEqual(0)
+
+      expect(typeof habits.totalPlayTime).toBe('number')
+      expect(habits.totalPlayTime).toBeGreaterThanOrEqual(0)
+    })
+
+    it('should handle empty game history', () => {
+      const habits = StatisticsService.calculatePlayingHabits([])
+
+      expect(habits.mostActiveHour).toBe(0)
+      expect(habits.mostActiveDay).toBe('Monday')
+      expect(habits.averageSessionLength).toBe(0)
+      expect(habits.totalPlayTime).toBe(0)
+    })
+  })
+
+  describe('calculateSessions', () => {
+    it('should group games into sessions correctly', () => {
+      // Create games with specific timing for session testing
+      const sessionTestGames: GameHistory[] = [
+        { ...mockGameHistory[0], created_at: '2024-01-15T10:00:00Z' },
+        { ...mockGameHistory[1], created_at: '2024-01-15T10:30:00Z' }, // Same session (30 min gap)
+        { ...mockGameHistory[2], created_at: '2024-01-15T12:00:00Z' }, // New session (1.5 hour gap)
+        { ...mockGameHistory[3], created_at: '2024-01-15T12:15:00Z' }, // Same session (15 min gap)
+      ]
+
+      const sessions = StatisticsService.calculateSessions(sessionTestGames)
+
+      expect(sessions).toHaveLength(2) // Should create 2 sessions
+
+      // First session should have 2 games and 30 minutes duration
+      expect(sessions[0].games).toBe(2)
+      expect(sessions[0].duration).toBe(30)
+
+      // Second session should have 2 games and 15 minutes duration
+      expect(sessions[1].games).toBe(2)
+      expect(sessions[1].duration).toBe(15)
+    })
+
+    it('should handle single game as single session', () => {
+      const singleGame = [mockGameHistory[0]]
+      const sessions = StatisticsService.calculateSessions(singleGame)
+
+      expect(sessions).toHaveLength(1)
+      expect(sessions[0].games).toBe(1)
+      expect(sessions[0].duration).toBe(0) // Single game has 0 duration
+    })
+
+    it('should handle empty game history', () => {
+      const sessions = StatisticsService.calculateSessions([])
+      expect(sessions).toHaveLength(0)
+    })
+  })
+
+  describe('getEmptyStatistics', () => {
+    it('should return properly structured empty statistics', () => {
+      const emptyStats = StatisticsService.getEmptyStatistics()
+
+      expect(emptyStats).toHaveProperty('overview')
+      expect(emptyStats).toHaveProperty('gameBreakdown')
+      expect(emptyStats).toHaveProperty('timeSeriesData')
+      expect(emptyStats).toHaveProperty('winStreaks')
+      expect(emptyStats).toHaveProperty('betPatterns')
+      expect(emptyStats).toHaveProperty('playingHabits')
+
+      expect(emptyStats.overview.totalGames).toBe(0)
+      expect(emptyStats.gameBreakdown).toHaveLength(0)
+      expect(emptyStats.timeSeriesData).toHaveLength(0)
+      expect(emptyStats.winStreaks.current).toBe(0)
+      expect(emptyStats.betPatterns.mostCommonBet).toBe(0)
+      expect(emptyStats.playingHabits.mostActiveHour).toBe(0)
+    })
+  })
+
+  describe('getEmptyGameStatistics', () => {
+    it('should return properly structured empty game statistics', () => {
+      const emptyGameStats = StatisticsService.getEmptyGameStatistics()
+
+      expect(emptyGameStats.totalGames).toBe(0)
+      expect(emptyGameStats.totalWagered).toBe(0)
+      expect(emptyGameStats.totalWon).toBe(0)
+      expect(emptyGameStats.netProfit).toBe(0)
+      expect(emptyGameStats.winRate).toBe(0)
+      expect(emptyGameStats.biggestWin).toBe(0)
+      expect(emptyGameStats.biggestLoss).toBe(0)
+      expect(emptyGameStats.averageBet).toBe(0)
+      expect(emptyGameStats.averageWin).toBe(0)
+      expect(emptyGameStats.profitMargin).toBe(0)
+    })
+  })
+
+  describe('Edge Cases and Error Handling', () => {
+    it('should handle games with zero bet amounts', () => {
+      const zeroBetGames = [
+        { ...mockGameHistory[0], bet_amount: 0, win_amount: 0 }
+      ]
+
+      const stats = StatisticsService.calculateOverviewStatistics(zeroBetGames)
+      expect(stats.totalGames).toBe(1)
+      expect(stats.totalWagered).toBe(0)
+      expect(stats.profitMargin).toBe(0) // Should handle division by zero
+    })
+
+    it('should handle games with negative win amounts', () => {
+      const negativeWinGames = [
+        { ...mockGameHistory[0], bet_amount: 100, win_amount: -50 }
+      ]
+
+      const stats = StatisticsService.calculateOverviewStatistics(negativeWinGames)
+      expect(stats.totalWon).toBe(-50)
+      expect(stats.netProfit).toBe(-150) // -50 - 100
+    })
+
+    it('should handle very large numbers correctly', () => {
+      const largeNumberGames = [
+        { ...mockGameHistory[0], bet_amount: 1000000, win_amount: 2000000 }
+      ]
+
+      const stats = StatisticsService.calculateOverviewStatistics(largeNumberGames)
+      expect(stats.totalWagered).toBe(1000000)
+      expect(stats.totalWon).toBe(2000000)
+      expect(stats.netProfit).toBe(1000000)
+      expect(stats.profitMargin).toBe(100)
+    })
+
+    it('should handle games with same timestamps', () => {
+      const sameTimeGames = mockGameHistory.map(game => ({
+        ...game,
+        created_at: '2024-01-15T10:00:00Z'
+      }))
+
+      const timeSeries = StatisticsService.calculateTimeSeriesData(sameTimeGames)
+      expect(timeSeries).toHaveLength(1)
+      expect(timeSeries[0].games).toBe(4)
+    })
+  })
+})

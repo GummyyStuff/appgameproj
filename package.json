@@ -1,0 +1,31 @@
+{
+  "name": "tarkov-casino",
+  "version": "1.0.0",
+  "description": "Tarkov-themed casino gaming website",
+  "type": "module",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "bun run --watch index.ts",
+    "build": "bun build index.ts --outdir ./dist",
+    "start": "bun run dist/index.js",
+    "test": "bun test",
+    "lint": "eslint . --ext .ts,.tsx",
+    "type-check": "tsc --noEmit",
+    "deploy:prepare": "./scripts/deploy.sh",
+    "deploy:validate": "./scripts/validate-production.sh",
+    "health:check": "./scripts/health-check.sh",
+    "health:check:prod": "./scripts/health-check.sh -u https://your-domain.com",
+    "docker:build": "./scripts/deploy.sh build",
+    "docker:test": "./scripts/deploy.sh test"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}

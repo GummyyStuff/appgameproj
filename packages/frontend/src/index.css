@@ -1,0 +1,403 @@
+/* Import Google Fonts for Tarkov theme */
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@300;400;700&display=swap');
+
+@import "tailwindcss";
+
+@theme {
+  /* Tarkov-themed color palette */
+  --color-tarkov-primary: #2D3748;
+  --color-tarkov-secondary: #4A5568;
+  --color-tarkov-accent: #F6AD55;
+  --color-tarkov-danger: #E53E3E;
+  --color-tarkov-success: #38A169;
+  --color-tarkov-warning: #D69E2E;
+  --color-tarkov-dark: #1A202C;
+  --color-tarkov-darker: #171923;
+  --color-tarkov-darkest: #0D1117;
+  
+  /* Extended Tarkov color palette */
+  --color-tarkov-olive: #4A5D23;
+  --color-tarkov-tan: #8B7355;
+  --color-tarkov-rust: #B85450;
+  --color-tarkov-steel: #6B7280;
+  --color-tarkov-gold: #D4AF37;
+  --color-tarkov-silver: #C0C0C0;
+  --color-tarkov-copper: #B87333;
+  
+  /* Currency colors */
+  --color-roubles: #4A90E2;
+  --color-dollars: #50C878;
+  --color-euros: #9B59B6;
+  
+  /* Game-specific colors */
+  --color-roulette-red: #DC2626;
+  --color-roulette-black: #1F2937;
+  --color-roulette-green: #059669;
+  --color-blackjack-felt: #0F5132;
+  --color-plinko-board: #8B4513;
+  
+  /* Font families */
+  --font-family-tarkov: 'Roboto Condensed', 'Arial', sans-serif;
+  --font-family-mono: 'Courier New', monospace;
+  
+  /* Custom animations */
+  --animate-spin-slow: spin 3s linear infinite;
+  --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-glow: glow 2s ease-in-out infinite alternate;
+  --animate-flicker: flicker 1.5s infinite;
+}
+
+/* Custom scrollbar for dark theme */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1A202C;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #4A5568;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #2D3748;
+}
+
+/* Smooth transitions for all interactive elements */
+* {
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* Focus styles for accessibility */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+a:focus-visible {
+  outline: 2px solid #F6AD55;
+  outline-offset: 2px;
+}
+
+/* Loading animation */
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 5px #F6AD55;
+  }
+  50% {
+    opacity: 0.7;
+    box-shadow: 0 0 20px #F6AD55;
+  }
+}
+
+.pulse-glow {
+  animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Fade in animation */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out;
+}
+
+/* Shake animation for errors */
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-5px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(5px);
+  }
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+/* Bounce animation */
+@keyframes bounce {
+  0%, 20%, 53%, 80%, 100% {
+    animation-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
+    transform: translate3d(0, 0, 0);
+  }
+  40%, 43% {
+    animation-timing-function: cubic-bezier(0.755, 0.05, 0.855, 0.06);
+    transform: translate3d(0, -15px, 0);
+  }
+  70% {
+    animation-timing-function: cubic-bezier(0.755, 0.05, 0.855, 0.06);
+    transform: translate3d(0, -7px, 0);
+  }
+  90% {
+    transform: translate3d(0, -2px, 0);
+  }
+}
+
+.animate-bounce {
+  animation: bounce 2s infinite;
+}
+
+/* Glow animation for important elements */
+@keyframes glow {
+  from {
+    box-shadow: 0 0 5px #F6AD55, 0 0 10px #F6AD55, 0 0 15px #F6AD55;
+  }
+  to {
+    box-shadow: 0 0 10px #F6AD55, 0 0 20px #F6AD55, 0 0 30px #F6AD55;
+  }
+}
+
+.animate-glow {
+  animation: glow 2s ease-in-out infinite alternate;
+}
+
+/* Flicker animation for damaged/worn elements */
+@keyframes flicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+
+.animate-flicker {
+  animation: flicker 1.5s infinite;
+}
+
+/* Slide in from different directions */
+@keyframes slide-in-left {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in-top {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-left {
+  animation: slide-in-left 0.5s ease-out;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.5s ease-out;
+}
+
+.animate-slide-in-top {
+  animation: slide-in-top 0.5s ease-out;
+}
+
+/* Tarkov-style button effects */
+.btn-tarkov {
+  position: relative;
+  background: linear-gradient(145deg, #4A5568, #2D3748);
+  border: 1px solid #F6AD55;
+  color: #F6AD55;
+  font-family: 'Roboto Condensed', sans-serif;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.3s ease;
+}
+
+.btn-tarkov:hover {
+  background: linear-gradient(145deg, #F6AD55, #D69E2E);
+  color: #1A202C;
+  box-shadow: 0 0 15px rgba(246, 173, 85, 0.5);
+  transform: translateY(-2px);
+}
+
+.btn-tarkov:active {
+  transform: translateY(0);
+  box-shadow: 0 0 5px rgba(246, 173, 85, 0.3);
+}
+
+/* Tarkov-style card/panel */
+.panel-tarkov {
+  background: linear-gradient(145deg, #2D3748, #1A202C);
+  border: 1px solid #4A5568;
+  border-radius: 8px;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.panel-tarkov-accent {
+  border-color: #F6AD55;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 4px 8px rgba(0, 0, 0, 0.3),
+    0 0 10px rgba(246, 173, 85, 0.2);
+}
+
+/* Tarkov-style input fields */
+.input-tarkov {
+  background: #1A202C;
+  border: 2px solid #4A5568;
+  color: #F7FAFC;
+  font-family: 'Roboto Condensed', sans-serif;
+  transition: all 0.3s ease;
+}
+
+.input-tarkov:focus {
+  border-color: #F6AD55;
+  box-shadow: 0 0 10px rgba(246, 173, 85, 0.3);
+  outline: none;
+}
+
+/* Currency styling */
+.currency-roubles {
+  color: #4A90E2;
+}
+
+.currency-dollars {
+  color: #50C878;
+}
+
+.currency-euros {
+  color: #9B59B6;
+}
+
+/* Game table felt texture */
+.felt-texture {
+  background: 
+    radial-gradient(circle at 25% 25%, #0F5132 0%, transparent 50%),
+    radial-gradient(circle at 75% 75%, #0F5132 0%, transparent 50%),
+    #065F46;
+  background-size: 20px 20px;
+}
+
+/* Metal texture for UI elements */
+.metal-texture {
+  background: 
+    linear-gradient(45deg, #6B7280 25%, transparent 25%),
+    linear-gradient(-45deg, #6B7280 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #6B7280 75%),
+    linear-gradient(-45deg, transparent 75%, #6B7280 75%),
+    #4B5563;
+  background-size: 4px 4px;
+  background-position: 0 0, 0 2px, 2px -2px, -2px 0px;
+}
+
+/* Custom slider styles */
+.slider-tarkov {
+  background: #1A202C;
+  border: 1px solid #4A5568;
+}
+
+.slider-tarkov::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #F6AD55, #D69E2E);
+  border: 2px solid #1A202C;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
+}
+
+.slider-tarkov::-webkit-slider-thumb:hover {
+  background: linear-gradient(145deg, #D69E2E, #F6AD55);
+  transform: scale(1.1);
+  box-shadow: 0 0 10px rgba(246, 173, 85, 0.5);
+}
+
+.slider-tarkov::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #F6AD55, #D69E2E);
+  border: 2px solid #1A202C;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.slider-tarkov:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.slider-tarkov:disabled::-webkit-slider-thumb {
+  cursor: not-allowed;
+  background: #4A5568;
+}
+
+/* Gradient background utility */
+.bg-gradient-radial {
+  background: radial-gradient(var(--tw-gradient-stops));
+}
+
+/* Additional Tarkov-themed utilities */
+.text-shadow-glow {
+  text-shadow: 0 0 10px currentColor;
+}
+
+.border-glow {
+  box-shadow: 0 0 10px currentColor;
+}
+
+/* Tarkov-style selection */
+::selection {
+  background-color: #F6AD55;
+  color: #1A202C;
+}
+
+::-moz-selection {
+  background-color: #F6AD55;
+  color: #1A202C;
+}
+
+/* Custom utility classes for Tarkov theming */
+.tarkov-panel {
+  @apply bg-gradient-to-br from-tarkov-primary to-tarkov-dark border border-tarkov-secondary rounded-lg shadow-lg;
+}
+
+.tarkov-panel-accent {
+  @apply bg-gradient-to-br from-tarkov-primary to-tarkov-dark border border-tarkov-accent rounded-lg shadow-lg shadow-tarkov-accent/20;
+}
+
+.tarkov-text-glow {
+  text-shadow: 0 0 10px #F6AD55, 0 0 20px #F6AD55, 0 0 30px #F6AD55;
+}
+
+.tarkov-border-glow {
+  box-shadow: 0 0 10px #F6AD55, 0 0 20px #F6AD55;
+}

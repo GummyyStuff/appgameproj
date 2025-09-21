@@ -1,0 +1,11 @@
+# Bun configuration for frontend testing
+
+[test]
+# Use test setup
+preload = ["./src/test-utils/test-setup.ts"]
+
+# Coverage settings
+coverage = true
+
+# Test timeout
+timeout = 10000

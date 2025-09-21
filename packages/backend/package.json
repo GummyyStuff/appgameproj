@@ -1,0 +1,41 @@
+{
+  "name": "@tarkov-casino/backend",
+  "version": "1.0.0",
+  "description": "Backend API for Tarkov Casino",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "bun run --watch src/index.ts",
+    "build": "bun build src/index.ts --outdir ./dist --target bun",
+    "start": "bun run dist/index.js",
+    "test": "bun test",
+    "test:watch": "bun test --watch",
+    "test:coverage": "bun test --coverage",
+    "test:unit": "bun test --test-name-pattern='.*\\.test\\.ts$'",
+    "test:integration": "bun test src/integration/",
+    "test:performance": "bun test src/test-utils/performance.test.ts",
+    "test:fairness": "bun test src/test-utils/game-fairness.test.ts",
+    "test:game-engine": "bun test src/services/game-engine/",
+    "test:api": "bun test src/routes/",
+    "test:database": "bun test src/services/database.test.ts src/database/database.test.ts",
+    "test:currency": "bun test src/services/currency.test.ts src/integration/currency-api.test.ts",
+    "test:statistics": "bun test src/services/statistics.test.ts src/services/statistics-integration.test.ts",
+    "test:ci": "bun test --coverage",
+    "db:setup": "bun run src/database/setup.ts",
+    "db:setup-with-seed": "bun run src/database/setup.ts --seed",
+    "db:verify": "bun run src/database/setup.ts --verify",
+    "db:test-connection": "bun run src/scripts/test-connection.ts"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.57.4",
+    "@types/pg": "^8.15.5",
+    "hono": "^4.9.8",
+    "pg": "^8.16.3",
+    "socket.io": "^4.8.1",
+    "zod": "^4.1.11"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5"
+  }
+}

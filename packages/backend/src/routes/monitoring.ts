@@ -1,0 +1,165 @@
+import { Hono } from 'hono'
+import { env, config } from '../config/env'
+import { getSupabaseHealth } from '../config/supabase'
+
+const monitoring = new Hono()
+
+// Basic health check endpoint
+monitoring.get('/health', async (c) => {
+  try {
+    const startTime = Date.now()
+    const supabaseHealth = await getSupabaseHealth()
+    const responseTime = Date.now() - startTime
+    
+    const isHealthy = supabaseHealth.overall === 'healthy'
+    
+    return c.json({
+      status: isHealthy ? 'ok' : 'degraded',
+      timestamp: new Date().toISOString(),
+      service: 'tarkov-casino-backend',
+      version: '1.0.0',
+      environment: env.NODE_ENV,
+      uptime: process.uptime(),
+      responseTime,
+      dependencies: {
+        supabase: supabaseHealth
+      }
+    }, isHealthy ? 200 : 503)
+  } catch (error) {
+    return c.json({
+      status: 'error',
+      timestamp: new Date().toISOString(),
+      service: 'tarkov-casino-backend',
+      version: '1.0.0',
+      environment: env.NODE_ENV,
+      error: 'Health check failed',
+      uptime: process.uptime()
+    }, 503)
+  }
+})
+
+// Detailed health check with more comprehensive checks
+monitoring.get('/health/detailed', async (c) => {
+  try {
+    const startTime = Date.now()
+    
+    // Check Supabase health
+    const supabaseHealth = await getSupabaseHealth()
+    
+    // Check memory usage
+    const memoryUsage = process.memoryUsage()
+    const memoryUsageMB = {
+      rss: Math.round(memoryUsage.rss / 1024 / 1024),
+      heapTotal: Math.round(memoryUsage.heapTotal / 1024 / 1024),
+      heapUsed: Math.round(memoryUsage.heapUsed / 1024 / 1024),
+      external: Math.round(memoryUsage.external / 1024 / 1024)
+    }
+    
+    // Check system info
+    const systemInfo = {
+      platform: process.platform,
+      arch: process.arch,
+      nodeVersion: process.version,
+      uptime: process.uptime(),
+      pid: process.pid
+    }
+    
+    const responseTime = Date.now() - startTime
+    const isHealthy = supabaseHealth.overall === 'healthy'
+    
+    return c.json({
+      status: isHealthy ? 'ok' : 'degraded',
+      timestamp: new Date().toISOString(),
+      service: 'tarkov-casino-backend',
+      version: '1.0.0',
+      environment: env.NODE_ENV,
+      responseTime,
+      system: systemInfo,
+      memory: memoryUsageMB,
+      dependencies: {
+        supabase: supabaseHealth
+      }
+    }, isHealthy ? 200 : 503)
+  } catch (error) {
+    return c.json({
+      status: 'error',
+      timestamp: new Date().toISOString(),
+      service: 'tarkov-casino-backend',
+      version: '1.0.0',
+      environment: env.NODE_ENV,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }, 503)
+  }
+})
+
+// Readiness check (for Kubernetes-style deployments)
+monitoring.get('/ready', async (c) => {
+  try {
+    // Check if all critical services are ready
+    const supabaseHealth = await getSupabaseHealth()
+    
+    const isReady = supabaseHealth.overall === 'healthy'
+    
+    return c.json({
+      ready: isReady,
+      timestamp: new Date().toISOString(),
+      checks: {
+        database: supabaseHealth.database.status === 'healthy',
+        auth: supabaseHealth.auth.status === 'healthy'
+      }
+    }, isReady ? 200 : 503)
+  } catch (error) {
+    return c.json({
+      ready: false,
+      timestamp: new Date().toISOString(),
+      error: 'Readiness check failed'
+    }, 503)
+  }
+})
+
+// Liveness check (for Kubernetes-style deployments)
+monitoring.get('/live', async (c) => {
+  // Simple liveness check - if the server can respond, it's alive
+  return c.json({
+    alive: true,
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  })
+})
+
+// Metrics endpoint (basic metrics for monitoring)
+monitoring.get('/metrics', async (c) => {
+  if (!config.metricsEnabled) {
+    return c.json({ error: 'Metrics disabled' }, 404)
+  }
+  
+  try {
+    const memoryUsage = process.memoryUsage()
+    
+    // Basic Prometheus-style metrics
+    const metrics = [
+      `# HELP nodejs_memory_usage_bytes Memory usage in bytes`,
+      `# TYPE nodejs_memory_usage_bytes gauge`,
+      `nodejs_memory_usage_bytes{type="rss"} ${memoryUsage.rss}`,
+      `nodejs_memory_usage_bytes{type="heapTotal"} ${memoryUsage.heapTotal}`,
+      `nodejs_memory_usage_bytes{type="heapUsed"} ${memoryUsage.heapUsed}`,
+      `nodejs_memory_usage_bytes{type="external"} ${memoryUsage.external}`,
+      ``,
+      `# HELP nodejs_process_uptime_seconds Process uptime in seconds`,
+      `# TYPE nodejs_process_uptime_seconds gauge`,
+      `nodejs_process_uptime_seconds ${process.uptime()}`,
+      ``,
+      `# HELP tarkov_casino_info Application information`,
+      `# TYPE tarkov_casino_info gauge`,
+      `tarkov_casino_info{version="1.0.0",environment="${env.NODE_ENV}"} 1`,
+    ].join('\n')
+    
+    return c.text(metrics, 200, {
+      'Content-Type': 'text/plain; version=0.0.4; charset=utf-8'
+    })
+  } catch (error) {
+    return c.json({ error: 'Failed to generate metrics' }, 500)
+  }
+})
+
+export { monitoring }
