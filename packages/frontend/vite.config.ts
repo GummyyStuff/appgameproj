@@ -30,56 +30,16 @@ export default defineConfig(({ mode }) => ({
     sourcemap: true,
     rollupOptions: {
       output: {
-        manualChunks: (id) => {
-          // Vendor chunks
-          if (id.includes('node_modules')) {
-            if (id.includes('react') || id.includes('react-dom')) {
-              return 'react-vendor';
-            }
-            if (id.includes('react-router')) {
-              return 'router-vendor';
-            }
-            if (id.includes('@tanstack/react-query')) {
-              return 'query-vendor';
-            }
-            if (id.includes('@supabase/supabase-js')) {
-              return 'supabase-vendor';
-            }
-            if (id.includes('framer-motion')) {
-              return 'animation-vendor';
-            }
-            if (id.includes('recharts')) {
-              return 'chart-vendor';
-            }
-            if (id.includes('socket.io-client')) {
-              return 'socket-vendor';
-            }
-            return 'vendor';
-          }
-          
-          // Game chunks
-          if (id.includes('/games/') && id.includes('Roulette')) {
-            return 'game-roulette';
-          }
-          if (id.includes('/games/') && id.includes('Blackjack')) {
-            return 'game-blackjack';
-          }
-
-          
-          // Page chunks
-          if (id.includes('/pages/')) {
-            return 'pages';
-          }
-          
-          // UI components
-          if (id.includes('/components/ui/')) {
-            return 'ui-components';
-          }
-          
-          // Utils and hooks
-          if (id.includes('/utils/') || id.includes('/hooks/')) {
-            return 'utils';
-          }
+        manualChunks: {
+          // Keep React ecosystem together to avoid import issues
+          'react-vendor': ['react', 'react-dom'],
+          // Separate other large dependencies
+          'router-vendor': ['react-router-dom'],
+          'query-vendor': ['@tanstack/react-query'],
+          'supabase-vendor': ['@supabase/supabase-js'],
+          'animation-vendor': ['framer-motion'],
+          'chart-vendor': ['recharts'],
+          'socket-vendor': ['socket.io-client']
         },
         chunkFileNames: 'js/[name]-[hash].js',
         entryFileNames: 'js/[name]-[hash].js',

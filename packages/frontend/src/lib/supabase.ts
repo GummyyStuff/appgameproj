@@ -9,6 +9,12 @@ if (!supabaseUrl || !supabaseAnonKey) {
   if (!supabaseUrl) missingVars.push('VITE_SUPABASE_URL')
   if (!supabaseAnonKey) missingVars.push('VITE_SUPABASE_ANON_KEY')
   
+  console.error('Supabase configuration error:', {
+    supabaseUrl: supabaseUrl ? 'SET' : 'MISSING',
+    supabaseAnonKey: supabaseAnonKey ? 'SET' : 'MISSING',
+    env: import.meta.env.MODE
+  })
+  
   throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`)
 }
 
