@@ -4,18 +4,19 @@ WORKDIR /app
 
 # Install dependencies stage
 FROM base AS deps
-COPY package.json bun.lock* ./
+COPY package.json bun.lock ./
 COPY packages/backend/package.json ./packages/backend/
 COPY packages/frontend/package.json ./packages/frontend/
-RUN bun install --frozen-lockfile --production=false
+RUN bun install --frozen-lockfile
 
 # Build frontend stage
-FROM node:18-alpine AS frontend-build
+FROM base AS frontend-build
 WORKDIR /app
-COPY packages/frontend/package.json packages/frontend/package-lock.json* ./
-RUN npm ci --only=production=false
-COPY packages/frontend/ ./
-RUN npm run build
+COPY --from=deps /app/node_modules ./node_modules
+COPY packages/frontend/ ./packages/frontend/
+COPY packages/frontend/package.json ./packages/frontend/
+WORKDIR /app/packages/frontend
+RUN bun run build
 
 # Build backend stage
 FROM base AS backend-build
@@ -23,7 +24,8 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY packages/backend/ ./packages/backend/
 COPY package.json tsconfig.json ./
-RUN cd packages/backend && bun run build
+WORKDIR /app/packages/backend
+RUN bun run build
 
 # Production stage
 FROM oven/bun:1-slim AS production
@@ -36,10 +38,11 @@ RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 # Copy built backend
 COPY --from=backend-build /app/packages/backend/dist ./dist
 COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/packages/backend/node_modules ./packages/backend/node_modules
 COPY packages/backend/package.json ./
 
 # Copy built frontend (served by backend)
-COPY --from=frontend-build /app/dist ./public
+COPY --from=frontend-build /app/packages/frontend/dist ./public
 
 # Create non-root user for security
 RUN groupadd --system --gid 1001 nodejs
