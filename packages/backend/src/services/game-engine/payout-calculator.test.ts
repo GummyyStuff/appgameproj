@@ -194,70 +194,13 @@ describe('PayoutCalculator', () => {
     })
   })
 
-  describe('calculatePlinkoPayout', () => {
-    it('should calculate correct payout for positive multiplier', () => {
-      const payout = calculator.calculatePlinkoPayout(2.5, 100)
-      expect(payout).toBe(250)
-    })
 
-    it('should calculate correct payout for 1x multiplier', () => {
-      const payout = calculator.calculatePlinkoPayout(1.0, 100)
-      expect(payout).toBe(100)
-    })
-
-    it('should calculate correct payout for fractional multiplier', () => {
-      const payout = calculator.calculatePlinkoPayout(0.5, 100)
-      expect(payout).toBe(50)
-    })
-
-    it('should return 0 for negative multiplier', () => {
-      const payout = calculator.calculatePlinkoPayout(-1, 100)
-      expect(payout).toBe(0)
-    })
-
-    it('should handle zero multiplier', () => {
-      const payout = calculator.calculatePlinkoPayout(0, 100)
-      expect(payout).toBe(0)
-    })
-  })
-
-  describe('getPlinkoMultiplier', () => {
-    it('should return correct multipliers for low risk', () => {
-      const multipliers = []
-      for (let i = 0; i < 9; i++) {
-        multipliers.push(calculator.getPlinkoMultiplier('low', i))
-      }
-      expect(multipliers).toEqual([1.5, 1.2, 1.1, 1.0, 0.5, 1.0, 1.1, 1.2, 1.5])
-    })
-
-    it('should return correct multipliers for medium risk', () => {
-      const multipliers = []
-      for (let i = 0; i < 9; i++) {
-        multipliers.push(calculator.getPlinkoMultiplier('medium', i))
-      }
-      expect(multipliers).toEqual([5.6, 2.1, 1.1, 1.0, 0.5, 1.0, 1.1, 2.1, 5.6])
-    })
-
-    it('should return correct multipliers for high risk', () => {
-      const multipliers = []
-      for (let i = 0; i < 9; i++) {
-        multipliers.push(calculator.getPlinkoMultiplier('high', i))
-      }
-      expect(multipliers).toEqual([29, 4, 1.5, 1.1, 1.0, 1.1, 1.5, 4, 29])
-    })
-
-    it('should return 0 for invalid slot numbers', () => {
-      expect(calculator.getPlinkoMultiplier('low', -1)).toBe(0)
-      expect(calculator.getPlinkoMultiplier('low', 9)).toBe(0)
-      expect(calculator.getPlinkoMultiplier('medium', 10)).toBe(0)
-    })
-  })
 
   describe('getHouseEdge', () => {
     it('should return correct house edges for different games', () => {
       expect(calculator.getHouseEdge('roulette')).toBe(2.7)
       expect(calculator.getHouseEdge('blackjack')).toBe(0.5)
-      expect(calculator.getHouseEdge('plinko')).toBe(1.0)
+
       expect(calculator.getHouseEdge('invalid')).toBe(0)
     })
   })

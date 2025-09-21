@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useBalance } from '../../hooks/useBalance'
+import { useAdvancedFeatures } from '../../hooks/useAdvancedFeatures'
 import { supabase } from '../../lib/supabase'
 import BlackjackHand from './BlackjackHand'
 import BlackjackActions from './BlackjackActions'
@@ -40,6 +41,7 @@ interface BlackjackGameResult {
 
 const BlackjackGame: React.FC = () => {
   const { balance, refetch: refreshBalance } = useBalance()
+  const { trackGamePlayed, updateAchievementProgress } = useAdvancedFeatures()
   
   // Game state
   const [gameState, setGameState] = useState<BlackjackGameState | null>(null)
@@ -218,7 +220,7 @@ const BlackjackGame: React.FC = () => {
 
       // Check if game is completed
       if (data.game_complete) {
-        setGameResult({
+        const result = {
           success: data.success,
           game_result: data.game_result,
           bet_amount: betAmount,
@@ -226,9 +228,22 @@ const BlackjackGame: React.FC = () => {
           net_result: data.net_result,
           new_balance: data.new_balance,
           game_id: data.game_id
-        })
+        }
+        
+        setGameResult(result)
         setGameState(null)
         await refreshBalance()
+        
+        // Track game for achievements
+        trackGamePlayed(betAmount, data.win_amount, 'blackjack')
+        
+        // Update specific blackjack achievements
+        if (data.win_amount > 0) {
+          // Check if it was a blackjack (21 with first 2 cards)
+          if (data.game_result.result === 'blackjack') {
+            updateAchievementProgress('blackjack-ace', 1)
+          }
+        }
       } else {
         // Update game state with new data from game_state
         const updatedState = { ...gameState }

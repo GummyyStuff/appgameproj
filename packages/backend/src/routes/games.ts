@@ -1,9 +1,13 @@
 import { Hono } from 'hono'
 import { authMiddleware } from '../middleware/auth'
 import { asyncHandler } from '../middleware/error'
+import { gameRateLimit } from '../middleware/rate-limit'
+import { validationMiddleware, commonSchemas } from '../middleware/validation'
+import { auditGame, auditLog } from '../middleware/audit'
+import { z } from 'zod'
 import { RouletteGame } from '../services/game-engine/roulette-game'
 import { BlackjackGame } from '../services/game-engine/blackjack-game'
-import { PlinkoGame } from '../services/game-engine/plinko-game'
+
 import { gameEngine } from '../services/game-engine'
 import { CurrencyService } from '../services/currency'
 import { realtimeGameService } from '../services/realtime-game'
@@ -11,8 +15,30 @@ import { isValidBetAmount } from '../types/database'
 
 export const gameRoutes = new Hono()
 
-// All game routes require authentication
+// All game routes require authentication and rate limiting
 gameRoutes.use('*', authMiddleware)
+gameRoutes.use('*', gameRateLimit)
+
+// Game validation schemas
+const rouletteBetSchema = z.object({
+  amount: commonSchemas.betAmount,
+  betType: z.string().min(1).max(20),
+  betValue: z.union([z.number(), z.string()]).transform(val => 
+    typeof val === 'string' ? val : val.toString()
+  )
+})
+
+const blackjackStartSchema = z.object({
+  amount: commonSchemas.betAmount
+})
+
+const blackjackActionSchema = z.object({
+  gameId: commonSchemas.gameId,
+  action: commonSchemas.blackjackAction,
+  handIndex: z.number().int().min(0).max(3).optional()
+})
+
+
 
 // Games overview endpoint
 gameRoutes.get('/', asyncHandler(async (c) => {
@@ -20,8 +46,7 @@ gameRoutes.get('/', asyncHandler(async (c) => {
     message: 'Tarkov Casino Games API',
     available_games: {
       roulette: '/api/games/roulette',
-      blackjack: '/api/games/blackjack',
-      plinko: '/api/games/plinko'
+      blackjack: '/api/games/blackjack'
     },
     status: 'Games API ready'
   })
@@ -38,23 +63,16 @@ gameRoutes.get('/roulette', asyncHandler(async (c) => {
   })
 }))
 
-gameRoutes.post('/roulette/bet', asyncHandler(async (c) => {
+gameRoutes.post('/roulette/bet',
+  validationMiddleware(rouletteBetSchema),
+  auditGame('roulette_bet'),
+  asyncHandler(async (c) => {
   const user = c.get('user')
   if (!user) {
     return c.json({ error: 'Authentication required' }, 401)
   }
 
-  const body = await c.req.json()
-  const { amount, betType, betValue } = body
-
-  // Validate input
-  if (!amount || !betType || betValue === undefined) {
-    return c.json({ error: 'Missing required fields: amount, betType, betValue' }, 400)
-  }
-
-  if (!isValidBetAmount(amount)) {
-    return c.json({ error: 'Invalid bet amount' }, 400)
-  }
+  const { amount, betType, betValue } = c.get('validatedData')
 
   // Check user balance
   const balance = await CurrencyService.getBalance(user.id)
@@ -63,6 +81,10 @@ gameRoutes.post('/roulette/bet', asyncHandler(async (c) => {
   }
 
   try {
+    // Log game start
+    const ip = c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP')
+    await auditLog.gamePlayStarted(user.id, 'roulette', amount, ip)
+    
     // Broadcast game start
     await realtimeGameService.handleRouletteGameStart(user.id, amount, betType, betValue)
 
@@ -105,6 +127,9 @@ gameRoutes.post('/roulette/bet', asyncHandler(async (c) => {
     // Broadcast game completion
     await realtimeGameService.handleRouletteGameComplete(user.id, gameId, result)
 
+    // Log game completion
+    await auditLog.gameCompleted(user.id, 'roulette', amount, result.winAmount, ip)
+    
     // Broadcast balance update
     await realtimeGameService.handleBalanceUpdate(
       user.id,
@@ -137,23 +162,16 @@ gameRoutes.get('/blackjack', asyncHandler(async (c) => {
   })
 }))
 
-gameRoutes.post('/blackjack/start', asyncHandler(async (c) => {
+gameRoutes.post('/blackjack/start',
+  validationMiddleware(blackjackStartSchema),
+  auditGame('blackjack_start'),
+  asyncHandler(async (c) => {
   const user = c.get('user')
   if (!user) {
     return c.json({ error: 'Authentication required' }, 401)
   }
 
-  const body = await c.req.json()
-  const { amount } = body
-
-  // Validate input
-  if (!amount) {
-    return c.json({ error: 'Missing required field: amount' }, 400)
-  }
-
-  if (!isValidBetAmount(amount)) {
-    return c.json({ error: 'Invalid bet amount' }, 400)
-  }
+  const { amount } = c.get('validatedData')
 
   // Check user balance
   const balance = await CurrencyService.getBalance(user.id)
@@ -182,6 +200,10 @@ gameRoutes.post('/blackjack/start', asyncHandler(async (c) => {
     // Note: For blackjack, we'll handle the full transaction when the game completes
     // This is different from roulette which processes immediately
 
+    // Log game start
+    const ip = c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP')
+    await auditLog.gamePlayStarted(user.id, 'blackjack', amount, ip)
+    
     // Broadcast game start
     await realtimeGameService.handleBlackjackGameStart(user.id, amount, result.gameId!)
 
@@ -198,24 +220,18 @@ gameRoutes.post('/blackjack/start', asyncHandler(async (c) => {
   }
 }))
 
-gameRoutes.post('/blackjack/action', asyncHandler(async (c) => {
+gameRoutes.post('/blackjack/action',
+  validationMiddleware(blackjackActionSchema),
+  asyncHandler(async (c) => {
   const user = c.get('user')
   if (!user) {
     return c.json({ error: 'Authentication required' }, 401)
   }
 
-  const body = await c.req.json()
-  const { gameId, action, handIndex } = body
-
-  // Validate input
-  if (!gameId || !action) {
-    return c.json({ error: 'Missing required fields: gameId, action' }, 400)
-  }
-
-  const validActions = ['hit', 'stand', 'double', 'split']
-  if (!validActions.includes(action)) {
-    return c.json({ error: 'Invalid action' }, 400)
-  }
+  const validatedData = c.get('validatedData')
+  console.log('Blackjack action - validated data:', validatedData)
+  
+  const { gameId, action, handIndex } = validatedData
 
   try {
     // Create blackjack game instance
@@ -250,6 +266,10 @@ gameRoutes.post('/blackjack/action', asyncHandler(async (c) => {
         result.resultData
       )
 
+      // Log game completion
+      const ip = c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP')
+      await auditLog.gameCompleted(user.id, 'blackjack', result.betAmount || 0, result.winAmount, ip)
+      
       // Broadcast game completion
       await realtimeGameService.handleBlackjackGameComplete(user.id, gameId, result)
 
@@ -287,105 +307,3 @@ gameRoutes.post('/blackjack/action', asyncHandler(async (c) => {
   }
 }))
 
-// Plinko game endpoints
-gameRoutes.get('/plinko', asyncHandler(async (c) => {
-  return c.json({
-    message: 'Plinko game information',
-    board_config: PlinkoGame.getBoardConfig(),
-    risk_levels: PlinkoGame.getRiskLevelInfo(),
-    multiplier_table: PlinkoGame.getMultiplierTable(),
-    peg_positions: PlinkoGame.getPegPositions(),
-    min_bet: 1,
-    max_bet: 10000
-  })
-}))
-
-gameRoutes.post('/plinko/drop', asyncHandler(async (c) => {
-  const user = c.get('user')
-  if (!user) {
-    return c.json({ error: 'Authentication required' }, 401)
-  }
-
-  const body = await c.req.json()
-  const { amount, riskLevel } = body
-
-  // Validate input
-  if (!amount || !riskLevel) {
-    return c.json({ error: 'Missing required fields: amount, riskLevel' }, 400)
-  }
-
-  if (!isValidBetAmount(amount)) {
-    return c.json({ error: 'Invalid bet amount' }, 400)
-  }
-
-  const validRiskLevels = ['low', 'medium', 'high']
-  if (!validRiskLevels.includes(riskLevel)) {
-    return c.json({ error: 'Invalid risk level. Must be: low, medium, or high' }, 400)
-  }
-
-  // Check user balance
-  const balance = await CurrencyService.getBalance(user.id)
-  if (balance < amount) {
-    return c.json({ error: 'Insufficient balance' }, 400)
-  }
-
-  try {
-    // Broadcast game start
-    const gameId = `plinko-${Date.now()}-${user.id}`
-    await realtimeGameService.handlePlinkoGameStart(user.id, amount, riskLevel, gameId)
-
-    // Create plinko game instance
-    const plinkoGame = new PlinkoGame()
-
-    // Create bet object
-    const bet = {
-      userId: user.id,
-      amount,
-      gameType: 'plinko' as const,
-      riskLevel
-    }
-
-    // Play the game
-    const result = await plinkoGame.play(bet)
-
-    if (!result.success) {
-      return c.json({ error: result.error || 'Game failed' }, 400)
-    }
-
-    // Process currency transaction
-    const transactionResult = await CurrencyService.processGameTransaction(
-      user.id,
-      'plinko',
-      amount,
-      result.winAmount,
-      result.resultData
-    )
-
-    if (!transactionResult.success) {
-      return c.json({ error: 'Transaction failed' }, 500)
-    }
-
-    // Broadcast game completion
-    await realtimeGameService.handlePlinkoGameComplete(user.id, gameId, result)
-
-    // Broadcast balance update
-    await realtimeGameService.handleBalanceUpdate(
-      user.id,
-      transactionResult.newBalance,
-      transactionResult.previousBalance
-    )
-
-    return c.json({
-      success: true,
-      game_result: result.resultData,
-      bet_amount: amount,
-      win_amount: result.winAmount,
-      net_result: result.winAmount - amount,
-      new_balance: transactionResult.newBalance,
-      game_id: gameId
-    })
-  } catch (error) {
-    console.error('Plinko drop error:', error)
-    return c.json({ error: 'Internal server error' }, 500)
-  }
-}))

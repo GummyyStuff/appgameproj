@@ -6,6 +6,21 @@ The Tarkov Casino Website is a web-based gaming platform that provides casino-st
 
 ## Architecture
 
+### Navigation Structure
+
+The application features a simplified navigation structure:
+- **Home**: Landing page with game selection
+- **Roulette**: Roulette game page
+- **Blackjack**: Blackjack game page  
+- **Profile**: User profile with statistics, history, and leaderboards
+- **Login/Register**: Authentication pages
+
+**Removed Pages:**
+- Features page (removed to simplify navigation)
+- Standalone leaderboards page (integrated into profile)
+- Game tutorials (removed from all games)
+- Game replay functionality (removed from history)
+
 ### High-Level Architecture
 
 ```mermaid
@@ -65,21 +80,21 @@ graph TB
 
 #### Core Layout Components
 - `AppLayout`: Main application wrapper with navigation and theming
-- `Navigation`: Tarkov-themed navigation bar with user balance display
+- `Navigation`: Simplified Tarkov-themed navigation bar with user balance display (no features page)
 - `GameLayout`: Shared layout for all casino games
 - `LoadingScreen`: Tarkov-themed loading animations
 
 #### Game Components
-- `RouletteGame`: Interactive roulette wheel with betting interface
-- `BlackjackGame`: Card game interface with player actions
-- `PlinkoGame`: Physics-based ball drop game
+- `RouletteGame`: Interactive roulette wheel with betting interface (no tutorials)
+- `BlackjackGame`: Card game interface with player actions (no tutorials)
 - `BettingPanel`: Reusable betting controls for all games
-- `GameHistory`: Display of recent game results
+- `GameHistory`: Display of recent game results (without replay functionality)
 
 #### User Interface Components
-- `UserProfile`: Account management and statistics
+- `UserProfile`: Account management, statistics, and integrated leaderboards
 - `CurrencyDisplay`: Tarkov-themed currency formatting
 - `GameStats`: Charts and analytics for player performance
+- `Leaderboard`: Player rankings and competitive statistics integrated into profile page
 - `AuthForms`: Login and registration components
 
 ### Backend Services
@@ -101,7 +116,6 @@ interface AuthService {
 interface GameEngine {
   playRoulette(bet: RouletteBet): Promise<RouletteResult>
   playBlackjack(action: BlackjackAction): Promise<BlackjackState>
-  playPlinko(bet: PlinkoBet): Promise<PlinkoResult>
   validateBet(userId: string, amount: number): Promise<boolean>
 }
 ```
@@ -130,13 +144,13 @@ interface CurrencyService {
 - `POST /api/games/roulette/bet` - Place roulette bet
 - `POST /api/games/blackjack/start` - Start blackjack hand
 - `POST /api/games/blackjack/action` - Player action (hit/stand/etc)
-- `POST /api/games/plinko/drop` - Drop plinko ball
 
 #### User Endpoints
 - `GET /api/user/profile` - Get user profile
 - `GET /api/user/balance` - Get current balance
 - `GET /api/user/history` - Get game history
 - `GET /api/user/stats` - Get user statistics
+- `GET /api/user/leaderboard` - Get leaderboard data for profile page
 
 ### WebSocket Events
 
@@ -171,7 +185,7 @@ interface User {
 interface GameHistory {
   id: string
   userId: string
-  gameType: 'roulette' | 'blackjack' | 'plinko'
+  gameType: 'roulette' | 'blackjack'
   betAmount: number
   result: number
   winAmount: number
@@ -195,13 +209,6 @@ interface BlackjackState {
   playerValue: number
   dealerValue: number
   gameStatus: 'playing' | 'won' | 'lost' | 'push'
-}
-
-interface PlinkoState {
-  betAmount: number
-  riskLevel: 'low' | 'medium' | 'high'
-  ballPath: number[]
-  multiplier: number
 }
 ```
 

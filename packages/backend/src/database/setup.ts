@@ -86,9 +86,10 @@ export async function runMigrations(): Promise<MigrationResult[]> {
   console.log('🔄 Running database migrations...')
 
   const migrationFiles = [
-    join(MIGRATIONS_DIR, '001_initial_schema.sql'),
-    join(MIGRATIONS_DIR, '002_rpc_functions.sql'),
-    join(MIGRATIONS_DIR, '003_fix_user_registration.sql')
+    join(MIGRATIONS_DIR, '001_initial_schema_v2.sql'),
+    join(MIGRATIONS_DIR, '002_rpc_functions_v2.sql'),
+    join(MIGRATIONS_DIR, '003_fix_user_registration.sql'),
+    join(MIGRATIONS_DIR, '004_realtime_triggers.sql')
   ]
 
   const results: MigrationResult[] = []

@@ -20,7 +20,7 @@ export interface UserProfile {
 export interface GameHistory {
   id: string // UUID
   user_id: string // UUID
-  game_type: 'roulette' | 'blackjack' | 'plinko'
+  game_type: 'roulette' | 'blackjack'
   bet_amount: number
   win_amount: number
   result_data: GameResultData
@@ -36,7 +36,7 @@ export interface DailyBonus {
 }
 
 // Game-specific result data types
-export type GameResultData = RouletteResult | BlackjackResult | PlinkoResult
+export type GameResultData = RouletteResult | BlackjackResult
 
 export interface RouletteResult {
   bet_type: 'number' | 'red' | 'black' | 'odd' | 'even' | 'low' | 'high' | 'dozen' | 'column'
@@ -54,12 +54,7 @@ export interface BlackjackResult {
   actions_taken?: string[] // ['hit', 'stand', 'double', 'split']
 }
 
-export interface PlinkoResult {
-  risk_level: 'low' | 'medium' | 'high'
-  ball_path: number[] // Array of 0s and 1s representing left/right movements
-  multiplier: number
-  landing_slot: number
-}
+
 
 export interface Card {
   suit: 'hearts' | 'diamonds' | 'clubs' | 'spades'
@@ -127,7 +122,8 @@ export const RPC_FUNCTIONS = {
   PROCESS_GAME_TRANSACTION: 'process_game_transaction',
   CLAIM_DAILY_BONUS: 'claim_daily_bonus',
   GET_USER_STATISTICS: 'get_user_statistics',
-  GET_GAME_HISTORY: 'get_game_history'
+  GET_GAME_HISTORY: 'get_game_history',
+  GET_LEADERBOARD: 'get_leaderboard'
 } as const
 
 // Game configuration constants
@@ -136,7 +132,7 @@ export const GAME_CONFIG = {
   DAILY_BONUS_AMOUNT: 1000,
   MIN_BET_AMOUNT: 1,
   MAX_BET_AMOUNT: 10000,
-  GAME_TYPES: ['roulette', 'blackjack', 'plinko'] as const
+  GAME_TYPES: ['roulette', 'blackjack'] as const
 } as const
 
 // Validation helpers

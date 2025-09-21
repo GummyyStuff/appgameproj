@@ -3,6 +3,8 @@ import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../../hooks/useAuth'
 import { supabase } from '../../lib/supabase'
 import { motion } from 'framer-motion'
+import { SkeletonTable } from './Skeleton'
+import { useToastContext } from '../providers/ToastProvider'
 
 interface GameHistory {
   id: string
@@ -37,6 +39,7 @@ const GameHistoryTable: React.FC<GameHistoryTableProps> = ({
   pageSize = 20
 }) => {
   const { user } = useAuth()
+  const toast = useToastContext()
   const [currentPage, setCurrentPage] = useState(1)
   const [filters, setFilters] = useState<GameHistoryFilters>({
     gameType: 'all',
@@ -174,7 +177,7 @@ const GameHistoryTable: React.FC<GameHistoryTableProps> = ({
     switch (gameType) {
       case 'roulette': return '🎰'
       case 'blackjack': return '🃏'
-      case 'plinko': return '🎯'
+
       default: return '🎮'
     }
   }
@@ -183,37 +186,46 @@ const GameHistoryTable: React.FC<GameHistoryTableProps> = ({
     switch (gameType) {
       case 'roulette': return 'Roulette'
       case 'blackjack': return 'Blackjack'
-      case 'plinko': return 'Plinko'
+
       default: return gameType.charAt(0).toUpperCase() + gameType.slice(1)
     }
   }
 
   const exportToCSV = () => {
-    if (!filteredData.length) return
+    if (!filteredData.length) {
+      toast.warning('No data to export', 'Apply different filters to see more results')
+      return
+    }
 
-    const headers = ['Date', 'Game', 'Bet Amount', 'Win Amount', 'Net Result', 'Details']
-    const csvData = filteredData.map(game => [
-      formatDate(game.created_at),
-      getGameName(game.game_type),
-      game.bet_amount,
-      game.win_amount,
-      game.net_result,
-      JSON.stringify(game.result_data || {})
-    ])
+    try {
+      const headers = ['Date', 'Game', 'Bet Amount', 'Win Amount', 'Net Result', 'Details']
+      const csvData = filteredData.map(game => [
+        formatDate(game.created_at),
+        getGameName(game.game_type),
+        game.bet_amount,
+        game.win_amount,
+        game.net_result,
+        JSON.stringify(game.result_data || {})
+      ])
 
-    const csvContent = [headers, ...csvData]
-      .map(row => row.map(cell => `"${cell}"`).join(','))
-      .join('\n')
+      const csvContent = [headers, ...csvData]
+        .map(row => row.map(cell => `"${cell}"`).join(','))
+        .join('\n')
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    const url = URL.createObjectURL(blob)
-    link.setAttribute('href', url)
-    link.setAttribute('download', `game-history-${new Date().toISOString().split('T')[0]}.csv`)
-    link.style.visibility = 'hidden'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+      link.setAttribute('href', url)
+      link.setAttribute('download', `game-history-${new Date().toISOString().split('T')[0]}.csv`)
+      link.style.visibility = 'hidden'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      
+      toast.success('Export successful', `Downloaded ${filteredData.length} games as CSV`)
+    } catch (error) {
+      toast.error('Export failed', 'Unable to export game history')
+    }
   }
 
   const exportToJSON = () => {
@@ -250,10 +262,11 @@ const GameHistoryTable: React.FC<GameHistoryTableProps> = ({
   if (isLoading) {
     return (
       <div className="bg-tarkov-dark rounded-lg p-6">
-        <div className="text-center py-8">
-          <div className="text-4xl mb-4 animate-spin">📊</div>
-          <p className="text-gray-400">Loading game history...</p>
+        <div className="flex items-center justify-between mb-6">
+          <div className="h-6 bg-tarkov-secondary/50 rounded w-48 animate-pulse" />
+          <div className="h-8 bg-tarkov-secondary/50 rounded w-24 animate-pulse" />
         </div>
+        <SkeletonTable rows={pageSize} columns={6} />
       </div>
     )
   }
@@ -320,7 +333,7 @@ const GameHistoryTable: React.FC<GameHistoryTableProps> = ({
                 <option value="all">All Games</option>
                 <option value="roulette">Roulette</option>
                 <option value="blackjack">Blackjack</option>
-                <option value="plinko">Plinko</option>
+
               </select>
             </div>
 
@@ -484,9 +497,7 @@ const GameHistoryTable: React.FC<GameHistoryTableProps> = ({
                           {game.game_type === 'blackjack' && game.result_data.player_hand && (
                             <span>Player: {game.result_data.player_hand.join(', ')}</span>
                           )}
-                          {game.game_type === 'plinko' && game.result_data.multiplier && (
-                            <span>Multiplier: {game.result_data.multiplier}x</span>
-                          )}
+
                         </>
                       )}
                     </td>

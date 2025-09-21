@@ -91,9 +91,7 @@ export const SoundProvider: React.FC<SoundProviderProps> = ({ children }) => {
       case 'chip-stack':
         soundEffects.playChipStack()
         break
-      case 'ball-drop':
-        soundEffects.playBallDrop()
-        break
+
       case 'jackpot':
         soundEffects.playJackpot()
         break

@@ -42,7 +42,7 @@ describe('Currency API Integration', () => {
           throw new Error('Offset must be non-negative')
         }
 
-        if (gameType && !['roulette', 'blackjack', 'plinko'].includes(gameType)) {
+        if (gameType && !['roulette', 'blackjack'].includes(gameType)) {
           throw new Error('Invalid game type')
         }
 

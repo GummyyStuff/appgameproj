@@ -10,7 +10,7 @@ describe('Database Types and Validation', () => {
   test('should validate game types correctly', () => {
     expect(isValidGameType('roulette')).toBe(true)
     expect(isValidGameType('blackjack')).toBe(true)
-    expect(isValidGameType('plinko')).toBe(true)
+
     expect(isValidGameType('invalid')).toBe(false)
     expect(isValidGameType('')).toBe(false)
   })
@@ -79,18 +79,7 @@ describe('Game Result Data Types', () => {
     expect(blackjackResult.result).toBe('blackjack')
   })
 
-  test('should accept valid plinko result data', () => {
-    const plinkoResult = {
-      risk_level: 'high' as const,
-      ball_path: [0, 1, 1, 0, 1, 0, 1, 1],
-      multiplier: 5.0,
-      landing_slot: 7
-    }
 
-    expect(plinkoResult.ball_path).toBeInstanceOf(Array)
-    expect(plinkoResult.multiplier).toBeGreaterThan(0)
-    expect(plinkoResult.landing_slot).toBeGreaterThanOrEqual(0)
-  })
 })
 
 // Integration tests (require actual database connection)

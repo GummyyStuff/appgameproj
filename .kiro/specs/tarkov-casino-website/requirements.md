@@ -2,7 +2,7 @@
 
 ## Introduction
 
-A web-based casino gaming platform themed around Escape from Tarkov, offering classic casino games with virtual currency for entertainment purposes only. The platform will feature popular games like roulette, blackjack, and plinko, similar to existing gaming websites for CS:GO and Rust communities, but with Tarkov-specific theming, items, and aesthetics.
+A web-based casino gaming platform themed around Escape from Tarkov, offering classic casino games with virtual currency for entertainment purposes only. The platform will feature popular games like roulette and blackjack, similar to existing gaming websites for CS:GO and Rust communities, but with Tarkov-specific theming, items, and aesthetics.
 
 ## Requirements
 
@@ -54,19 +54,9 @@ A web-based casino gaming platform themed around Escape from Tarkov, offering cl
 4. WHEN a hand exceeds 21 THEN the system SHALL declare a bust and end the hand
 5. WHEN both hands are complete THEN the system SHALL determine winner and distribute winnings accordingly
 
-### Requirement 5: Plinko Game
 
-**User Story:** As a player, I want to play plinko so that I can enjoy the excitement of ball-drop gambling.
 
-#### Acceptance Criteria
-
-1. WHEN a player accesses plinko THEN the system SHALL display a board with pegs and multiplier slots at the bottom
-2. WHEN a player selects bet amount and risk level THEN the system SHALL adjust the multiplier values accordingly
-3. WHEN a ball is dropped THEN the system SHALL simulate realistic physics for ball movement
-4. WHEN the ball reaches the bottom THEN the system SHALL apply the corresponding multiplier to the bet amount
-5. WHEN displaying results THEN the system SHALL show the path taken and final payout
-
-### Requirement 6: Tarkov Theming and Visual Design
+### Requirement 5: Tarkov Theming and Visual Design
 
 **User Story:** As a Tarkov fan, I want the website to feel immersive and themed so that it enhances my gaming experience.
 
@@ -78,7 +68,7 @@ A web-based casino gaming platform themed around Escape from Tarkov, offering cl
 4. WHEN displaying game elements THEN the system SHALL incorporate Tarkov item imagery and iconography
 5. WHEN loading screens appear THEN the system SHALL show Tarkov-related imagery and tips
 
-### Requirement 7: Game History and Statistics
+### Requirement 6: Game History and Statistics
 
 **User Story:** As a player, I want to view my gaming history and statistics so that I can track my performance and favorite games.
 
@@ -89,6 +79,18 @@ A web-based casino gaming platform themed around Escape from Tarkov, offering cl
 3. WHEN viewing statistics THEN the system SHALL show win/loss ratios, total wagered, and biggest wins per game type
 4. WHEN displaying data THEN the system SHALL provide charts and visual representations of gaming patterns
 5. WHEN exporting data THEN the system SHALL allow users to download their gaming history
+
+### Requirement 7: Profile Page with Leaderboards
+
+**User Story:** As a player, I want to view leaderboards on my profile page so that I can see how I rank against other players.
+
+#### Acceptance Criteria
+
+1. WHEN a player accesses their profile page THEN the system SHALL display personal leaderboard rankings
+2. WHEN viewing leaderboards THEN the system SHALL show top players by total winnings, biggest single win, and games played
+3. WHEN displaying rankings THEN the system SHALL highlight the current player's position
+4. WHEN leaderboard data updates THEN the system SHALL refresh rankings in real-time
+5. WHEN viewing leaderboards THEN the system SHALL provide filtering options by game type and time period
 
 ### Requirement 8: Responsive Web Design
 

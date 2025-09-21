@@ -57,7 +57,7 @@ BEGIN
     END IF;
     
     -- Validate game type
-    IF game_type_param NOT IN ('roulette', 'blackjack', 'plinko') THEN
+    IF game_type_param NOT IN ('roulette', 'blackjack') THEN
         RETURN jsonb_build_object(
             'success', false,
             'error', 'Invalid game type'
@@ -238,7 +238,7 @@ DECLARE
     total_count INTEGER;
 BEGIN
     -- Validate game type filter if provided
-    IF game_type_filter IS NOT NULL AND game_type_filter NOT IN ('roulette', 'blackjack', 'plinko') THEN
+    IF game_type_filter IS NOT NULL AND game_type_filter NOT IN ('roulette', 'blackjack') THEN
         RETURN jsonb_build_object(
             'success', false,
             'error', 'Invalid game type filter'

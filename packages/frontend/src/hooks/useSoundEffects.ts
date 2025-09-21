@@ -9,7 +9,7 @@ interface SoundEffects {
   playCardFlip: () => void
   playCardDeal: () => void
   playChipStack: () => void
-  playBallDrop: () => void
+
   playJackpot: () => void
   playError: () => void
   playNotification: () => void
@@ -102,13 +102,7 @@ export const useSoundEffects = (enabled: boolean = true): SoundEffects => {
     setTimeout(() => playTone(1000, 0.05, 'square'), 100)
   }, [playTone])
 
-  const playBallDrop = useCallback(() => {
-    // Plinko ball drop - bouncing sound
-    playTone(1200, 0.1, 'sine')
-    setTimeout(() => playTone(1000, 0.08, 'sine'), 100)
-    setTimeout(() => playTone(800, 0.06, 'sine'), 180)
-    setTimeout(() => playTone(600, 0.04, 'sine'), 240)
-  }, [playTone])
+
 
   const playJackpot = useCallback(() => {
     // Big win sound - celebration
@@ -146,7 +140,7 @@ export const useSoundEffects = (enabled: boolean = true): SoundEffects => {
     playCardFlip,
     playCardDeal,
     playChipStack,
-    playBallDrop,
+
     playJackpot,
     playError,
     playNotification,

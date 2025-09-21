@@ -1,15 +1,19 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import { useAuth } from '../hooks/useAuth'
 import { useBalance, useBalanceUpdates } from '../hooks/useBalance'
 import { useRouletteRealtime } from '../hooks/useRouletteRealtime'
 import { useSoundEffects, useSoundPreferences } from '../hooks/useSoundEffects'
+import { useToastContext } from '../components/providers/ToastProvider'
+import { useGameShortcuts } from '../hooks/useKeyboardShortcuts'
+import { useAdvancedFeatures } from '../hooks/useAdvancedFeatures'
 import { supabase } from '../lib/supabase'
 import { formatCurrency } from '../utils/currency'
 import RouletteWheel from '../components/games/RouletteWheel'
 import BettingPanel from '../components/games/BettingPanel'
 import ResultDisplay from '../components/games/ResultDisplay'
 import GameHistory from '../components/games/GameHistory'
+import { SkeletonGameCard, SkeletonCard } from '../components/ui/Skeleton'
 
 interface RouletteBet {
   betType: 'number' | 'red' | 'black' | 'odd' | 'even' | 'low' | 'high' | 'dozen' | 'column'
@@ -42,11 +46,14 @@ interface GameState {
 
 const RoulettePage: React.FC = () => {
   const { user } = useAuth()
-  const { balance } = useBalance()
+  const { balance, isLoading: balanceLoading } = useBalance()
   const { updateBalance } = useBalanceUpdates()
   const { isConnected, broadcastGameStart } = useRouletteRealtime()
   const { soundEnabled, toggleSound } = useSoundPreferences()
   const { playSpinSound, playWinSound, playLoseSound, playBetSound } = useSoundEffects(soundEnabled)
+  const { trackGamePlayed, updateAchievementProgress } = useAdvancedFeatures()
+  const toast = useToastContext()
+  const [isInitialLoading, setIsInitialLoading] = useState(true)
   
   const [gameState, setGameState] = useState<GameState>({
     isSpinning: false,
@@ -73,6 +80,13 @@ const RoulettePage: React.FC = () => {
 
   const redNumbers = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]
 
+  // Simulate initial loading
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsInitialLoading(false)
+    }, 1500)
+    return () => clearTimeout(timer)
+  }, [])
 
   const getNumberColor = (num: number): 'red' | 'black' | 'green' => {
     if (num === 0) return 'green'
@@ -87,11 +101,13 @@ const RoulettePage: React.FC = () => {
 
     if (betAmount > balance) {
       setError('Insufficient balance')
+      toast.error('Insufficient balance', `You need ₽${(betAmount - balance).toLocaleString()} more`)
       return
     }
 
     if (betAmount < 1) {
       setError('Minimum bet is ₽1')
+      toast.error('Invalid bet', 'Minimum bet amount is ₽1')
       return
     }
 
@@ -158,11 +174,30 @@ const RoulettePage: React.FC = () => {
         updateBalance(result.new_balance)
         setShowResult(true)
         
-        // Play result sound
+        // Track game for achievements
+        trackGamePlayed(betAmount, result.win_amount, 'roulette')
+        
+        // Update specific roulette achievements
+        if (result.win_amount > 0) {
+          // Track roulette wins for roulette master achievement
+          updateAchievementProgress('roulette-master', 1)
+        }
+        
+        // Play result sound and show toast
         if (result.win_amount > 0) {
           playWinSound()
+          toast.success(
+            'You won!', 
+            `₽${result.win_amount.toLocaleString()} on ${result.game_result.winning_number}`,
+            { duration: 4000 }
+          )
         } else {
           playLoseSound()
+          toast.info(
+            'Better luck next time!', 
+            `Number ${result.game_result.winning_number} came up`,
+            { duration: 3000 }
+          )
         }
         
         // Hide result after 5 seconds
@@ -170,7 +205,9 @@ const RoulettePage: React.FC = () => {
       }, 3000)
 
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to place bet')
+      const errorMessage = err instanceof Error ? err.message : 'Failed to place bet'
+      setError(errorMessage)
+      toast.error('Bet failed', errorMessage)
       setGameState(prev => ({ ...prev, isSpinning: false }))
     }
   }
@@ -186,6 +223,42 @@ const RoulettePage: React.FC = () => {
     { type: 'dozen', value: 2, label: '2nd 12', payout: '2:1' },
     { type: 'dozen', value: 3, label: '3rd 12', payout: '2:1' }
   ]
+
+  // Keyboard shortcuts for roulette (after placeBet function is declared)
+  useGameShortcuts({
+    placeBet: !gameState.isSpinning ? placeBet : undefined,
+    toggleSound,
+    quickBet: (amount) => setBetAmount(Math.min(amount, balance))
+  })
+
+  // Show loading skeleton during initial load
+  if (isInitialLoading || balanceLoading) {
+    return (
+      <div className="min-h-screen bg-tarkov-darker text-white p-4">
+        <div className="max-w-6xl mx-auto">
+          {/* Header Skeleton */}
+          <div className="text-center mb-8">
+            <div className="h-12 bg-tarkov-secondary/50 rounded-lg w-64 mx-auto mb-4 animate-pulse" />
+            <div className="h-4 bg-tarkov-secondary/30 rounded w-48 mx-auto mb-4 animate-pulse" />
+            <div className="h-6 bg-tarkov-secondary/40 rounded w-32 mx-auto animate-pulse" />
+          </div>
+
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 lg:gap-8">
+            {/* Game Area Skeleton */}
+            <div className="xl:col-span-2">
+              <SkeletonGameCard />
+            </div>
+
+            {/* Betting Panel Skeleton */}
+            <div className="space-y-6">
+              <SkeletonCard />
+              <SkeletonCard className="h-64" />
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-tarkov-darker text-white p-4">
@@ -207,10 +280,10 @@ const RoulettePage: React.FC = () => {
               </div>
               <button
                 onClick={toggleSound}
-                className={`p-2 rounded-full transition-colors ${
+                className={`p-2 rounded-full transition-colors hover:scale-110 active:scale-95 ${
                   soundEnabled ? 'bg-tarkov-accent/20 text-tarkov-accent' : 'bg-gray-600/20 text-gray-400'
                 }`}
-                title={soundEnabled ? 'Disable sound' : 'Enable sound'}
+                title={soundEnabled ? 'Disable sound (S)' : 'Enable sound (S)'}
               >
                 {soundEnabled ? '🔊' : '🔇'}
               </button>
@@ -221,7 +294,11 @@ const RoulettePage: React.FC = () => {
           </p>
           <div className="mt-4 text-xl">
             Balance: <span className="text-tarkov-accent font-bold">
-              {formatCurrency(balance, 'roubles')}
+              {balanceLoading ? (
+                <span className="inline-block w-24 h-6 bg-tarkov-secondary/50 rounded animate-pulse" />
+              ) : (
+                formatCurrency(balance, 'roubles')
+              )}
             </span>
           </div>
         </div>

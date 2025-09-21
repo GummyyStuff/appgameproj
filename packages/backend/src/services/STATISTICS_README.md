@@ -26,7 +26,7 @@ User Request → Statistics API → StatisticsService → Processed Analytics �
 ### 1. Game History Recording
 
 All game sessions are automatically recorded with the following data:
-- Game type (roulette, blackjack, plinko)
+- Game type (roulette, blackjack)
 - Bet amount and win amount
 - Game-specific result data (cards, numbers, multipliers)
 - Timestamp and duration
@@ -57,7 +57,7 @@ await DatabaseService.processGameTransaction(
 - Profit margin
 
 #### Game Type Breakdown
-- Statistics per game type (roulette, blackjack, plinko)
+- Statistics per game type (roulette, blackjack)
 - Popularity rankings
 - Recent performance trends
 - Comparative analysis
@@ -140,7 +140,7 @@ Returns statistics broken down by game type.
 
 ### Win/Loss Streaks
 ```
-GET /api/statistics/streaks?gameType=plinko
+GET /api/statistics/streaks?gameType=roulette
 ```
 Returns streak analysis data.
 
@@ -181,7 +181,7 @@ Returns data formatted for CSV export.
 CREATE TABLE game_history (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id),
-  game_type TEXT NOT NULL CHECK (game_type IN ('roulette', 'blackjack', 'plinko')),
+  game_type TEXT NOT NULL CHECK (game_type IN ('roulette', 'blackjack')),
   bet_amount DECIMAL(15,2) NOT NULL,
   win_amount DECIMAL(15,2) NOT NULL,
   result_data JSONB NOT NULL,

@@ -32,7 +32,7 @@ const WinLossPattern: React.FC<WinLossPatternProps> = ({
     switch (gameType) {
       case 'roulette': return '🎰'
       case 'blackjack': return '🃏'
-      case 'plinko': return '🎯'
+
       default: return '🎮'
     }
   }

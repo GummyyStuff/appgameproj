@@ -83,7 +83,7 @@ VITE_API_URL=http://localhost:3000/api
 - `/register` - User registration  
 - `/roulette` - Roulette game (protected)
 - `/blackjack` - Blackjack game (protected)
-- `/plinko` - Plinko game (protected)
+
 - `/history` - Game history and statistics (protected)
 
 ## Theming

@@ -75,7 +75,7 @@ async function testRealtimeIntegration() {
     await supabaseRealtimeService.broadcastBigWin(
       testUserId,
       'TestUser',
-      'plinko',
+      'roulette',
       5000,
       { betAmount: 100, multiplier: 50 }
     )

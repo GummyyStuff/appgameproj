@@ -29,13 +29,7 @@ const HomePage: React.FC = () => {
       path: '/blackjack',
       color: 'from-green-900 to-green-700',
     },
-    {
-      name: 'Plinko',
-      icon: TarkovIcons.Plinko,
-      description: 'Physics-based ball drop game',
-      path: '/plinko',
-      color: 'from-blue-900 to-blue-700',
-    },
+
   ]
 
   return (

@@ -4,6 +4,8 @@ import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 import CurrencyManager from '../components/ui/CurrencyManager'
 import TransactionHistory from '../components/ui/TransactionHistory'
+import { AchievementSystem, TarkovIcons, TarkovButton, TarkovCard, ProfileLeaderboard } from '../components/ui'
+import { useAdvancedFeatures } from '../hooks/useAdvancedFeatures'
 import { formatCurrency } from '../utils/currency'
 
 
@@ -33,6 +35,15 @@ const ProfilePage: React.FC = () => {
   const queryClient = useQueryClient()
   const [isEditing, setIsEditing] = useState(false)
   const [newUsername, setNewUsername] = useState('')
+  
+  // Advanced features for achievements
+  const {
+    showAchievements,
+    achievements,
+    openAchievements,
+    closeAchievements,
+    claimAchievementReward
+  } = useAdvancedFeatures()
   // Fetch user profile with optimized caching
   const { data: profile, isLoading: profileLoading, error: profileError } = useQuery({
     queryKey: ['profile', user?.id],
@@ -120,6 +131,16 @@ const ProfilePage: React.FC = () => {
   const getWinRate = (wagered: number, won: number): string => {
     if (wagered === 0) return '0.0'
     return ((won / wagered) * 100).toFixed(1)
+  }
+
+  const formatAchievementDate = (date: Date | string | undefined): string => {
+    if (!date) return ''
+    try {
+      const dateObj = typeof date === 'string' ? new Date(date) : date
+      return dateObj.toLocaleDateString()
+    } catch {
+      return ''
+    }
   }
 
   // Show loading only for profile, let stats load separately
@@ -253,7 +274,7 @@ const ProfilePage: React.FC = () => {
                   <span className="text-2xl">
                     {stat.game_type === 'roulette' && '🎰'}
                     {stat.game_type === 'blackjack' && '🃏'}
-                    {stat.game_type === 'plinko' && '🎯'}
+
                   </span>
                   <h3 className="text-lg font-medium text-white capitalize">
                     {stat.game_type}
@@ -299,6 +320,170 @@ const ProfilePage: React.FC = () => {
         )}
       </div>
 
+      {/* Achievements Section */}
+      <div className="bg-tarkov-dark rounded-lg p-6 shadow-lg">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-3">
+            <TarkovIcons.Helmet className="text-tarkov-accent" size={24} />
+            <h2 className="text-xl font-tarkov font-bold text-white uppercase tracking-wide">
+              Achievements
+            </h2>
+          </div>
+          <TarkovButton
+            variant="secondary"
+            size="sm"
+            onClick={openAchievements}
+            icon={<TarkovIcons.Energy size={16} />}
+          >
+            View All
+          </TarkovButton>
+        </div>
+
+        {/* Achievement Progress Overview */}
+        <div className="mb-6">
+          <div className="flex justify-between text-sm text-gray-400 mb-2">
+            <span>Overall Progress</span>
+            <span>{achievements.filter(a => a.unlocked).length}/{achievements.length} unlocked</span>
+          </div>
+          <div className="w-full bg-gray-700 rounded-full h-3">
+            <div
+              className="bg-gradient-to-r from-tarkov-accent to-green-500 h-3 rounded-full transition-all duration-500"
+              style={{ width: `${(achievements.filter(a => a.unlocked).length / achievements.length) * 100}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Recent Achievements */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+          {achievements
+            .filter(achievement => achievement.unlocked)
+            .slice(0, 3)
+            .map((achievement) => {
+              const getAchievementIcon = (achievementId: string) => {
+                const iconMap: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
+                  'first-win': TarkovIcons.Health,
+                  'high-roller': TarkovIcons.Roubles,
+                  'lucky-seven': TarkovIcons.Energy,
+                  'roulette-master': TarkovIcons.Roulette,
+                  'blackjack-ace': TarkovIcons.Blackjack
+                }
+                return iconMap[achievementId] || TarkovIcons.Helmet
+              }
+              
+              const IconComponent = getAchievementIcon(achievement.id)
+              
+              return (
+                <TarkovCard key={achievement.id} className="p-4" hover>
+                  <div className="flex items-center space-x-3">
+                    <div className={`p-2 rounded-lg ${
+                      achievement.rarity === 'common' ? 'bg-gray-600/50' :
+                      achievement.rarity === 'rare' ? 'bg-blue-600/50' :
+                      achievement.rarity === 'epic' ? 'bg-purple-600/50' :
+                      'bg-yellow-600/50'
+                    }`}>
+                      <IconComponent className="text-white" size={20} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-tarkov font-bold text-white text-sm uppercase truncate">
+                        {achievement.title}
+                      </h4>
+                      <p className="text-xs text-gray-400 truncate">
+                        {achievement.description}
+                      </p>
+                      {achievement.unlockedAt && (
+                        <p className="text-xs text-green-400 mt-1">
+                          Unlocked {formatAchievementDate(achievement.unlockedAt)}
+                        </p>
+                      )}
+                    </div>
+                    <div className={`w-3 h-3 rounded-full ${
+                      achievement.rarity === 'common' ? 'bg-gray-500' :
+                      achievement.rarity === 'rare' ? 'bg-blue-500' :
+                      achievement.rarity === 'epic' ? 'bg-purple-500' :
+                      'bg-yellow-500'
+                    }`} />
+                  </div>
+                </TarkovCard>
+              )
+            })}
+        </div>
+
+        {/* No achievements unlocked state */}
+        {achievements.filter(a => a.unlocked).length === 0 && (
+          <div className="text-center py-8">
+            <TarkovIcons.Helmet className="text-gray-600 mx-auto mb-4" size={48} />
+            <p className="text-gray-400 mb-4">No achievements unlocked yet</p>
+            <p className="text-sm text-gray-500">Start playing games to earn your first achievements!</p>
+          </div>
+        )}
+
+        {/* Progress on current achievements */}
+        {achievements.filter(a => !a.unlocked && a.progress > 0).length > 0 && (
+          <div className="mt-6">
+            <h3 className="text-sm font-tarkov font-bold text-tarkov-accent uppercase mb-3">
+              In Progress
+            </h3>
+            <div className="space-y-3">
+              {achievements
+                .filter(a => !a.unlocked && a.progress > 0)
+                .slice(0, 2)
+                .map((achievement) => {
+                  const getAchievementIcon = (achievementId: string) => {
+                    const iconMap: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
+                      'first-win': TarkovIcons.Health,
+                      'high-roller': TarkovIcons.Roubles,
+                      'lucky-seven': TarkovIcons.Energy,
+                      'roulette-master': TarkovIcons.Roulette,
+                      'blackjack-ace': TarkovIcons.Blackjack
+                    }
+                    return iconMap[achievementId] || TarkovIcons.Helmet
+                  }
+                  
+                  const IconComponent = getAchievementIcon(achievement.id)
+                  const progressPercentage = (achievement.progress / achievement.maxProgress) * 100
+                  
+                  return (
+                    <div key={achievement.id} className="flex items-center space-x-3 p-3 bg-tarkov-secondary/50 rounded-lg">
+                      <div className="p-2 rounded-lg bg-gray-700/50">
+                        <IconComponent className="text-gray-400" size={16} />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex justify-between items-center mb-1">
+                          <h4 className="font-tarkov font-bold text-white text-sm uppercase">
+                            {achievement.title}
+                          </h4>
+                          <span className="text-xs text-gray-400">
+                            {achievement.progress}/{achievement.maxProgress}
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-700 rounded-full h-2">
+                          <div
+                            className="bg-tarkov-accent h-2 rounded-full transition-all duration-300"
+                            style={{ width: `${progressPercentage}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Leaderboards Section */}
+      <div className="bg-tarkov-dark rounded-lg p-6 shadow-lg">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-3">
+            <TarkovIcons.Weapon className="text-tarkov-accent" size={24} />
+            <h2 className="text-xl font-tarkov font-bold text-white uppercase tracking-wide">
+              Leaderboards
+            </h2>
+          </div>
+        </div>
+        <ProfileLeaderboard currentUser={profile.username} compact={false} />
+      </div>
+
       {/* Recent Transactions */}
       <div className="bg-tarkov-dark rounded-lg p-6 shadow-lg">
         <div className="flex items-center justify-between mb-4">
@@ -312,6 +497,14 @@ const ProfilePage: React.FC = () => {
         </div>
         <TransactionHistory limit={5} showFilters={false} compact={true} />
       </div>
+
+      {/* Achievement System Modal */}
+      <AchievementSystem
+        isOpen={showAchievements}
+        onClose={closeAchievements}
+        achievements={achievements}
+        onClaimReward={claimAchievementReward}
+      />
     </div>
   )
 }

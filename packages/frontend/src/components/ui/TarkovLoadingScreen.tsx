@@ -158,7 +158,7 @@ export const TarkovLoadingScreen: React.FC<LoadingScreenProps> = ({
 
 // Game-specific loading screens
 export const GameLoadingScreen: React.FC<{
-  gameType: 'roulette' | 'blackjack' | 'plinko'
+  gameType: 'roulette' | 'blackjack'
   message?: string
 }> = ({ gameType, message }) => {
   const gameConfig = {
@@ -184,17 +184,7 @@ export const GameLoadingScreen: React.FC<{
         "Basic strategy reduces the house edge significantly"
       ]
     },
-    plinko: {
-      icon: TarkovIcons.Plinko,
-      title: 'Plinko Board',
-      defaultMessage: 'Setting up the pegs...',
-      tips: [
-        "Higher risk levels offer bigger multipliers",
-        "The ball's path is determined by physics simulation",
-        "Center slots typically have lower multipliers",
-        "Edge slots can have the highest payouts"
-      ]
-    }
+
   }
 
   const config = gameConfig[gameType]

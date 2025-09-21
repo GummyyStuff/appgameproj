@@ -80,12 +80,12 @@ export const TarkovCard: React.FC<TarkovCardProps> = ({
 export const GameTableCard: React.FC<{
   children: React.ReactNode
   className?: string
-  gameType?: 'roulette' | 'blackjack' | 'plinko'
+  gameType?: 'roulette' | 'blackjack'
 }> = ({ children, className = '', gameType = 'blackjack' }) => {
   const gameStyles = {
     roulette: 'felt-texture border-red-700 shadow-red-900/20',
     blackjack: 'felt-texture border-green-700 shadow-green-900/20',
-    plinko: 'bg-gradient-to-b from-amber-900 to-amber-800 border-amber-600 shadow-amber-900/20'
+
   }
 
   return (

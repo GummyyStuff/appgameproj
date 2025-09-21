@@ -18,7 +18,10 @@
     "test:auth": "bun test src/components/auth",
     "test:games": "bun test src/components/games",
     "test:ui": "bun test src/components/ui",
-    "test:ci": "bun test --coverage"
+    "test:performance": "bun test src/utils/__tests__/cache.test.ts src/utils/__tests__/lazy-loading.test.tsx",
+    "test:ci": "bun test --coverage",
+    "analyze": "vite build --mode analyze",
+    "bundle-analyzer": "npx vite-bundle-analyzer dist"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",
@@ -43,6 +46,7 @@
     "happy-dom": "^18.0.1",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.13",
+    "terser": "^5.44.0",
     "typescript": "^5.9.2",
     "vite": "^7.1.6"
   }

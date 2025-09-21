@@ -1,6 +1,6 @@
 /**
  * Payout calculation system for all casino games
- * Handles odds and multipliers for roulette, blackjack, and plinko
+ * Handles odds and multipliers for roulette and blackjack
  */
 
 import { IPayoutCalculator } from './types'
@@ -27,12 +27,7 @@ export class PayoutCalculator implements IPayoutCalculator {
     loss: -1            // Loss (lose bet)
   } as const
 
-  // Plinko multipliers by risk level
-  private readonly PLINKO_MULTIPLIERS = {
-    low: [1.5, 1.2, 1.1, 1.0, 0.5, 1.0, 1.1, 1.2, 1.5],
-    medium: [5.6, 2.1, 1.1, 1.0, 0.5, 1.0, 1.1, 2.1, 5.6],
-    high: [29, 4, 1.5, 1.1, 1.0, 1.1, 1.5, 4, 29]
-  } as const
+
 
   /**
    * Calculate roulette payout based on bet type and winning number
@@ -76,26 +71,7 @@ export class PayoutCalculator implements IPayoutCalculator {
     }
   }
 
-  /**
-   * Calculate plinko payout based on multiplier
-   */
-  calculatePlinkoPayout(multiplier: number, betAmount: number): number {
-    if (multiplier < 0) {
-      return 0
-    }
-    return betAmount * multiplier
-  }
 
-  /**
-   * Get plinko multiplier for specific slot and risk level
-   */
-  getPlinkoMultiplier(riskLevel: 'low' | 'medium' | 'high', slot: number): number {
-    const multipliers = this.PLINKO_MULTIPLIERS[riskLevel]
-    if (slot < 0 || slot >= multipliers.length) {
-      return 0
-    }
-    return multipliers[slot]
-  }
 
   /**
    * Validate if a roulette bet is valid and winning
@@ -185,8 +161,7 @@ export class PayoutCalculator implements IPayoutCalculator {
         return 2.7 // European roulette house edge
       case 'blackjack':
         return 0.5 // Optimal play blackjack house edge
-      case 'plinko':
-        return 1.0 // Configurable plinko house edge
+
       default:
         return 0
     }

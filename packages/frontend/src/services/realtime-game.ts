@@ -8,7 +8,7 @@ import { RealtimeChannel } from '@supabase/supabase-js'
 
 export interface GameStateUpdate {
   userId: string
-  gameType: 'roulette' | 'blackjack' | 'plinko'
+  gameType: 'roulette' | 'blackjack'
   gameId?: string
   status: 'betting' | 'playing' | 'completed'
   data?: any
@@ -45,7 +45,7 @@ export class RealtimeGameService {
    * Subscribe to game-specific updates
    */
   async subscribeToGame(
-    gameType: 'roulette' | 'blackjack' | 'plinko',
+    gameType: 'roulette' | 'blackjack',
     userId: string,
     onUpdate: (update: GameStateUpdate) => void
   ): Promise<void> {
@@ -93,7 +93,7 @@ export class RealtimeGameService {
    * Subscribe to game room updates (all players in a game)
    */
   async subscribeToGameRoom(
-    gameType: 'roulette' | 'blackjack' | 'plinko',
+    gameType: 'roulette' | 'blackjack',
     onRoomUpdate: (state: GameRoomState) => void
   ): Promise<void> {
     const channelName = `game-room-${gameType}`
@@ -153,7 +153,7 @@ export class RealtimeGameService {
    * Broadcast game action to other players
    */
   async broadcastGameAction(
-    gameType: 'roulette' | 'blackjack' | 'plinko',
+    gameType: 'roulette' | 'blackjack',
     userId: string,
     action: string,
     data?: any
@@ -211,7 +211,7 @@ export class RealtimeGameService {
    * Join game room presence
    */
   async joinGameRoom(
-    gameType: 'roulette' | 'blackjack' | 'plinko',
+    gameType: 'roulette' | 'blackjack',
     userId: string,
     username: string
   ): Promise<void> {
@@ -243,7 +243,7 @@ export class RealtimeGameService {
    * Leave game room presence
    */
   async leaveGameRoom(
-    gameType: 'roulette' | 'blackjack' | 'plinko',
+    gameType: 'roulette' | 'blackjack',
     userId: string,
     username: string
   ): Promise<void> {
@@ -271,7 +271,7 @@ export class RealtimeGameService {
    * Unsubscribe from game updates
    */
   async unsubscribeFromGame(
-    gameType: 'roulette' | 'blackjack' | 'plinko',
+    gameType: 'roulette' | 'blackjack',
     userId: string
   ): Promise<void> {
     const channelName = `game-${gameType}-${userId}`
@@ -288,7 +288,7 @@ export class RealtimeGameService {
   /**
    * Unsubscribe from game room updates
    */
-  async unsubscribeFromGameRoom(gameType: 'roulette' | 'blackjack' | 'plinko'): Promise<void> {
+  async unsubscribeFromGameRoom(gameType: 'roulette' | 'blackjack'): Promise<void> {
     const channelName = `game-room-${gameType}`
     const channel = this.channels.get(channelName)
 

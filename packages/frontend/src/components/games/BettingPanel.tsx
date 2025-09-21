@@ -1,5 +1,10 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { motion } from 'framer-motion'
+import { useToastContext } from '../providers/ToastProvider'
+import { useGameShortcuts } from '../../hooks/useKeyboardShortcuts'
+import { useEnhancedButton } from '../../hooks/useTouchInteractions'
+import ConfirmDialog from '../ui/ConfirmDialog'
+import KeyboardShortcutsHelp from '../ui/KeyboardShortcutsHelp'
 
 interface BetOption {
   type: string
@@ -38,6 +43,10 @@ const BettingPanel: React.FC<BettingPanelProps> = ({
   error
 }) => {
   const quickBetAmounts = [10, 50, 100, 500, 1000]
+  const toast = useToastContext()
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+  const [showShortcutsHelp, setShowShortcutsHelp] = useState(false)
+  const [, setPendingBet] = useState<RouletteBet | null>(null)
 
   const handleBetTypeChange = (option: BetOption) => {
     setCurrentBet({
@@ -53,6 +62,101 @@ const BettingPanel: React.FC<BettingPanelProps> = ({
 
   const handleMaxBet = () => {
     setBetAmount(balance)
+    toast.info('Max bet set', `Bet amount set to ₽${balance.toLocaleString()}`)
+  }
+
+  const handlePlaceBet = () => {
+    // Show confirmation for large bets (>1000 or >50% of balance)
+    const isLargeBet = betAmount > 1000 || betAmount > balance * 0.5
+    
+    if (isLargeBet && !showConfirmDialog) {
+      setPendingBet(currentBet)
+      setShowConfirmDialog(true)
+      return
+    }
+    
+    onPlaceBet()
+    toast.success('Bet placed!', `₽${betAmount.toLocaleString()} on ${currentBet.betType}`)
+  }
+
+  const handleConfirmBet = () => {
+    setShowConfirmDialog(false)
+    setPendingBet(null)
+    onPlaceBet()
+    toast.success('Large bet confirmed!', `₽${betAmount.toLocaleString()} placed`)
+  }
+
+  const handleCancelBet = () => {
+    setShowConfirmDialog(false)
+    setPendingBet(null)
+  }
+
+  const handleQuickBetWithToast = (amount: number) => {
+    handleQuickBet(amount)
+    toast.info('Quick bet', `Bet amount set to ₽${amount.toLocaleString()}`)
+  }
+
+  // Keyboard shortcuts
+  const shortcuts = useGameShortcuts({
+    placeBet: !isSpinning ? handlePlaceBet : undefined,
+    maxBet: !isSpinning ? handleMaxBet : undefined,
+    quickBet: !isSpinning ? handleQuickBetWithToast : undefined,
+    showHelp: () => setShowShortcutsHelp(true)
+  })
+
+  // Enhanced button interactions for quick bet buttons - call hooks at top level
+  const quickBet10Props = useEnhancedButton({
+    onClick: () => handleQuickBetWithToast(10),
+    onLongPress: () => {
+      handleQuickBetWithToast(10)
+      toast.info('Long press detected', 'Quick bet ₽10 applied!')
+    },
+    disabled: isSpinning || 10 > balance
+  })
+
+  const quickBet50Props = useEnhancedButton({
+    onClick: () => handleQuickBetWithToast(50),
+    onLongPress: () => {
+      handleQuickBetWithToast(50)
+      toast.info('Long press detected', 'Quick bet ₽50 applied!')
+    },
+    disabled: isSpinning || 50 > balance
+  })
+
+  const quickBet100Props = useEnhancedButton({
+    onClick: () => handleQuickBetWithToast(100),
+    onLongPress: () => {
+      handleQuickBetWithToast(100)
+      toast.info('Long press detected', 'Quick bet ₽100 applied!')
+    },
+    disabled: isSpinning || 100 > balance
+  })
+
+  const quickBet500Props = useEnhancedButton({
+    onClick: () => handleQuickBetWithToast(500),
+    onLongPress: () => {
+      handleQuickBetWithToast(500)
+      toast.info('Long press detected', 'Quick bet ₽500 applied!')
+    },
+    disabled: isSpinning || 500 > balance
+  })
+
+  const quickBet1000Props = useEnhancedButton({
+    onClick: () => handleQuickBetWithToast(1000),
+    onLongPress: () => {
+      handleQuickBetWithToast(1000)
+      toast.info('Long press detected', 'Quick bet ₽1000 applied!')
+    },
+    disabled: isSpinning || 1000 > balance
+  })
+
+  // Map amounts to their button props
+  const quickBetButtonPropsMap = {
+    10: quickBet10Props,
+    50: quickBet50Props,
+    100: quickBet100Props,
+    500: quickBet500Props,
+    1000: quickBet1000Props
   }
 
   return (
@@ -133,30 +237,38 @@ const BettingPanel: React.FC<BettingPanelProps> = ({
         
         {/* Quick Bet Buttons */}
         <div className="flex flex-wrap gap-2 mb-3">
-          {quickBetAmounts.map(amount => (
-            <motion.button
-              key={amount}
-              className={`px-3 py-1 rounded text-sm font-medium ${
-                betAmount === amount
-                  ? 'bg-tarkov-accent text-tarkov-dark'
-                  : 'bg-tarkov-secondary text-gray-300 hover:bg-tarkov-accent/20'
-              }`}
-              onClick={() => handleQuickBet(amount)}
-              disabled={isSpinning || amount > balance}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              ₽{amount}
-            </motion.button>
-          ))}
+          {quickBetAmounts.map((amount, index) => {
+            const buttonProps = quickBetButtonPropsMap[amount as keyof typeof quickBetButtonPropsMap]
+            return (
+              <motion.button
+                key={amount}
+                {...buttonProps}
+                className={`px-3 py-1 rounded text-sm font-medium relative ${
+                  betAmount === amount
+                    ? 'bg-tarkov-accent text-tarkov-dark'
+                    : 'bg-tarkov-secondary text-gray-300 hover:bg-tarkov-accent/20'
+                } ${buttonProps.className || ''}`}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                ₽{amount}
+                <span className="absolute -top-1 -right-1 text-xs text-tarkov-accent opacity-60">
+                  {index + 1}
+                </span>
+              </motion.button>
+            )
+          })}
           <motion.button
-            className="px-3 py-1 rounded text-sm font-medium bg-tarkov-warning text-tarkov-dark hover:bg-tarkov-warning/80"
+            className="px-3 py-1 rounded text-sm font-medium bg-tarkov-warning text-tarkov-dark hover:bg-tarkov-warning/80 relative"
             onClick={handleMaxBet}
             disabled={isSpinning || balance === 0}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
             Max
+            <span className="absolute -top-1 -right-1 text-xs text-tarkov-warning opacity-60">
+              M
+            </span>
           </motion.button>
         </div>
 
@@ -215,19 +327,54 @@ const BettingPanel: React.FC<BettingPanelProps> = ({
       )}
 
       {/* Place Bet Button */}
-      <motion.button
-        className={`w-full py-4 rounded-lg font-bold text-lg transition-all ${
-          isSpinning
-            ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-            : 'bg-tarkov-accent text-tarkov-dark hover:bg-tarkov-accent/90 shadow-lg hover:shadow-tarkov-accent/25'
-        }`}
-        onClick={onPlaceBet}
-        disabled={isSpinning || betAmount > balance || betAmount < 1}
-        whileHover={!isSpinning ? { scale: 1.02 } : {}}
-        whileTap={!isSpinning ? { scale: 0.98 } : {}}
-      >
-        {isSpinning ? 'Spinning...' : 'Place Bet'}
-      </motion.button>
+      <div className="space-y-3">
+        <motion.button
+          className={`w-full py-4 rounded-lg font-bold text-lg transition-all relative ${
+            isSpinning
+              ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+              : 'bg-tarkov-accent text-tarkov-dark hover:bg-tarkov-accent/90 shadow-lg hover:shadow-tarkov-accent/25'
+          }`}
+          onClick={handlePlaceBet}
+          disabled={isSpinning || betAmount > balance || betAmount < 1}
+          whileHover={!isSpinning ? { scale: 1.02 } : {}}
+          whileTap={!isSpinning ? { scale: 0.98 } : {}}
+        >
+          {isSpinning ? 'Spinning...' : 'Place Bet'}
+          {!isSpinning && (
+            <span className="absolute right-4 top-1/2 transform -translate-y-1/2 text-sm opacity-60">
+              ⏎
+            </span>
+          )}
+        </motion.button>
+
+        {/* Help Button */}
+        <button
+          onClick={() => setShowShortcutsHelp(true)}
+          className="w-full py-2 text-sm text-gray-400 hover:text-tarkov-accent transition-colors"
+        >
+          Press H for keyboard shortcuts
+        </button>
+      </div>
+
+      {/* Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showConfirmDialog}
+        onClose={handleCancelBet}
+        onConfirm={handleConfirmBet}
+        title="Confirm Large Bet"
+        message={`Are you sure you want to bet ₽${betAmount.toLocaleString()}? This is ${((betAmount / balance) * 100).toFixed(1)}% of your balance.`}
+        confirmText="Place Bet"
+        cancelText="Cancel"
+        type="warning"
+      />
+
+      {/* Keyboard Shortcuts Help */}
+      <KeyboardShortcutsHelp
+        isOpen={showShortcutsHelp}
+        onClose={() => setShowShortcutsHelp(false)}
+        shortcuts={shortcuts}
+        title="Game Controls"
+      />
     </div>
   )
 }

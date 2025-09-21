@@ -11,6 +11,10 @@ export interface AuthUser {
 declare module 'hono' {
   interface ContextVariableMap {
     user: AuthUser
+    validatedData: any
+    sessionId: string
+    sessionManager: any
+    ipSecurityManager: any
   }
 }
 

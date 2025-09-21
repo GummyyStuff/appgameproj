@@ -6,7 +6,7 @@ A Tarkov-themed casino gaming website offering classic casino games with virtual
 
 - **Roulette**: Classic casino roulette with Tarkov theming
 - **Blackjack**: Strategic card gameplay
-- **Plinko**: Exciting ball-drop gambling
+
 - **Virtual Currency**: Safe gaming with no real money risk
 - **Tarkov Theming**: Immersive design with game assets and aesthetics
 
@@ -230,7 +230,7 @@ bun run test
 ### Games
 - **POST** `/api/games/roulette/bet` - Place roulette bet
 - **POST** `/api/games/blackjack/start` - Start blackjack hand
-- **POST** `/api/games/plinko/drop` - Drop plinko ball
+
 
 ## 🎨 Theming
 

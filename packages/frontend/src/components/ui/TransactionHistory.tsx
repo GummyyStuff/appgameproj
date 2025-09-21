@@ -83,7 +83,7 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
     switch (gameType) {
       case 'roulette': return '🎰'
       case 'blackjack': return '🃏'
-      case 'plinko': return '🎯'
+
       case 'admin': return '⚙️'
       default: return '🎮'
     }
@@ -93,7 +93,7 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
     switch (gameType) {
       case 'roulette': return 'Roulette'
       case 'blackjack': return 'Blackjack'
-      case 'plinko': return 'Plinko'
+
       case 'admin': return 'Admin'
       default: return gameType.charAt(0).toUpperCase() + gameType.slice(1)
     }
@@ -141,7 +141,7 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
               <option value="all">All Games</option>
               <option value="roulette">Roulette</option>
               <option value="blackjack">Blackjack</option>
-              <option value="plinko">Plinko</option>
+
             </select>
             
             <button
@@ -221,9 +221,7 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
                     {transaction.game_type === 'blackjack' && transaction.result_data.player_hand && (
                       <span>Player: {transaction.result_data.player_hand.join(', ')} | Dealer: {transaction.result_data.dealer_hand?.join(', ')}</span>
                     )}
-                    {transaction.game_type === 'plinko' && transaction.result_data.multiplier && (
-                      <span>Multiplier: {transaction.result_data.multiplier}x</span>
-                    )}
+
                   </div>
                 </div>
               )}

@@ -45,7 +45,7 @@
   - Build game result validation and payout calculation system
   - Create game state management utilities
   - Write comprehensive tests for game fairness and edge cases
-  - _Requirements: 3.3, 4.4, 5.4_
+  - _Requirements: 3.3, 4.4_
 
 - [x] 6. Build roulette game backend logic
   - Implement roulette betting validation and payout calculations
@@ -63,13 +63,7 @@
   - Write comprehensive tests for blackjack rules and edge cases
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
 
-- [x] 8. Build plinko game backend logic
-  - Implement physics simulation for ball drop mechanics
-  - Create risk level configuration and multiplier calculations
-  - Build API endpoints for ball drop and result processing
-  - Implement ball path tracking and result validation
-  - Write tests for plinko physics and payout accuracy
-  - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
+
 
 - [x] 9. Implement game history and statistics system
   - Create game history recording for all game types
@@ -127,13 +121,7 @@
   - Create responsive layout for different screen sizes
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 6.1, 6.2, 6.3, 6.4, 6.5_
 
-- [x] 15. Build plinko game frontend interface
-  - Create plinko board with pegs and multiplier slots
-  - Implement ball drop physics animation
-  - Build risk level selection and bet amount controls
-  - Add ball path visualization and result display
-  - Create responsive design with touch controls for mobile
-  - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 6.1, 6.2, 6.3, 6.4, 6.5_
+
 
 - [x] 16. Implement game history and statistics UI
   - Create game history table with filtering and pagination
@@ -157,7 +145,7 @@
   - Build client-side subscription management for game updates
   - Create real-time balance updates across all clients using Supabase subscriptions
   - Add real-time notifications for game events through Supabase channels
-  - _Requirements: 3.3, 4.4, 5.4_
+  - _Requirements: 3.3, 4.4_
 
 - [x] 19. Implement comprehensive testing suite
   - Write unit tests for all game logic and currency operations
@@ -185,7 +173,7 @@
   - Test authentication flow with proper HTTPS configuration
   - _Requirements: 1.3, 1.4, 8.1, 8.2_
 
-- [-] 21. Enhance user experience and polish
+- [x] 21. Enhance user experience and polish
   - Add loading states and skeleton screens for better UX
   - Implement toast notifications for user actions
   - Add confirmation dialogs for significant actions (large bets, etc.)
@@ -193,15 +181,14 @@
   - Add keyboard shortcuts for power users
   - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5_
 
-- [ ] 22. Implement advanced game features
-  - Add game tutorials and help modals for new players
-  - Implement betting limits and responsible gaming features
-  - Add game replay functionality to review past games
+- [x] 22. Implement advanced game features
+  - ~~Add game tutorials and help modals for new players~~ (Removed in task 30)
+  - ~~Add game replay functionality to review past games~~ (Removed in task 29)
   - Create achievement system with Tarkov-themed badges
-  - Add social features like leaderboards and player comparisons
-  - _Requirements: 3.1, 4.1, 5.1, 7.1, 7.2, 7.3_
+  - ~~Add social features like leaderboards and player comparisons~~ (Moved to profile page in task 31)
+  - _Requirements: 3.1, 4.1, 6.1, 6.2, 6.3_
 
-- [ ] 23. Performance optimization and monitoring
+- [x] 23. Performance optimization and monitoring
   - Implement client-side caching strategies for game data
   - Add performance monitoring and analytics
   - Optimize bundle size and implement code splitting
@@ -209,18 +196,66 @@
   - Implement A/B testing framework for game features
   - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5_
 
-- [ ] 24. Security hardening and compliance
+- [x] 24. Security hardening and compliance
   - Implement rate limiting for game actions
-  - Add CAPTCHA for suspicious activity detection
   - Enhance input validation and sanitization
   - Add audit logging for administrative actions
   - Implement session timeout and security headers
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_
 
-- [ ] 25. Documentation and maintenance
+- [x] 25. Documentation and maintenance
   - Create comprehensive API documentation
   - Write user guides and game rules documentation
   - Set up automated testing in CI/CD pipeline
   - Create database backup and recovery procedures
   - Document deployment and maintenance procedures
   - _Requirements: All requirements validation_
+## Feature Removal Tasks
+
+- [x] 26. Remove plinko game from existing codebase
+  - Delete all plinko-specific files and components
+  - Remove plinko references from shared code and configurations
+  - Update database schema to remove plinko game type
+  - Remove plinko routes and API endpoints
+  - Update frontend navigation and routing
+  - Clean up tests and documentation
+  - _Requirements: Remove plinko game completely while preserving roulette and blackjack functionality_
+
+- [x] 27. Remove responsible gaming limits from the application
+  - Delete ResponsibleGaming component and all related functionality
+  - Remove betting limits, session limits, and time limits from useAdvancedFeatures hook
+  - Update AdvancedFeaturesPage to remove responsible gaming features
+  - Clean up UI component exports and imports
+  - Remove responsible gaming references from documentation
+  - _Requirements: Remove all responsible gaming restrictions while maintaining core game functionality_
+
+- [x] 28. Remove features page and related components
+  - Delete AdvancedFeaturesPage component and route
+  - Remove features page navigation links from main navigation
+  - Update routing configuration to remove features page route
+  - Clean up any references to features page in documentation
+  - _Requirements: Simplify navigation by removing dedicated features page_
+
+- [x] 29. Remove game replay system
+  - Delete GameReplay component and all related functionality
+  - Remove game replay data storage from database schema
+  - Remove replay-related API endpoints and services
+  - Clean up replay references from game history components
+  - Update tests to remove replay functionality testing
+  - _Requirements: Remove game replay functionality while maintaining game history_
+
+- [x] 30. Remove game tutorials system
+  - Delete GameTutorial component and all tutorial-related functionality
+  - Remove tutorial triggers and modal systems
+  - Clean up tutorial references from game components
+  - Remove tutorial data and content from codebase
+  - Update UI components to remove tutorial integration
+  - _Requirements: Remove tutorial system while maintaining core game functionality_
+
+- [x] 31. Move leaderboards to profile page
+  - Remove standalone Leaderboard page and route
+  - Integrate leaderboard components into UserProfile page
+  - Update leaderboard API endpoints to work with profile context
+  - Modify navigation to remove leaderboard menu item
+  - Update leaderboard styling to fit within profile page layout
+  - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_

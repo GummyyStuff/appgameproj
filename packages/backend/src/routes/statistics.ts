@@ -48,7 +48,9 @@ const gameHistorySchema = z.object({
   )
 })
 
-// All statistics routes require authentication
+
+
+// All other statistics routes require authentication
 statisticsRoutes.use('*', authMiddleware)
 
 // Get comprehensive user statistics with advanced analytics
@@ -297,36 +299,7 @@ statisticsRoutes.get('/playing-habits', asyncHandler(async (c) => {
   }
 }))
 
-// Get leaderboard with various metrics
-statisticsRoutes.get('/leaderboard', asyncHandler(async (c) => {
-  const query = c.req.query()
 
-  try {
-    const params = leaderboardSchema.parse({
-      metric: query.metric as any,
-      limit: query.limit ? parseInt(query.limit) : undefined
-    })
-
-    const leaderboard = await StatisticsService.getLeaderboard(params.metric, params.limit)
-
-    return c.json({
-      success: true,
-      ...leaderboard,
-      generated_at: new Date().toISOString()
-    })
-
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      throw new HTTPException(400, { 
-        message: 'Invalid parameters', 
-        cause: error.errors 
-      })
-    }
-    
-    console.error('Leaderboard error:', error)
-    throw new HTTPException(500, { message: 'Failed to fetch leaderboard' })
-  }
-}))
 
 // Get global statistics (for admin/analytics)
 statisticsRoutes.get('/global', asyncHandler(async (c) => {

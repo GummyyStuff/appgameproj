@@ -8,7 +8,7 @@ import ForgotPasswordPage from '../pages/ForgotPasswordPage'
 import ProfilePage from '../pages/ProfilePage'
 import RoulettePage from '../pages/RoulettePage'
 import BlackjackPage from '../pages/BlackjackPage'
-import PlinkoPage from '../pages/PlinkoPage'
+
 import HistoryPage from '../pages/HistoryPage'
 import ProtectedRoute from '../components/auth/ProtectedRoute'
 
@@ -57,14 +57,7 @@ const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
-      {
-        path: 'plinko',
-        element: (
-          <ProtectedRoute>
-            <PlinkoPage />
-          </ProtectedRoute>
-        ),
-      },
+
       {
         path: 'history',
         element: (

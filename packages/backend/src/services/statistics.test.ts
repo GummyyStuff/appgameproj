@@ -35,15 +35,7 @@ describe('StatisticsService', () => {
         },
         created_at: '2024-01-15T11:00:00Z'
       },
-      {
-        id: '3',
-        user_id: 'test-user',
-        game_type: 'plinko',
-        bet_amount: 25,
-        win_amount: 75,
-        result_data: { risk_level: 'medium', ball_path: [0, 1, 0, 1], multiplier: 3, landing_slot: 5 },
-        created_at: '2024-01-15T12:00:00Z'
-      },
+
       {
         id: '4',
         user_id: 'test-user',
@@ -108,8 +100,8 @@ describe('StatisticsService', () => {
     it('should calculate breakdown for all game types', () => {
       const breakdown = StatisticsService.calculateGameTypeBreakdown(mockGameHistory)
 
-      expect(breakdown).toHaveLength(3)
-      expect(breakdown.map(b => b.gameType)).toEqual(expect.arrayContaining(['roulette', 'blackjack', 'plinko']))
+      expect(breakdown).toHaveLength(2)
+      expect(breakdown.map(b => b.gameType)).toEqual(expect.arrayContaining(['roulette', 'blackjack']))
 
       // Find roulette breakdown
       const rouletteBreakdown = breakdown.find(b => b.gameType === 'roulette')
@@ -127,13 +119,7 @@ describe('StatisticsService', () => {
       expect(blackjackBreakdown!.statistics.totalWon).toBe(0)
       expect(blackjackBreakdown!.statistics.winRate).toBe(0)
 
-      // Find plinko breakdown
-      const plinkoBreakdown = breakdown.find(b => b.gameType === 'plinko')
-      expect(plinkoBreakdown).toBeDefined()
-      expect(plinkoBreakdown!.statistics.totalGames).toBe(1)
-      expect(plinkoBreakdown!.statistics.totalWagered).toBe(25)
-      expect(plinkoBreakdown!.statistics.totalWon).toBe(75)
-      expect(plinkoBreakdown!.statistics.winRate).toBe(100)
+
     })
 
     it('should assign popularity ranks correctly', () => {
@@ -143,10 +129,9 @@ describe('StatisticsService', () => {
       const rouletteBreakdown = breakdown.find(b => b.gameType === 'roulette')
       expect(rouletteBreakdown!.popularityRank).toBe(1)
 
-      // Blackjack and Plinko should be tied for second (1 game each)
+      // Blackjack should be second (1 game)
       const blackjackBreakdown = breakdown.find(b => b.gameType === 'blackjack')
-      const plinkoBreakdown = breakdown.find(b => b.gameType === 'plinko')
-      expect([blackjackBreakdown!.popularityRank, plinkoBreakdown!.popularityRank]).toEqual(expect.arrayContaining([2, 3]))
+      expect(blackjackBreakdown!.popularityRank).toBe(2)
     })
 
     it('should handle empty game history', () => {

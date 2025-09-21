@@ -34,7 +34,7 @@
   --color-roulette-black: #1F2937;
   --color-roulette-green: #059669;
   --color-blackjack-felt: #0F5132;
-  --color-plinko-board: #8B4513;
+
   
   /* Font families */
   --font-family-tarkov: 'Roboto Condensed', 'Arial', sans-serif;
@@ -176,6 +176,22 @@ a:focus-visible {
 
 .animate-flicker {
   animation: flicker 1.5s infinite;
+}
+
+/* Shimmer animation for skeleton loading */
+@keyframes shimmer {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, #2D3748 0%, #4A5568 50%, #2D3748 100%);
+  background-size: 200px 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
 }
 
 /* Slide in from different directions */

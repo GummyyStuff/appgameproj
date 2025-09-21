@@ -5,11 +5,11 @@
 
 import { supabaseAdmin as supabase } from '../config/supabase'
 import { GameResult } from './game-engine/types'
-import { GameHistory, RouletteResult, PlinkoResult } from '../types/database'
+import { GameHistory, RouletteResult } from '../types/database'
 
 export interface GameStateUpdate {
   userId: string
-  gameType: 'roulette' | 'blackjack' | 'plinko'
+  gameType: 'roulette' | 'blackjack'
   gameId?: string
   status: 'betting' | 'playing' | 'completed'
   data?: any
@@ -28,18 +28,7 @@ export interface RouletteStateUpdate extends GameStateUpdate {
   }
 }
 
-export interface PlinkoStateUpdate extends GameStateUpdate {
-  gameType: 'plinko'
-  data?: {
-    betAmount?: number
-    riskLevel?: 'low' | 'medium' | 'high'
-    ballPath?: number[]
-    landingSlot?: number
-    multiplier?: number
-    winAmount?: number
-    ballDropInProgress?: boolean
-  }
-}
+
 
 export class RealtimeGameService {
   private static instance: RealtimeGameService
@@ -274,79 +263,7 @@ export class RealtimeGameService {
     }
   }
 
-  /**
-   * Handle plinko game start
-   */
-  async handlePlinkoGameStart(userId: string, betAmount: number, riskLevel: 'low' | 'medium' | 'high', gameId: string) {
-    const update: PlinkoStateUpdate = {
-      userId,
-      gameType: 'plinko',
-      gameId,
-      status: 'betting',
-      data: {
-        betAmount,
-        riskLevel,
-        ballDropInProgress: false
-      }
-    }
 
-    await this.broadcastGameUpdate(update)
-  }
-
-  /**
-   * Handle plinko ball drop start
-   */
-  async handlePlinkoBallDropStart(userId: string, gameId: string) {
-    const update: PlinkoStateUpdate = {
-      userId,
-      gameType: 'plinko',
-      gameId,
-      status: 'playing',
-      data: {
-        ballDropInProgress: true
-      }
-    }
-
-    await this.broadcastGameUpdate(update)
-  }
-
-  /**
-   * Handle plinko game completion
-   */
-  async handlePlinkoGameComplete(userId: string, gameId: string, result: GameResult) {
-    const plinkoResult = result.resultData as PlinkoResult
-    
-    const update: PlinkoStateUpdate = {
-      userId,
-      gameType: 'plinko',
-      gameId,
-      status: 'completed',
-      data: {
-        ballPath: plinkoResult.ball_path,
-        landingSlot: plinkoResult.landing_slot,
-        multiplier: plinkoResult.multiplier,
-        winAmount: result.winAmount,
-        ballDropInProgress: false
-      }
-    }
-
-    await this.broadcastGameUpdate(update)
-
-    // Broadcast big wins globally (wins over 1000)
-    if (result.winAmount > 1000) {
-      await this.broadcastGlobalGameEvent({
-        userId,
-        gameType: 'plinko',
-        gameId,
-        status: 'completed',
-        data: {
-          winAmount: result.winAmount,
-          gameType: 'plinko',
-          multiplier: plinkoResult.multiplier
-        }
-      })
-    }
-  }
 
   /**
    * Handle balance updates

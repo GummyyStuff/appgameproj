@@ -6,6 +6,18 @@ export { default as TarkovBackground, TarkovParticles, TarkovDecorations } from 
 export { default as TarkovLoadingScreen, GameLoadingScreen, LoadingOverlay } from './TarkovLoadingScreen'
 export { SoundProvider, SoundControlPanel, useSoundManager } from './SoundManager'
 
+// Enhanced UX components
+export { default as Toast } from './Toast'
+export { default as ToastContainer } from './ToastContainer'
+export { default as ConfirmDialog } from './ConfirmDialog'
+export { default as Skeleton, SkeletonText, SkeletonCard, SkeletonGameCard, SkeletonTable } from './Skeleton'
+export { default as KeyboardShortcutsHelp } from './KeyboardShortcutsHelp'
+
+// Advanced Game Features
+export { default as AchievementSystem } from './AchievementSystem'
+export { default as Leaderboard } from './Leaderboard'
+export { default as ProfileLeaderboard } from './ProfileLeaderboard'
+
 // Existing components
 export { default as CurrencyDisplay } from './CurrencyDisplay'
 export { default as BalanceAnimation } from './BalanceAnimation'

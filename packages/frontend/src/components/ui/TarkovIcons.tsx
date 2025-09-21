@@ -52,22 +52,7 @@ export const TarkovIcons = {
     </svg>
   ),
 
-  Plinko: ({ className = '', size = 24 }: IconProps) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" className={className} fill="currentColor">
-      <polygon points="12,2 2,20 22,20" stroke="currentColor" strokeWidth="2" fill="none"/>
-      <circle cx="12" cy="6" r="1" fill="currentColor"/>
-      <circle cx="9" cy="9" r="1" fill="currentColor"/>
-      <circle cx="15" cy="9" r="1" fill="currentColor"/>
-      <circle cx="6" cy="12" r="1" fill="currentColor"/>
-      <circle cx="12" cy="12" r="1" fill="currentColor"/>
-      <circle cx="18" cy="12" r="1" fill="currentColor"/>
-      <circle cx="3" cy="15" r="1" fill="currentColor"/>
-      <circle cx="9" cy="15" r="1" fill="currentColor"/>
-      <circle cx="15" cy="15" r="1" fill="currentColor"/>
-      <circle cx="21" cy="15" r="1" fill="currentColor"/>
-      <circle cx="12" cy="4" r="2" fill="#F6AD55"/>
-    </svg>
-  ),
+
 
   // UI icons
   Skull: ({ className = '', size = 24 }: IconProps) => (
@@ -113,6 +98,25 @@ export const TarkovIcons = {
   Hydration: ({ className = '', size = 24 }: IconProps) => (
     <svg width={size} height={size} viewBox="0 0 24 24" className={className} fill="currentColor">
       <path d="M12 2c1.1 0 2 .9 2 2v8c0 1.1-.9 2-2 2s-2-.9-2-2V4c0-1.1.9-2 2-2zm4.24 7.76l1.41 1.41C18.78 10.04 19 9.05 19 8c0-2.21-1.79-4-4-4V2c3.31 0 6 2.69 6 6 0 1.66-.67 3.16-1.76 4.24zM6.76 9.76C5.67 8.84 5 7.34 5 6c0-3.31 2.69-6 6-6v2C8.79 2 7 3.79 7 6c0 1.05.22 2.04 1.35 3.17l1.41-1.41z"/>
+    </svg>
+  ),
+
+  // Navigation icons
+  Close: ({ className = '', size = 24 }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" className={className} fill="currentColor">
+      <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+    </svg>
+  ),
+
+  ArrowLeft: ({ className = '', size = 24 }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" className={className} fill="currentColor">
+      <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+    </svg>
+  ),
+
+  ArrowRight: ({ className = '', size = 24 }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" className={className} fill="currentColor">
+      <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
     </svg>
   )
 }

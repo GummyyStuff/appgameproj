@@ -5,29 +5,35 @@ import { supabaseAdmin } from '../config/supabase'
 import { asyncHandler } from '../middleware/error'
 import { logSecurityEvent } from '../middleware/logger'
 import { env } from '../config/env'
+import { authRateLimit, sensitiveRateLimit } from '../middleware/rate-limit'
+import { validationMiddleware, commonSchemas } from '../middleware/validation'
+import { auditAuth, auditLog } from '../middleware/audit'
 
 export const authRoutes = new Hono()
 
-// Validation schemas
+// Enhanced validation schemas with security
 const registerSchema = z.object({
-  email: z.string().email('Invalid email format'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-  username: z.string().min(3, 'Username must be at least 3 characters').max(20, 'Username must be less than 20 characters')
+  email: commonSchemas.email,
+  password: commonSchemas.password,
+  username: commonSchemas.username
 })
 
 const loginSchema = z.object({
-  email: z.string().email('Invalid email format'),
-  password: z.string().min(1, 'Password is required')
+  email: commonSchemas.email,
+  password: z.string().min(1, 'Password is required').max(128)
 })
 
 const resetPasswordSchema = z.object({
-  email: z.string().email('Invalid email format')
+  email: commonSchemas.email
 })
 
 // Register new user
-authRoutes.post('/register', asyncHandler(async (c) => {
-  const body = await c.req.json()
-  const { email, password, username } = registerSchema.parse(body)
+authRoutes.post('/register', 
+  authRateLimit,
+  validationMiddleware(registerSchema),
+  auditAuth('user_register'),
+  asyncHandler(async (c) => {
+  const { email, password, username } = c.get('validatedData')
   
   const ip = c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP')
 
@@ -79,6 +85,7 @@ authRoutes.post('/register', asyncHandler(async (c) => {
     }
 
     logSecurityEvent('user_registered', authData.user.id, ip, { email, username })
+    await auditLog.userRegistered(authData.user.id, email, ip)
 
     return c.json({
       message: 'User registered successfully',
@@ -99,9 +106,12 @@ authRoutes.post('/register', asyncHandler(async (c) => {
 }))
 
 // Login user
-authRoutes.post('/login', asyncHandler(async (c) => {
-  const body = await c.req.json()
-  const { email, password } = loginSchema.parse(body)
+authRoutes.post('/login',
+  authRateLimit,
+  validationMiddleware(loginSchema),
+  auditAuth('user_login'),
+  asyncHandler(async (c) => {
+  const { email, password } = c.get('validatedData')
   
   const ip = c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP')
 
@@ -125,6 +135,7 @@ authRoutes.post('/login', asyncHandler(async (c) => {
       .single()
 
     logSecurityEvent('user_logged_in', data.user.id, ip, { email })
+    await auditLog.userLoggedIn(data.user.id, email, ip)
 
     return c.json({
       message: 'Login successful',
@@ -151,7 +162,9 @@ authRoutes.post('/login', asyncHandler(async (c) => {
 }))
 
 // Logout user
-authRoutes.post('/logout', asyncHandler(async (c) => {
+authRoutes.post('/logout', 
+  auditAuth('user_logout'),
+  asyncHandler(async (c) => {
   const authHeader = c.req.header('Authorization')
   const ip = c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP')
   
@@ -167,6 +180,7 @@ authRoutes.post('/logout', asyncHandler(async (c) => {
       
       if (user) {
         logSecurityEvent('user_logged_out', user.id, ip)
+        await auditLog.userLoggedOut(user.id, ip)
       }
     } catch (error) {
       console.warn('Logout error:', error)
@@ -177,9 +191,12 @@ authRoutes.post('/logout', asyncHandler(async (c) => {
 }))
 
 // Reset password
-authRoutes.post('/reset-password', asyncHandler(async (c) => {
-  const body = await c.req.json()
-  const { email } = resetPasswordSchema.parse(body)
+authRoutes.post('/reset-password',
+  sensitiveRateLimit,
+  validationMiddleware(resetPasswordSchema),
+  auditAuth('password_reset_request'),
+  asyncHandler(async (c) => {
+  const { email } = c.get('validatedData')
   
   const ip = c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP')
 

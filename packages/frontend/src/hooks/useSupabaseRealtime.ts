@@ -10,7 +10,7 @@ import { useAuth } from './useAuth'
 
 export interface GameStateUpdate {
   userId: string
-  gameType: 'roulette' | 'blackjack' | 'plinko'
+  gameType: 'roulette' | 'blackjack'
   gameId?: string
   status: 'betting' | 'playing' | 'completed'
   data?: any
@@ -46,6 +46,12 @@ export function useSupabaseRealtime(callbacks: RealtimeCallbacks = {}) {
   const { user } = useAuth()
   const channelsRef = useRef<Map<string, RealtimeChannel>>(new Map())
   const isConnectedRef = useRef(false)
+  const retryCountRef = useRef(0)
+  const maxRetries = 3
+  const connectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  
+  // Feature flag to disable realtime if needed
+  const realtimeEnabled = import.meta.env.VITE_REALTIME_ENABLED !== 'false'
 
   const {
     onGameUpdate,
@@ -82,8 +88,13 @@ export function useSupabaseRealtime(callbacks: RealtimeCallbacks = {}) {
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           console.log('✅ Subscribed to game events channel')
+          retryCountRef.current = 0
         } else if (status === 'CHANNEL_ERROR') {
-          console.error('❌ Game events channel error')
+          console.warn('⚠️  Game events channel error - realtime may not be configured')
+          if (retryCountRef.current < maxRetries) {
+            retryCountRef.current++
+            console.log(`🔄 Retrying connection (${retryCountRef.current}/${maxRetries})`)
+          }
         }
       })
 
@@ -115,7 +126,7 @@ export function useSupabaseRealtime(callbacks: RealtimeCallbacks = {}) {
         if (status === 'SUBSCRIBED') {
           console.log('✅ Subscribed to balance updates channel')
         } else if (status === 'CHANNEL_ERROR') {
-          console.error('❌ Balance updates channel error')
+          console.warn('⚠️  Balance updates channel error - realtime may not be configured')
         }
       })
 
@@ -154,7 +165,7 @@ export function useSupabaseRealtime(callbacks: RealtimeCallbacks = {}) {
         if (status === 'SUBSCRIBED') {
           console.log('✅ Subscribed to notifications channel')
         } else if (status === 'CHANNEL_ERROR') {
-          console.error('❌ Notifications channel error')
+          console.warn('⚠️  Notifications channel error - realtime may not be configured')
         }
       })
 
@@ -194,7 +205,7 @@ export function useSupabaseRealtime(callbacks: RealtimeCallbacks = {}) {
         if (status === 'SUBSCRIBED') {
           console.log(`✅ Subscribed to user channel: ${user.id}`)
         } else if (status === 'CHANNEL_ERROR') {
-          console.error(`❌ User channel error: ${user.id}`)
+          console.warn(`⚠️  User channel error: ${user.id} - realtime may not be configured`)
         }
       })
 
@@ -272,7 +283,7 @@ export function useSupabaseRealtime(callbacks: RealtimeCallbacks = {}) {
         if (status === 'SUBSCRIBED') {
           console.log('✅ Subscribed to database changes')
         } else if (status === 'CHANNEL_ERROR') {
-          console.error('❌ Database changes channel error')
+          console.warn('⚠️  Database changes channel error - realtime may not be configured')
         }
       })
 
@@ -283,7 +294,17 @@ export function useSupabaseRealtime(callbacks: RealtimeCallbacks = {}) {
    * Initialize all subscriptions
    */
   const connect = useCallback(() => {
-    if (isConnectedRef.current) return
+    if (isConnectedRef.current || !realtimeEnabled) {
+      if (!realtimeEnabled) {
+        console.log('⚠️  Realtime is disabled via VITE_REALTIME_ENABLED=false')
+      }
+      return
+    }
+
+    // Clear any pending connection timeout
+    if (connectTimeoutRef.current) {
+      clearTimeout(connectTimeoutRef.current)
+    }
 
     subscribeToGameEvents()
     subscribeToBalanceUpdates()
@@ -309,7 +330,15 @@ export function useSupabaseRealtime(callbacks: RealtimeCallbacks = {}) {
    * Disconnect all subscriptions
    */
   const disconnect = useCallback(() => {
+    if (!isConnectedRef.current) return
+    
     console.log('🔌 Disconnecting Supabase Realtime...')
+
+    // Clear any pending connection timeout
+    if (connectTimeoutRef.current) {
+      clearTimeout(connectTimeoutRef.current)
+      connectTimeoutRef.current = null
+    }
 
     for (const [name, channel] of channelsRef.current) {
       supabase.removeChannel(channel)
@@ -351,19 +380,46 @@ export function useSupabaseRealtime(callbacks: RealtimeCallbacks = {}) {
     }
   }, [])
 
-  // Auto-connect when user is available
+  // Auto-connect when user is available (debounced)
   useEffect(() => {
-    if (user && !isConnectedRef.current) {
-      connect()
+    if (user && !isConnectedRef.current && realtimeEnabled) {
+      // Clear any existing timeout
+      if (connectTimeoutRef.current) {
+        clearTimeout(connectTimeoutRef.current)
+      }
+      
+      // Debounce connection to avoid rapid reconnections in development
+      connectTimeoutRef.current = setTimeout(() => {
+        if (user && !isConnectedRef.current && realtimeEnabled) {
+          console.log('🔌 Connecting to Supabase Realtime...')
+          connect()
+        }
+      }, import.meta.env.DEV ? 500 : 0) // 500ms delay in development, immediate in production
     }
-  }, [user, connect])
+    
+    return () => {
+      if (connectTimeoutRef.current) {
+        clearTimeout(connectTimeoutRef.current)
+      }
+    }
+  }, [user, realtimeEnabled])
 
-  // Cleanup on unmount
+  // Cleanup on unmount - only in production or when actually unmounting
   useEffect(() => {
     return () => {
-      disconnect()
+      // In development mode, don't disconnect immediately to avoid Strict Mode issues
+      if (import.meta.env.DEV) {
+        console.log('🔌 Development mode: Keeping realtime connection alive')
+        return
+      }
+      
+      // In production, disconnect normally
+      if (isConnectedRef.current) {
+        console.log('🔌 Production mode: Disconnecting realtime on unmount')
+        disconnect()
+      }
     }
-  }, [disconnect])
+  }, [])
 
   return {
     connect,

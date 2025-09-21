@@ -96,20 +96,7 @@ global.testUtils = {
     ...overrides
   }),
 
-  createMockPlinkoResponse: (overrides = {}) => ({
-    success: true,
-    gameId: 'test-game-123',
-    result: {
-      risk_level: 'medium',
-      ball_path: [1, 0, 1, 1, 0, 1, 0, 1],
-      landing_slot: 7,
-      multiplier: 2.1,
-      payout: 210
-    },
-    balance: 1110,
-    timestamp: '2024-01-15T10:00:00Z',
-    ...overrides
-  }),
+
 
   // Form validation helpers
   isValidBetAmount: (amount) => {

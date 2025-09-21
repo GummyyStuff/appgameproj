@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS user_profiles (
 CREATE TABLE IF NOT EXISTS game_history (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     user_id UUID REFERENCES user_profiles(id) ON DELETE CASCADE NOT NULL,
-    game_type VARCHAR(20) NOT NULL CHECK (game_type IN ('roulette', 'blackjack', 'plinko')),
+    game_type VARCHAR(20) NOT NULL CHECK (game_type IN ('roulette', 'blackjack')),
     bet_amount DECIMAL(15,2) NOT NULL CHECK (bet_amount > 0),
     win_amount DECIMAL(15,2) DEFAULT 0.00 NOT NULL CHECK (win_amount >= 0),
     result_data JSONB NOT NULL, -- Game-specific result data
