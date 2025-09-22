@@ -10,14 +10,22 @@ import { TarkovCard } from '../ui/TarkovCard'
 import { TarkovButton } from '../ui/TarkovButton'
 import CaseSelector, { CaseType } from './CaseSelector'
 import ItemReveal, { CaseOpeningResult } from './ItemReveal'
+import CaseOpeningCarousel, { CarouselItemData } from './CaseOpeningCarousel'
 import { formatCurrency } from '../../utils/currency'
+import { generateCarouselSequence, calculateWinningPosition, validateCarouselSequence, CAROUSEL_TIMING } from '../../utils/carousel'
 
 interface CaseOpeningGameState {
   isOpening: boolean
   isRevealing: boolean
+  isCarouselSpinning: boolean
+  isCarouselSetup: boolean
   selectedCase: CaseType | null
   lastResult: CaseOpeningResult | null
   openingHistory: CaseOpeningResult[]
+  carouselItems: CarouselItemData[]
+  winningItemIndex: number
+  caseItems: any[] // Items available in the selected case
+  useCarousel: boolean // Flag to enable/disable carousel
 }
 
 const CaseOpeningGame: React.FC = () => {
@@ -32,9 +40,15 @@ const CaseOpeningGame: React.FC = () => {
   const [gameState, setGameState] = useState<CaseOpeningGameState>({
     isOpening: false,
     isRevealing: false,
+    isCarouselSpinning: false,
+    isCarouselSetup: false,
     selectedCase: null,
     lastResult: null,
-    openingHistory: []
+    openingHistory: [],
+    carouselItems: [],
+    winningItemIndex: 0,
+    caseItems: [],
+    useCarousel: true // Enable carousel by default
   })
 
   // Data loading states
@@ -78,14 +92,21 @@ const CaseOpeningGame: React.FC = () => {
     }
   }
 
-  const openCase = async () => {
-    if (!gameState.selectedCase || !user) {
+  const openCase = async (caseType?: CaseType) => {
+    const selectedCase = caseType || gameState.selectedCase
+    
+    if (!selectedCase || !user) {
       return
     }
 
-    if (balance < gameState.selectedCase.price) {
-      toast.error('Insufficient balance', `You need ${formatCurrency(gameState.selectedCase.price - balance, 'roubles')} more`)
+    if (balance < selectedCase.price) {
+      toast.error('Insufficient balance', `You need ${formatCurrency(selectedCase.price - balance, 'roubles')} more`)
       return
+    }
+    
+    // Update selected case if passed as parameter
+    if (caseType) {
+      setGameState(prev => ({ ...prev, selectedCase: caseType }))
     }
 
     setError(null)
@@ -113,7 +134,7 @@ const CaseOpeningGame: React.FC = () => {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          caseTypeId: gameState.selectedCase.id
+          caseTypeId: selectedCase.id
         })
       })
 
@@ -134,61 +155,151 @@ const CaseOpeningGame: React.FC = () => {
         throw new Error(result.error || 'Case opening failed')
       }
 
-      // Start reveal animation after opening delay
+      // Generate carousel sequence and start animation
       setTimeout(() => {
-        // Play reveal sound
-        playCaseReveal()
-        
-        setGameState(prev => ({
-          ...prev,
-          isOpening: false,
-          isRevealing: true,
-          lastResult: result.opening_result,
-          openingHistory: [result.opening_result, ...prev.openingHistory.slice(0, 9)]
-        }))
-
-        // Update balance
-        refreshBalance()
-
-        // Track game for achievements
-        trackGamePlayed(
-          gameState.selectedCase!.price, 
-          result.opening_result.currency_awarded, 
-          'case_opening'
-        )
-
-        // Play rarity-specific sound after a short delay
-        setTimeout(() => {
-          playRarityReveal(result.opening_result.item_won.rarity)
-        }, 1500)
-
-        // Play result sound based on profit/loss
-        setTimeout(() => {
-          if (result.opening_result.currency_awarded > gameState.selectedCase!.price) {
-            playWinSound()
-          } else {
-            playLoseSound()
-          }
-        }, 2500)
-
-        // Show toast notification
-        const profit = result.opening_result.currency_awarded - gameState.selectedCase!.price
-        setTimeout(() => {
-          if (profit > 0) {
-            toast.success(
-              `${result.opening_result.item_won.rarity.toUpperCase()} Item!`,
-              `You won ${result.opening_result.item_won.name} (+${formatCurrency(profit, 'roubles')})`,
-              { duration: 5000 }
+        if (gameState.useCarousel) {
+          try {
+            // Set carousel setup state
+            setGameState(prev => ({ ...prev, isOpening: false, isCarouselSetup: true }))
+            
+            // Generate carousel item sequence with real case items
+            const winningPosition = calculateWinningPosition(CAROUSEL_TIMING.SEQUENCE_LENGTH)
+            
+            // Ensure we have a proper item pool - if case items aren't loaded, create a basic pool
+            let itemPool = gameState.caseItems
+            if (!itemPool || itemPool.length === 0) {
+              // Create a basic item pool with the winning item and some variations
+              const winningItem = result.opening_result.item_won
+              itemPool = [
+                winningItem,
+                // Add some common items as fallback with proper structure
+                { 
+                  id: 'fallback-1', 
+                  name: 'Bandage', 
+                  rarity: 'common', 
+                  base_value: 100,
+                  category: 'medical',
+                  is_active: true,
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString()
+                },
+                { 
+                  id: 'fallback-2', 
+                  name: 'Salewa First Aid Kit', 
+                  rarity: 'uncommon', 
+                  base_value: 300,
+                  category: 'medical',
+                  is_active: true,
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString()
+                },
+                { 
+                  id: 'fallback-3', 
+                  name: 'IFAK Personal Tactical First Aid Kit', 
+                  rarity: 'rare', 
+                  base_value: 800,
+                  category: 'medical',
+                  is_active: true,
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString()
+                }
+              ]
+            }
+            
+            // Filter out any invalid items
+            itemPool = itemPool.filter(item => 
+              item && 
+              item.id && 
+              item.name && 
+              item.rarity && 
+              typeof item.base_value === 'number'
             )
-          } else {
-            toast.info(
-              'Item Received',
-              `You got ${result.opening_result.item_won.name}`,
-              { duration: 4000 }
+            
+            // Ensure we still have items after filtering
+            if (itemPool.length === 0) {
+              throw new Error('No valid items available for carousel')
+            }
+            
+            const carouselItems = generateCarouselSequence(
+              itemPool,
+              result.opening_result.item_won,
+              CAROUSEL_TIMING.SEQUENCE_LENGTH,
+              winningPosition
+            )
+
+            // Validate the sequence
+            if (!validateCarouselSequence(carouselItems)) {
+              throw new Error('Invalid carousel sequence generated')
+            }
+
+            // Start carousel animation after a brief setup delay
+            setTimeout(() => {
+              setGameState(prev => ({
+                ...prev,
+                isCarouselSetup: false,
+                isCarouselSpinning: true,
+                lastResult: result.opening_result,
+                carouselItems,
+                winningItemIndex: winningPosition
+                // Don't update history yet - wait for carousel to complete
+              }))
+            }, 500)
+
+            // Update balance
+            refreshBalance()
+
+            // Track game for achievements
+            trackGamePlayed(
+              selectedCase.price, 
+              result.opening_result.currency_awarded, 
+              'case_opening'
+            )
+
+          } catch (error) {
+            console.error('Carousel setup error:', error)
+            toast.error('Animation Error', 'Using fallback animation')
+            
+            // Fallback to original reveal animation
+            setGameState(prev => ({
+              ...prev,
+              isOpening: false,
+              isCarouselSetup: false,
+              isRevealing: true,
+              lastResult: result.opening_result,
+              openingHistory: [result.opening_result, ...prev.openingHistory.slice(0, 9)]
+            }))
+            
+            // Update balance even if carousel fails
+            refreshBalance()
+            
+            // Track game for achievements
+            trackGamePlayed(
+              selectedCase.price, 
+              result.opening_result.currency_awarded, 
+              'case_opening'
             )
           }
-        }, 3000)
-      }, 2000)
+        } else {
+          // Use original reveal animation if carousel is disabled
+          setGameState(prev => ({
+            ...prev,
+            isOpening: false,
+            isRevealing: true,
+            lastResult: result.opening_result,
+            openingHistory: [result.opening_result, ...prev.openingHistory.slice(0, 9)]
+          }))
+          
+          // Update balance
+          refreshBalance()
+          
+          // Track game for achievements
+          trackGamePlayed(
+            selectedCase.price, 
+            result.opening_result.currency_awarded, 
+            'case_opening'
+          )
+        }
+      }, 1000)
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to open case'
@@ -204,14 +315,96 @@ const CaseOpeningGame: React.FC = () => {
     }, 2000)
   }
 
-  const handleSelectCase = (caseType: CaseType) => {
-    setGameState(prev => ({ ...prev, selectedCase: caseType }))
+  const handleCarouselSpinComplete = () => {
+    if (!gameState.lastResult) return
+
+    // Play reveal sound
+    playCaseReveal()
+
+    // Play rarity-specific sound
+    setTimeout(() => {
+      playRarityReveal(gameState.lastResult!.item_won.rarity)
+    }, 500)
+
+    // Play result sound based on profit/loss
+    setTimeout(() => {
+      if (gameState.lastResult!.currency_awarded > gameState.selectedCase!.price) {
+        playWinSound()
+      } else {
+        playLoseSound()
+      }
+    }, 1000)
+
+    // Show toast notification
+    const profit = gameState.lastResult.currency_awarded - gameState.selectedCase!.price
+    setTimeout(() => {
+      if (profit > 0) {
+        toast.success(
+          `${gameState.lastResult!.item_won.rarity.toUpperCase()} Item!`,
+          `You won ${gameState.lastResult!.item_won.name} (+${formatCurrency(profit, 'roubles')})`,
+          { duration: 5000 }
+        )
+      } else {
+        toast.info(
+          'Item Received',
+          `You got ${gameState.lastResult!.item_won.name}`,
+          { duration: 4000 }
+        )
+      }
+    }, 1500)
+
+    // Add to history and stop carousel spinning after a delay
+    setTimeout(() => {
+      setGameState(prev => ({ 
+        ...prev, 
+        isCarouselSpinning: false,
+        openingHistory: [gameState.lastResult!, ...prev.openingHistory.slice(0, 9)]
+      }))
+    }, 3000)
   }
 
-  const canOpenCase = gameState.selectedCase && 
-                     balance >= gameState.selectedCase.price && 
-                     !gameState.isOpening && 
-                     !gameState.isRevealing
+  const handleSelectCase = async (caseType: CaseType) => {
+    setGameState(prev => ({ ...prev, selectedCase: caseType }))
+    
+    // Load items for this case type
+    try {
+      const session = await supabase.auth.getSession()
+      const token = session.data.session?.access_token
+
+      if (token) {
+        const response = await fetch(`/api/games/cases/${caseType.id}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          const itemPool = data.item_pool || []
+          
+          // Ensure we have valid items
+          const validItems = itemPool.filter((item: any) => 
+            item && item.id && item.name && item.rarity && typeof item.base_value === 'number'
+          )
+          
+          setGameState(prev => ({ 
+            ...prev, 
+            caseItems: validItems
+          }))
+          
+          console.log(`Loaded ${validItems.length} valid items for case ${caseType.name}`)
+        } else {
+          console.warn('Failed to load case items from API')
+          setGameState(prev => ({ ...prev, caseItems: [] }))
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load case items:', err)
+      setGameState(prev => ({ ...prev, caseItems: [] }))
+    }
+  }
+
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-tarkov-darker via-tarkov-dark to-tarkov-primary">
@@ -238,23 +431,43 @@ const CaseOpeningGame: React.FC = () => {
               📦 Case Opening
             </motion.h1>
             
-            <motion.button
-              onClick={toggleSound}
-              className={`
-                p-3 md:p-4 rounded-full transition-all duration-300 border-2
-                hover:scale-110 active:scale-95 ${
-                soundEnabled 
-                  ? 'bg-tarkov-accent/20 text-tarkov-accent border-tarkov-accent/50 shadow-lg shadow-tarkov-accent/30' 
-                  : 'bg-gray-600/20 text-gray-400 border-gray-600/50'
-              }`}
-              title={soundEnabled ? 'Disable sound' : 'Enable sound'}
-              whileHover={{ rotate: [0, -10, 10, 0] }}
-              transition={{ duration: 0.3 }}
-            >
-              <span className="text-xl md:text-2xl">
-                {soundEnabled ? '🔊' : '🔇'}
-              </span>
-            </motion.button>
+            <div className="flex space-x-3">
+              <motion.button
+                onClick={toggleSound}
+                className={`
+                  p-3 md:p-4 rounded-full transition-all duration-300 border-2
+                  hover:scale-110 active:scale-95 ${
+                  soundEnabled 
+                    ? 'bg-tarkov-accent/20 text-tarkov-accent border-tarkov-accent/50 shadow-lg shadow-tarkov-accent/30' 
+                    : 'bg-gray-600/20 text-gray-400 border-gray-600/50'
+                }`}
+                title={soundEnabled ? 'Disable sound' : 'Enable sound'}
+                whileHover={{ rotate: [0, -10, 10, 0] }}
+                transition={{ duration: 0.3 }}
+              >
+                <span className="text-xl md:text-2xl">
+                  {soundEnabled ? '🔊' : '🔇'}
+                </span>
+              </motion.button>
+
+              <motion.button
+                onClick={() => setGameState(prev => ({ ...prev, useCarousel: !prev.useCarousel }))}
+                className={`
+                  p-3 md:p-4 rounded-full transition-all duration-300 border-2
+                  hover:scale-110 active:scale-95 ${
+                  gameState.useCarousel 
+                    ? 'bg-tarkov-accent/20 text-tarkov-accent border-tarkov-accent/50 shadow-lg shadow-tarkov-accent/30' 
+                    : 'bg-gray-600/20 text-gray-400 border-gray-600/50'
+                }`}
+                title={gameState.useCarousel ? 'Disable carousel animation' : 'Enable carousel animation'}
+                whileHover={{ rotate: [0, -10, 10, 0] }}
+                transition={{ duration: 0.3 }}
+              >
+                <span className="text-xl md:text-2xl">
+                  {gameState.useCarousel ? '🎰' : '📦'}
+                </span>
+              </motion.button>
+            </div>
           </div>
           
           <motion.p 
@@ -280,129 +493,124 @@ const CaseOpeningGame: React.FC = () => {
         </motion.div>
 
         <div className="max-w-6xl mx-auto space-y-8">
+          {/* Carousel Animation - Always visible at top */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1, type: "spring", stiffness: 200 }}
+          >
+            <TarkovCard className="p-6 md:p-8">
+              {gameState.isCarouselSpinning || gameState.isCarouselSetup ? (
+                <>
+                  <motion.h3 
+                    className="text-xl md:text-2xl font-tarkov font-bold text-tarkov-accent mb-6 text-center"
+                    animate={{ opacity: [0.7, 1, 0.7] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  >
+                    🎰 Opening {gameState.selectedCase?.name}...
+                  </motion.h3>
+                  
+                  {gameState.isCarouselSetup ? (
+                    <div className="text-center py-12">
+                      <motion.div
+                        animate={{ opacity: [0.5, 1, 0.5] }}
+                        transition={{ duration: 1.5, repeat: Infinity }}
+                        className="text-lg text-gray-300 mb-4"
+                      >
+                        🎰 Preparing Case Opening...
+                      </motion.div>
+                      
+                      <div className="flex justify-center space-x-2 mb-4">
+                        {[...Array(5)].map((_, i) => (
+                          <motion.div
+                            key={i}
+                            className="w-3 h-3 bg-tarkov-accent rounded-full"
+                            animate={{ 
+                              scale: [1, 1.5, 1],
+                              opacity: [0.5, 1, 0.5]
+                            }}
+                            transition={{ 
+                              duration: 1, 
+                              repeat: Infinity, 
+                              delay: i * 0.2 
+                            }}
+                          />
+                        ))}
+                      </div>
+                      
+                      <p className="text-gray-400 text-sm">
+                        Setting up carousel animation...
+                      </p>
+                    </div>
+                  ) : gameState.carouselItems.length > 0 ? (
+                    <CaseOpeningCarousel
+                      items={gameState.carouselItems}
+                      winningIndex={gameState.winningItemIndex}
+                      isSpinning={gameState.isCarouselSpinning}
+                      onSpinComplete={handleCarouselSpinComplete}
+                      caseType={gameState.selectedCase!}
+                    />
+                  ) : null}
+                </>
+              ) : (
+                <>
+                  <motion.h3 
+                    className="text-xl md:text-2xl font-tarkov font-bold text-tarkov-accent mb-6 text-center"
+                    initial={{ opacity: 0.7 }}
+                    animate={{ opacity: 1 }}
+                  >
+                    🎰 Case Opening Carousel
+                  </motion.h3>
+                  
+                  <div className="text-center py-12">
+                    <motion.div
+                      className="text-6xl mb-4 opacity-30"
+                      animate={{ 
+                        rotate: [0, 5, -5, 0],
+                        scale: [1, 1.05, 1]
+                      }}
+                      transition={{ 
+                        duration: 4, 
+                        repeat: Infinity,
+                        ease: "easeInOut"
+                      }}
+                    >
+                      🎰
+                    </motion.div>
+                    <div className="text-gray-400 text-lg mb-2">
+                      Select a case and click "Open Case" to see the carousel animation
+                    </div>
+                    <div className="text-gray-500 text-sm">
+                      Items will spin and reveal your prize here
+                    </div>
+                  </div>
+                </>
+              )}
+            </TarkovCard>
+          </motion.div>
+
           {/* Case Selection */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
+            transition={{ delay: 0.2 }}
           >
             <CaseSelector
               caseTypes={caseTypes}
-              selectedCaseType={gameState.selectedCase}
-              onSelectCase={handleSelectCase}
+              onOpenCase={openCase}
               balance={balance}
               isLoading={isLoadingCases}
             />
           </motion.div>
 
-          {/* Enhanced Opening Controls */}
-          {gameState.selectedCase && (
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-            >
-              <TarkovCard className="p-6 md:p-8 text-center relative overflow-hidden">
-                {/* Background animation for selected case */}
-                <motion.div
-                  className="absolute inset-0 bg-gradient-to-r from-tarkov-accent/5 via-tarkov-accent/10 to-tarkov-accent/5"
-                  animate={{ x: [-100, 100] }}
-                  transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-                />
-                
-                <div className="relative z-10">
-                  <motion.h3 
-                    className="text-2xl md:text-3xl font-tarkov font-bold text-white mb-4"
-                    animate={{ scale: [1, 1.02, 1] }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                  >
-                    Ready to Open: {gameState.selectedCase.name}
-                  </motion.h3>
-                  
-                  <motion.div 
-                    className="mb-8"
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.3 }}
-                  >
-                    <div className="inline-flex items-center bg-tarkov-primary/50 rounded-full px-6 py-3 border border-tarkov-accent/30 mb-4">
-                      <span className="text-gray-300 mr-2">Cost:</span>
-                      <span className="text-xl font-tarkov font-bold text-tarkov-accent">
-                        {formatCurrency(gameState.selectedCase.price, 'roubles')}
-                      </span>
-                    </div>
-                    
-                    {/* Remaining balance after purchase */}
-                    <div className="text-sm text-gray-400">
-                      Remaining balance: {formatCurrency(balance - gameState.selectedCase.price, 'roubles')}
-                    </div>
-                  </motion.div>
-                  
-                  <motion.div
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <TarkovButton
-                      onClick={openCase}
-                      disabled={!canOpenCase}
-                      loading={gameState.isOpening}
-                      size="lg"
-                      className="px-12 py-4 text-lg md:text-xl relative overflow-hidden"
-                    >
-                      {gameState.isOpening ? (
-                        <motion.span
-                          className="flex items-center"
-                          animate={{ opacity: [1, 0.5, 1] }}
-                          transition={{ duration: 1, repeat: Infinity }}
-                        >
-                          <motion.span
-                            className="mr-3 text-2xl"
-                            animate={{ rotate: 360 }}
-                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                          >
-                            📦
-                          </motion.span>
-                          Opening Case...
-                        </motion.span>
-                      ) : (
-                        <span className="flex items-center">
-                          <span className="mr-3 text-2xl">🎲</span>
-                          Open Case
-                        </span>
-                      )}
-                      
-                      {/* Button glow effect */}
-                      {canOpenCase && !gameState.isOpening && (
-                        <motion.div
-                          className="absolute inset-0 bg-tarkov-accent/20 rounded-lg"
-                          animate={{ opacity: [0, 0.5, 0] }}
-                          transition={{ duration: 2, repeat: Infinity }}
-                        />
-                      )}
-                    </TarkovButton>
-                  </motion.div>
 
-                  {error && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="mt-6 p-4 bg-tarkov-danger/20 border border-tarkov-danger/50 rounded-lg"
-                    >
-                      <div className="text-tarkov-danger font-semibold mb-1">⚠️ Error</div>
-                      <div className="text-tarkov-danger/80 text-sm">{error}</div>
-                    </motion.div>
-                  )}
-                </div>
-              </TarkovCard>
-            </motion.div>
-          )}
 
           {/* Enhanced Opening History */}
           {gameState.openingHistory.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
+              transition={{ delay: 0.4, type: "spring", stiffness: 200 }}
             >
               <TarkovCard className="p-6 md:p-8">
                 <motion.h3 
@@ -506,9 +714,11 @@ const CaseOpeningGame: React.FC = () => {
               </TarkovCard>
             </motion.div>
           )}
+
+
         </div>
 
-        {/* Item Reveal Modal */}
+        {/* Item Reveal Modal (Fallback) */}
         <ItemReveal
           result={gameState.lastResult}
           isRevealing={gameState.isRevealing}

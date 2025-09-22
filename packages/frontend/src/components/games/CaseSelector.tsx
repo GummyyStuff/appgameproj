@@ -26,8 +26,7 @@ export interface RarityDistribution {
 
 interface CaseSelectorProps {
   caseTypes: CaseType[]
-  selectedCaseType: CaseType | null
-  onSelectCase: (caseType: CaseType) => void
+  onOpenCase: (caseType: CaseType) => void
   balance: number
   isLoading?: boolean
 }
@@ -42,11 +41,11 @@ const rarityColors = {
 
 const CaseSelector: React.FC<CaseSelectorProps> = ({
   caseTypes,
-  selectedCaseType,
-  onSelectCase,
+  onOpenCase,
   balance,
   isLoading = false
 }) => {
+  const [confirmationCase, setConfirmationCase] = React.useState<CaseType | null>(null)
   if (isLoading) {
     return (
       <TarkovCard className="p-4 md:p-6">
@@ -101,7 +100,6 @@ const CaseSelector: React.FC<CaseSelectorProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         {caseTypes.map((caseType, index) => {
           const canAfford = balance >= caseType.price
-          const isSelected = selectedCaseType?.id === caseType.id
           
           return (
             <motion.div
@@ -116,15 +114,13 @@ const CaseSelector: React.FC<CaseSelectorProps> = ({
               }}
               whileTap={{ scale: canAfford ? 0.97 : 1 }}
               className={`
-                relative cursor-pointer rounded-xl border-2 transition-all duration-300 overflow-hidden
-                ${isSelected 
-                  ? 'border-tarkov-accent bg-tarkov-accent/10 shadow-lg shadow-tarkov-accent/30' 
-                  : canAfford 
-                    ? 'border-tarkov-secondary hover:border-tarkov-accent/50 hover:shadow-lg hover:shadow-tarkov-accent/20' 
-                    : 'border-gray-600 opacity-50 cursor-not-allowed'
+                group relative cursor-pointer rounded-xl border-2 transition-all duration-300 overflow-hidden
+                ${canAfford 
+                  ? 'border-tarkov-secondary hover:border-tarkov-accent/50 hover:shadow-lg hover:shadow-tarkov-accent/20 hover:scale-[1.02]' 
+                  : 'border-gray-600 opacity-50 cursor-not-allowed'
                 }
               `}
-              onClick={() => canAfford && onSelectCase(caseType)}
+              onClick={() => canAfford && setConfirmationCase(caseType)}
             >
               {/* Case Image */}
               <div className="relative h-36 md:h-40 bg-gradient-to-br from-tarkov-primary to-tarkov-dark rounded-t-xl overflow-hidden">
@@ -168,36 +164,8 @@ const CaseSelector: React.FC<CaseSelectorProps> = ({
                   </span>
                 </motion.div>
                 
-                {/* Enhanced Selected Indicator */}
-                {isSelected && (
-                  <motion.div 
-                    className="absolute inset-0 bg-tarkov-accent/20 flex items-center justify-center"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <motion.div 
-                      className="bg-tarkov-accent rounded-full p-3 shadow-lg"
-                      initial={{ scale: 0, rotate: -180 }}
-                      animate={{ scale: 1, rotate: 0 }}
-                      transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                    >
-                      <svg className="w-6 h-6 md:w-8 md:h-8 text-tarkov-dark" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    </motion.div>
-                    
-                    {/* Pulsing border effect */}
-                    <motion.div
-                      className="absolute inset-0 border-2 border-tarkov-accent rounded-t-xl"
-                      animate={{ opacity: [0.5, 1, 0.5] }}
-                      transition={{ duration: 1.5, repeat: Infinity }}
-                    />
-                  </motion.div>
-                )}
-                
                 {/* Hover glow effect */}
-                {canAfford && !isSelected && (
+                {canAfford && (
                   <motion.div
                     className="absolute inset-0 bg-tarkov-accent/5 opacity-0"
                     whileHover={{ opacity: 1 }}
@@ -277,17 +245,20 @@ const CaseSelector: React.FC<CaseSelectorProps> = ({
                   </motion.div>
                 )}
                 
-                {/* Affordability indicator */}
-                {canAfford && !isSelected && (
+                {/* Hover to open indicator */}
+                {canAfford && (
                   <motion.div 
-                    className="mt-4 p-2 bg-tarkov-success/20 border border-tarkov-success/50 rounded-lg"
+                    className="mt-4 p-2 bg-tarkov-accent/10 border border-tarkov-accent/30 rounded-lg group-hover:bg-tarkov-accent/20 group-hover:border-tarkov-accent/50 transition-all duration-300"
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.7 }}
                   >
-                    <div className="text-xs text-tarkov-success font-semibold text-center">
-                      ✅ Ready to Open
-                    </div>
+                    <motion.div 
+                      className="text-xs font-semibold text-center text-tarkov-accent"
+                      whileHover={{ scale: 1.05 }}
+                    >
+                      🎲 Click to Open
+                    </motion.div>
                   </motion.div>
                 )}
               </div>
@@ -317,6 +288,101 @@ const CaseSelector: React.FC<CaseSelectorProps> = ({
           </motion.div>
           <h3 className="text-xl font-tarkov font-bold mb-2">No Cases Available</h3>
           <p className="text-gray-500">Check back later for new case types!</p>
+        </motion.div>
+      )}
+      
+      {/* Modern Confirmation Popup */}
+      {confirmationCase && (
+        <motion.div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={() => setConfirmationCase(null)}
+        >
+          <motion.div
+            className="bg-gradient-to-br from-tarkov-dark to-tarkov-primary rounded-2xl border-2 border-tarkov-accent/50 p-6 md:p-8 max-w-md w-full shadow-2xl shadow-tarkov-accent/20"
+            initial={{ scale: 0.8, opacity: 0, y: 20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.8, opacity: 0, y: 20 }}
+            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <motion.div 
+              className="text-center mb-6"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+            >
+              <div className="text-4xl mb-3">🎲</div>
+              <h3 className="text-xl md:text-2xl font-tarkov font-bold text-tarkov-accent mb-2">
+                Open Case?
+              </h3>
+              <p className="text-gray-300">
+                Are you sure you want to open this case?
+              </p>
+            </motion.div>
+
+            {/* Case Info */}
+            <motion.div 
+              className="bg-tarkov-secondary/30 rounded-xl p-4 mb-6 border border-tarkov-accent/20"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.2 }}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-tarkov font-bold text-white text-lg">
+                  {confirmationCase.name}
+                </h4>
+                <div className="text-tarkov-accent font-bold text-lg">
+                  {formatCurrency(confirmationCase.price, 'roubles')}
+                </div>
+              </div>
+              <p className="text-sm text-gray-300 mb-3">
+                {confirmationCase.description}
+              </p>
+              
+              {/* Balance info */}
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-400">Your balance:</span>
+                <span className="text-white font-semibold">
+                  {formatCurrency(balance, 'roubles')}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-sm mt-1">
+                <span className="text-gray-400">After opening:</span>
+                <span className="text-tarkov-accent font-semibold">
+                  {formatCurrency(balance - confirmationCase.price, 'roubles')}
+                </span>
+              </div>
+            </motion.div>
+
+            {/* Action Buttons */}
+            <motion.div 
+              className="flex gap-3"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <TarkovButton
+                variant="secondary"
+                onClick={() => setConfirmationCase(null)}
+                className="flex-1"
+              >
+                Cancel
+              </TarkovButton>
+              <TarkovButton
+                onClick={() => {
+                  onOpenCase(confirmationCase)
+                  setConfirmationCase(null)
+                }}
+                className="flex-1"
+              >
+                🎲 Open Case
+              </TarkovButton>
+            </motion.div>
+          </motion.div>
         </motion.div>
       )}
     </TarkovCard>

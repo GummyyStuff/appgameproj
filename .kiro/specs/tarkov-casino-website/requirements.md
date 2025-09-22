@@ -108,6 +108,11 @@ A web-based casino gaming platform themed around Escape from Tarkov, offering cl
 8. WHEN case opening animations play THEN the system SHALL create suspenseful reveal sequences with Tarkov-themed sound effects
 9. WHEN an item is converted to currency THEN the system SHALL display both the item won and the currency amount received
 10. WHEN viewing case opening history THEN the system SHALL record the case type, item won, and currency received for statistics tracking
+11. WHEN a case opening animation begins THEN the system SHALL display a horizontal spinning carousel showing multiple potential items from the case
+12. WHEN the carousel spins THEN the system SHALL animate the items moving horizontally with realistic momentum and deceleration
+13. WHEN the carousel stops THEN the system SHALL ensure the winning item lands precisely in the center selection area with visual alignment
+14. WHEN displaying the carousel THEN the system SHALL show at least 20-30 items in the sequence with the winning item positioned appropriately
+15. WHEN the carousel is spinning THEN the system SHALL provide visual feedback with a center pointer/selector and item highlighting effects
 
 ### Requirement 9: Responsive Web Design
 

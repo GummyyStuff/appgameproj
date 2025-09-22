@@ -90,7 +90,9 @@ graph TB
 - `BlackjackGame`: Card game interface with player actions (no tutorials)
 - `CaseOpeningGame`: Case opening interface with Tarkov-themed items and animations
 - `CaseSelector`: Display of available case types with prices and rarity information
-- `ItemReveal`: Animated item reveal component with Tarkov theming
+- `ItemReveal`: Animated item reveal component with Tarkov theming (legacy component)
+- `CaseOpeningCarousel`: New spinning carousel component for case opening animations
+- `CarouselItem`: Individual item display component within the carousel
 - `BettingPanel`: Reusable betting controls for all games
 - `GameHistory`: Display of recent game results (without replay functionality)
 
@@ -273,12 +275,49 @@ Each case type has configured drop rates:
 
 ### Animation Design
 
-The case opening uses a multi-phase animation system:
+The case opening uses a multi-phase animation system with a spinning carousel interface:
 
 1. **Selection Phase**: Player chooses case type
-2. **Opening Phase**: Suspenseful case opening animation (3-5 seconds)
-3. **Revealing Phase**: Item reveal with rarity-based effects
-4. **Completion Phase**: Currency conversion and balance update
+2. **Carousel Setup Phase**: Generate item sequence with winning item positioned correctly
+3. **Spinning Phase**: Horizontal carousel spins with momentum-based animation (3-4 seconds)
+4. **Deceleration Phase**: Carousel gradually slows down and stops on winning item (2-3 seconds)
+5. **Reveal Phase**: Item highlight and rarity-based celebration effects (2 seconds)
+6. **Completion Phase**: Currency conversion and balance update
+
+#### Carousel Interface Specifications
+
+**Layout:**
+- Horizontal scrolling carousel displaying 50-100 items in sequence for realistic spinning
+- Fixed viewport showing 5-7 items at once with center selection area
+- Center pointer/indicator with visual highlighting (triangle or line pointing down)
+- Items displayed as cards (120px width) with item images, names, and rarity border colors
+- Smooth momentum-based scrolling animation with CSS transforms
+
+**Item Sequence Generation:**
+- Generate 50-100 items from case's item pool with proper rarity distribution
+- Place winning item at calculated position (e.g., position 75 out of 100)
+- Fill remaining positions with random items from same case pool
+- Each item card shows: item image, name, rarity color border, and value
+- Items can repeat to create realistic variety
+
+**Animation Mechanics:**
+- **Phase 1 - Fast Spin (2s)**: Rapid movement with motion blur, items move at ~2000px/s
+- **Phase 2 - Deceleration (3s)**: Gradual slowdown using cubic-bezier easing
+- **Phase 3 - Precision Stop**: Final positioning with winning item perfectly centered
+- **Phase 4 - Settle Effect**: Small bounce/oscillation when stopping
+- Transform-based animation using `translateX` for smooth 60fps performance
+
+**Visual Effects:**
+- Motion blur during fast spinning using CSS `filter: blur()`
+- Rarity-based glow effects on winning item when revealed
+- Particle effects and screen shake for high-rarity items
+- Sound synchronization with carousel movement and stopping
+
+**Technical Implementation:**
+- Use CSS transforms for hardware acceleration
+- Calculate final position: `finalX = -(winningItemIndex * itemWidth - viewportCenter)`
+- Implement easing with `cubic-bezier(0.25, 0.46, 0.45, 0.94)` for realistic deceleration
+- Use `requestAnimationFrame` for smooth animation loop
 
 ## Data Models
 
@@ -369,7 +408,36 @@ interface CaseOpeningState {
   isOpening: boolean
   itemRevealed: TarkovItem | null
   currencyAwarded: number
-  animationPhase: 'selecting' | 'opening' | 'revealing' | 'complete'
+  animationPhase: 'selecting' | 'carousel_setup' | 'spinning' | 'decelerating' | 'revealing' | 'complete'
+  carouselItems: CarouselItemData[]
+  winningItemIndex: number
+}
+
+interface CarouselItemData {
+  item: TarkovItem
+  id: string
+  isWinning: boolean
+}
+
+interface CaseOpeningCarouselProps {
+  items: CarouselItemData[]
+  winningIndex: number
+  isSpinning: boolean
+  onSpinComplete: () => void
+  caseType: CaseType
+  animationDuration?: number
+  itemWidth?: number
+  visibleItems?: number
+}
+
+interface CarouselAnimationConfig {
+  totalItems: number
+  itemWidth: number
+  winningIndex: number
+  spinDuration: number
+  decelerationDuration: number
+  finalPosition: number
+  easing: string
 }
 ```
 

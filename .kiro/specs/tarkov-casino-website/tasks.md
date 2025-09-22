@@ -328,3 +328,67 @@
   - Run case opening seed data to populate tables with Tarkov-themed items
   - Test case opening API endpoints to ensure they work correctly
   - _Requirements: 8.1, 8.2, 8.6, 8.7_
+
+# Carousel Interface Enhancement
+
+- [x] 40. Create spinning carousel component foundation
+  - Build CaseOpeningCarousel component with horizontal scrolling container
+  - Implement CarouselItem component (120px width) with item image, name, and rarity styling
+  - Create carousel viewport (600px width) showing 5 items with center pointer indicator
+  - Add CSS transforms for hardware-accelerated animation using translateX
+  - Implement item sequence generation (50-100 items) with winning item positioning
+  - _Requirements: 8.11, 8.12, 8.13, 8.14, 8.15_
+
+- [x] 41. Implement carousel animation mechanics
+  - Create multi-phase animation: fast spin (2s) → deceleration (3s) → settle
+  - Add motion blur effects during fast spinning using CSS filter blur
+  - Implement cubic-bezier easing for realistic deceleration
+  - Calculate precise final position to center winning item perfectly
+  - Add small bounce/oscillation effect when carousel stops
+  - _Requirements: 8.11, 8.12, 8.13, 8.14, 8.15_
+
+- [x] 42. Integrate carousel with case opening flow
+  - Replace ItemReveal modal with carousel interface in CaseOpeningGame
+  - Update case opening state to handle carousel phases (setup → spinning → revealing)
+  - Generate item sequence when case opening starts, before animation
+  - Coordinate backend result timing with carousel animation completion
+  - Ensure winning item from backend matches carousel final position
+  - _Requirements: 8.11, 8.12, 8.13, 8.14, 8.15_
+
+- [x] 43. Add carousel visual effects and polish
+  - Implement rarity-based glow effects and particle systems for winning item
+  - Add sound effects synchronized with carousel phases (spin start, deceleration, stop)
+  - Create screen shake effect for legendary items
+  - Add loading state and error handling for carousel failures
+  - Optimize performance for smooth 60fps animation on mobile devices
+  - _Requirements: 8.8, 8.13, 8.15_
+
+- [x] 44. Test and validate carousel accuracy
+  - Test mathematical precision of winning item centering across all cases
+  - Validate carousel timing consistency with different item counts and rarities
+  - Test responsive behavior on mobile devices with touch interactions
+  - Ensure carousel works with all existing case types and item pools
+  - Add comprehensive error handling and fallback to original ItemReveal if needed
+  - _Requirements: 8.11, 8.12, 8.13, 8.14, 8.15_
+
+- [x] 45. Fix carousel spinning direction and item population consistency
+  - Simplify carousel animation to spin consistently in one direction (left to right)
+  - Ensure carousel is populated entirely with real items from the case's item pool
+  - Fix rarity distribution to match case opening probabilities
+  - Remove complex multi-phase animation in favor of smooth single-direction spin
+  - Ensure winning item positioning is mathematically accurate for consistent direction
+  - Remove bounce/settling effects that cause direction swapping at the end
+  - Fix direction swapping during "slowing down" phase
+  - Eliminate blank spots in carousel by improving item validation
+  - Add Firefox-specific animation compatibility to prevent direction reversals
+  - Use linear easing and multiple simple animations for Firefox browser
+  - Implement never-go-backwards logic with mathematical validation
+  - Use intermediate position calculation to guarantee left-to-right progression
+  - Move winning item to middle of sequence (positions 30-45) to prevent overshoot
+  - Replace multi-phase animation with single smooth animation to eliminate any direction changes
+  - Use single continuous movement from start to final position with no intermediate stops
+  - Fix animation easing curve for proper fast start then slow down behavior
+  - Simplify case selector by removing selection state and adding confirmation popup
+  - Replace "Ready to Open" section with direct case opening and modern confirmation dialog
+  - Add clean hover effect showing "Click to Open" on affordable cases
+  - _Requirements: 8.11, 8.12, 8.13, 8.14, 8.15_
