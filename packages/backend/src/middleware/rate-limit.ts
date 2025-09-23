@@ -1,4 +1,4 @@
-import { Context, Next } from 'hono'
+import type { Context, Next } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { config } from '../config/env'
 import { logSecurityEvent } from './logger'
@@ -21,7 +21,7 @@ interface RateLimitConfig {
 
 class RateLimiter {
   private store = new Map<string, RateLimitEntry>()
-  private cleanupInterval: Timer | null = null
+  private cleanupInterval: ReturnType<typeof setInterval> | null = null
 
   constructor() {
     // Clean up expired entries every 5 minutes
@@ -119,14 +119,16 @@ class RateLimiter {
       return {
         remaining: config.maxRequests,
         resetTime: Date.now() + config.windowMs,
-        blocked: false
+        blocked: false,
+        blockUntil: undefined as number | undefined
       }
     }
     
     return {
       remaining: Math.max(0, config.maxRequests - entry.count),
       resetTime: entry.resetTime,
-      blocked: entry.blocked
+      blocked: entry.blocked,
+      blockUntil: entry.blockUntil
     }
   }
 
@@ -158,14 +160,15 @@ export function rateLimitMiddleware(rateLimitConfig?: Partial<RateLimitConfig>) 
     
     if (!allowed) {
       const status = globalRateLimiter.getStatus(c, config)
-      const retryAfter = status.blocked && status.resetTime 
-        ? Math.ceil((status.resetTime - Date.now()) / 1000)
-        : Math.ceil(config.windowMs / 1000)
+      const effectiveResetMs = status.blocked && status.blockUntil && status.blockUntil > Date.now()
+        ? status.blockUntil
+        : status.resetTime
+      const retryAfter = Math.max(0, Math.ceil((effectiveResetMs - Date.now()) / 1000))
       
       c.header('Retry-After', retryAfter.toString())
       c.header('X-RateLimit-Limit', config.maxRequests.toString())
       c.header('X-RateLimit-Remaining', '0')
-      c.header('X-RateLimit-Reset', status.resetTime.toString())
+      c.header('X-RateLimit-Reset', effectiveResetMs.toString())
       
       throw new HTTPException(429, { 
         message: 'Too many requests. Please try again later.',
@@ -181,7 +184,10 @@ export function rateLimitMiddleware(rateLimitConfig?: Partial<RateLimitConfig>) 
     const status = globalRateLimiter.getStatus(c, config)
     c.header('X-RateLimit-Limit', config.maxRequests.toString())
     c.header('X-RateLimit-Remaining', status.remaining.toString())
-    c.header('X-RateLimit-Reset', status.resetTime.toString())
+    const effectiveResetOk = status.blocked && status.blockUntil && status.blockUntil > Date.now()
+      ? status.blockUntil
+      : status.resetTime
+    c.header('X-RateLimit-Reset', effectiveResetOk.toString())
     
     await next()
   }

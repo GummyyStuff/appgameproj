@@ -27,6 +27,16 @@ export class PayoutCalculator implements IPayoutCalculator {
     loss: -1            // Loss (lose bet)
   } as const
 
+  /**
+   * Plinko multipliers by risk level and landing slot (0..8)
+   * Simple example table; can be tuned for fairness separately.
+   */
+  private readonly PLINKO_MULTIPLIERS: Record<string, number[]> = {
+    low:   [0.5, 0.7, 0.9, 1.0, 1.2, 1.0, 0.9, 0.7, 0.5],
+    medium:[0.3, 0.6, 0.9, 1.2, 2.1, 1.2, 0.9, 0.6, 0.3],
+    high:  [0.1, 0.3, 0.6, 1.5, 5.0, 1.5, 0.6, 0.3, 0.1]
+  }
+
 
 
   /**
@@ -71,6 +81,15 @@ export class PayoutCalculator implements IPayoutCalculator {
     }
   }
 
+  getPlinkoMultiplier(riskLevel: string, landingSlot: number): number {
+    const table = this.PLINKO_MULTIPLIERS[riskLevel as keyof typeof this.PLINKO_MULTIPLIERS] || this.PLINKO_MULTIPLIERS.medium
+    if (landingSlot < 0 || landingSlot >= table.length) return 0
+    return table[landingSlot]
+  }
+
+  calculateCaseOpeningPayout(itemValue: number): number {
+    return Math.max(0, Math.floor(itemValue))
+  }
 
 
   /**

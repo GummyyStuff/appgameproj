@@ -80,10 +80,7 @@ export class CoreGameEngine implements IGameEngine {
         )
       case 'plinko':
         const plinkoResult = result as any
-        return this.payoutCalculator.calculatePlinkoPayout(
-          plinkoResult.multiplier,
-          bet.amount
-        )
+        return Math.max(0, Math.floor(bet.amount * (plinkoResult.multiplier || 0)))
       default:
         return 0
     }
@@ -112,7 +109,7 @@ export class CoreGameEngine implements IGameEngine {
       // Generate provably fair seeds
       const serverSeed = await this.randomGenerator.generateSeed()
       const clientSeed = await this.randomGenerator.generateSeed() // In real implementation, this comes from client
-      const nonce = Math.floor(Math.random() * 1000000)
+      const nonce = await this.randomGenerator.generateSecureRandomInt(0, 1_000_000)
 
       const seed: ProvablyFairSeed = { serverSeed, clientSeed, nonce }
 
@@ -182,11 +179,13 @@ export class CoreGameEngine implements IGameEngine {
     const winningNumber = Math.floor(fairResult.randomValue * 37) // 0-36
 
     // For demo purposes, assume a simple number bet
+    const randomBetValue = Math.floor(fairResult.randomValue * 37)
     const rouletteResult = {
       bet_type: 'number',
-      bet_value: Math.floor(Math.random() * 37), // Random bet for demo
+      bet_value: randomBetValue, // Demo bet value (since generic GameBet lacks roulette specifics)
       winning_number: winningNumber,
-      multiplier: winningNumber === Number(bet.amount) ? 35 : 0
+      // Correct logic: compare against the bet value, not the bet amount
+      multiplier: winningNumber === randomBetValue ? 35 : 0
     }
 
     return rouletteResult as GameResultData
