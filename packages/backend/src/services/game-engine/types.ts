@@ -8,7 +8,7 @@ import { GameResultData } from '../../types/database'
 export interface GameBet {
   userId: string
   amount: number
-  gameType: 'roulette' | 'blackjack' | 'case_opening'
+  gameType: 'roulette' | 'blackjack' | 'case_opening' | 'plinko'
 }
 
 export interface GameResult {
@@ -84,7 +84,7 @@ export abstract class BaseGame {
 export interface IRandomGenerator {
   generateSecureRandom(): Promise<number>
   generateSecureRandomInt(min: number, max: number): Promise<number>
-  generateSecureBytes(length: number): Promise<Buffer>
+  generateSecureBytes(length: number): Promise<any>
   generateSeed(): Promise<string>
 }
 
@@ -101,6 +101,7 @@ export interface IPayoutCalculator {
   calculateRoulettePayout(betType: string, betValue: number | string, winningNumber: number, betAmount: number): number
   calculateBlackjackPayout(result: string, betAmount: number): number
   calculateCaseOpeningPayout(itemValue: number): number
+  getPlinkoMultiplier(riskLevel: string, landingSlot: number): number
 }
 
 // Game validation interface

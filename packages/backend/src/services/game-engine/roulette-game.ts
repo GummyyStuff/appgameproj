@@ -47,7 +47,7 @@ export class RouletteGame extends BaseGame {
       // Generate provably fair result
       const serverSeed = await this.randomGenerator.generateSeed()
       const clientSeed = await this.randomGenerator.generateSeed() // In real implementation, from client
-      const nonce = Math.floor(Math.random() * 1000000)
+      const nonce = await this.randomGenerator.generateSecureRandomInt(0, 1_000_000)
 
       const seed: ProvablyFairSeed = { serverSeed, clientSeed, nonce }
       const fairResult = await this.randomGenerator.generateProvablyFairResult(seed)

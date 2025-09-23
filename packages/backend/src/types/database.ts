@@ -36,7 +36,7 @@ export interface DailyBonus {
 }
 
 // Game-specific result data types
-export type GameResultData = RouletteResult | BlackjackResult | CaseOpeningResult
+export type GameResultData = RouletteResult | BlackjackResult | CaseOpeningResult | PlinkoResult
 
 export interface RouletteResult {
   bet_type: 'number' | 'red' | 'black' | 'odd' | 'even' | 'low' | 'high' | 'dozen' | 'column'
@@ -52,6 +52,14 @@ export interface BlackjackResult {
   dealer_value?: number
   result: 'player_win' | 'dealer_win' | 'push' | 'blackjack' | 'dealer_blackjack' | 'bust'
   actions_taken?: string[] // ['hit', 'stand', 'double', 'split']
+}
+
+
+export interface PlinkoResult {
+  risk_level: 'low' | 'medium' | 'high'
+  ball_path: (0 | 1)[]
+  multiplier: number
+  landing_slot: number
 }
 
 
