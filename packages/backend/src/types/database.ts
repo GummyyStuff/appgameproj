@@ -154,7 +154,7 @@ export function isValidGameType(gameType: string): gameType is GameHistory['game
 }
 
 export function isValidBetAmount(amount: number): boolean {
-  return amount >= GAME_CONFIG.MIN_BET_AMOUNT && 
-         amount <= GAME_CONFIG.MAX_BET_AMOUNT && 
-         amount > 0
+  return amount >= 0 &&  // Allow 0 for winnings-only transactions
+         amount <= GAME_CONFIG.MAX_BET_AMOUNT &&
+         (amount === 0 || amount >= GAME_CONFIG.MIN_BET_AMOUNT)  // Only check min bet for non-zero amounts
 }

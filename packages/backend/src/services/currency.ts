@@ -122,6 +122,90 @@ export class CurrencyService {
   }
 
   /**
+   * Deduct case price for case opening (first step)
+   */
+  static async deductCasePrice(userId: string, casePrice: number, caseTypeData: any) {
+    if (casePrice <= 0) {
+      throw new Error('Case price must be positive')
+    }
+
+    // Validate balance before processing
+    const balanceCheck = await this.validateBalance(userId, casePrice)
+    if (!balanceCheck.isValid) {
+      throw new Error(`Insufficient balance. Required: ${casePrice}, Available: ${balanceCheck.currentBalance}`)
+    }
+
+    try {
+      const result = await DatabaseService.processGameTransaction(
+        userId,
+        'case_opening',
+        casePrice, // bet amount (deducted)
+        0, // no winnings yet
+        {
+          ...caseTypeData,
+          transaction_type: 'case_price_deduction',
+          timestamp: new Date().toISOString()
+        }
+      )
+
+      if (!result.success) {
+        throw new Error(result.error || 'Transaction failed')
+      }
+
+      return {
+        success: true,
+        gameId: result.game_id,
+        previousBalance: result.previous_balance,
+        newBalance: result.new_balance,
+        deductedAmount: casePrice
+      }
+    } catch (error) {
+      console.error('Error deducting case price:', error)
+      throw new Error('Failed to deduct case price')
+    }
+  }
+
+  /**
+   * Credit case winnings (second step)
+   */
+  static async creditCaseWinnings(userId: string, winAmount: number, caseResultData: any, originalGameId?: string) {
+    if (winAmount < 0) {
+      throw new Error('Win amount cannot be negative')
+    }
+
+    try {
+      const result = await DatabaseService.processGameTransaction(
+        userId,
+        'case_opening',
+        0, // no additional bet
+        winAmount, // winnings credited
+        {
+          ...caseResultData,
+          transaction_type: 'case_winnings_credit',
+          original_game_id: originalGameId,
+          timestamp: new Date().toISOString()
+        }
+      )
+
+      if (!result.success) {
+        throw new Error(result.error || 'Transaction failed')
+      }
+
+      return {
+        success: true,
+        gameId: result.game_id,
+        previousBalance: result.previous_balance,
+        newBalance: result.new_balance,
+        creditedAmount: winAmount,
+        netResult: winAmount // since no additional bet in this transaction
+      }
+    } catch (error) {
+      console.error('Error crediting case winnings:', error)
+      throw new Error('Failed to credit case winnings')
+    }
+  }
+
+  /**
    * Get daily bonus status for user
    */
   static async getDailyBonusStatus(userId: string): Promise<DailyBonusStatus> {

@@ -17,6 +17,7 @@ interface CaseOpeningCarouselProps {
   isSpinning: boolean
   onSpinComplete: () => void
   caseType: CaseType
+  finalItem?: TarkovItem | null
   animationDuration?: number
   itemWidth?: number
   visibleItems?: number
@@ -74,6 +75,8 @@ const CaseOpeningCarousel: React.FC<CaseOpeningCarouselProps> = ({
   winningIndex,
   isSpinning,
   onSpinComplete,
+  caseType,
+  finalItem,
   itemWidth = 120,
   visibleItems = 5,
   soundEnabled = true
@@ -341,21 +344,28 @@ const CaseOpeningCarousel: React.FC<CaseOpeningCarouselProps> = ({
             WebkitTransformStyle: 'preserve-3d'
           }}
         >
-          {items.map((itemData, index) => (
-            <CarouselItem
-              key={itemData.id}
-              itemData={itemData}
-              width={itemWidth}
-              isWinning={itemData.isWinning && animationPhase === 'complete'}
-              animationPhase={animationPhase}
-            />
-          ))}
+          {items.map((itemData, index) => {
+            // Use finalItem for the winning index when animation is complete
+            const displayItemData = (index === winningIndex && animationPhase === 'complete' && finalItem)
+              ? { ...itemData, item: finalItem, isWinning: true }
+              : itemData
+
+            return (
+              <CarouselItem
+                key={displayItemData.id}
+                itemData={displayItemData}
+                width={itemWidth}
+                isWinning={displayItemData.isWinning && animationPhase === 'complete'}
+                animationPhase={animationPhase}
+              />
+            )
+          })}
         </motion.div>
 
         {/* Enhanced Gradient Fade Edges */}
         <div className="absolute top-0 left-0 w-12 h-full bg-gradient-to-r from-tarkov-dark via-tarkov-dark/60 to-transparent z-15 pointer-events-none" />
         <div className="absolute top-0 right-0 w-12 h-full bg-gradient-to-l from-tarkov-dark via-tarkov-dark/60 to-transparent z-15 pointer-events-none" />
-        
+
         {/* Spinning animation effects */}
         {animationPhase === 'spinning' && (
           <>
@@ -403,6 +413,71 @@ const CaseOpeningCarousel: React.FC<CaseOpeningCarouselProps> = ({
             />
           </>
         )}
+
+        {/* Victory animation effects */}
+        {animationPhase === 'complete' && (
+          <>
+            {/* Falling emojis effect */}
+            {[...Array(12)].map((_, i) => (
+              <motion.div
+                key={`victory-emoji-${i}`}
+                className="absolute pointer-events-none text-2xl"
+                style={{
+                  left: `${10 + (i % 4) * 20}%`,
+                  top: '-20px'
+                }}
+                initial={{ y: -20, opacity: 0, rotate: 0 }}
+                animate={{
+                  y: '120vh',
+                  opacity: [0, 1, 1, 0],
+                  rotate: [0, 180, 360]
+                }}
+                transition={{
+                  duration: 3,
+                  delay: i * 0.2,
+                  ease: 'easeOut'
+                }}
+              >
+                {['🎉', '💎', '⭐', '🏆'][i % 4]}
+              </motion.div>
+            ))}
+
+            {/* Golden particles effect */}
+            {[...Array(20)].map((_, i) => (
+              <motion.div
+                key={`particle-${i}`}
+                className="absolute w-1 h-1 bg-yellow-400 rounded-full pointer-events-none"
+                style={{
+                  left: `${20 + Math.random() * 60}%`,
+                  top: `${30 + Math.random() * 40}%`
+                }}
+                initial={{ scale: 0, opacity: 1 }}
+                animate={{
+                  scale: [0, 1, 0],
+                  opacity: [1, 1, 0],
+                  x: [0, (Math.random() - 0.5) * 100],
+                  y: [0, (Math.random() - 0.5) * 100]
+                }}
+                transition={{
+                  duration: 2,
+                  delay: Math.random() * 1,
+                  ease: 'easeOut'
+                }}
+              />
+            ))}
+
+            {/* Win glow effect */}
+            <motion.div
+              className="absolute inset-0 pointer-events-none"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0, 0.3, 0] }}
+              transition={{ duration: 2, ease: 'easeOut' }}
+            >
+              <div className="w-full h-full bg-gradient-to-br from-yellow-400/20 via-yellow-500/10 to-yellow-600/5 rounded-lg" />
+            </motion.div>
+          </>
+        )}
+
 
         {/* Deceleration glow effect */}
         {animationPhase === 'decelerating' && (

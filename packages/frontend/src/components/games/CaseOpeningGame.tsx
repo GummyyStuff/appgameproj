@@ -26,6 +26,12 @@ interface CaseOpeningGameState {
   winningItemIndex: number
   caseItems: any[] // Items available in the selected case
   useCarousel: boolean // Flag to enable/disable carousel
+  pendingCompletion?: {
+    caseTypeId: string
+    openingId: string
+    token: string
+    predeterminedWinner?: any
+  }
 }
 
 const CaseOpeningGame: React.FC = () => {
@@ -48,7 +54,8 @@ const CaseOpeningGame: React.FC = () => {
     carouselItems: [],
     winningItemIndex: 0,
     caseItems: [],
-    useCarousel: true // Enable carousel by default
+    useCarousel: true, // Enable carousel by default
+    pendingCompletion: undefined
   })
 
   // Data loading states
@@ -94,7 +101,7 @@ const CaseOpeningGame: React.FC = () => {
 
   const openCase = async (caseType?: CaseType) => {
     const selectedCase = caseType || gameState.selectedCase
-    
+
     if (!selectedCase || !user) {
       return
     }
@@ -103,15 +110,15 @@ const CaseOpeningGame: React.FC = () => {
       toast.error('Insufficient balance', `You need ${formatCurrency(selectedCase.price - balance, 'roubles')} more`)
       return
     }
-    
+
     // Update selected case if passed as parameter
     if (caseType) {
       setGameState(prev => ({ ...prev, selectedCase: caseType }))
     }
 
     setError(null)
-    setGameState(prev => ({ 
-      ...prev, 
+    setGameState(prev => ({
+      ...prev,
       isOpening: true,
       lastResult: null
     }))
@@ -127,7 +134,8 @@ const CaseOpeningGame: React.FC = () => {
         throw new Error('Please log in to open cases')
       }
 
-      const response = await fetch('/api/games/cases/open', {
+      // Step 1: Start case opening (deduct balance)
+      const startResponse = await fetch('/api/games/cases/start', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -138,66 +146,97 @@ const CaseOpeningGame: React.FC = () => {
         })
       })
 
-      if (!response.ok) {
-        let errorMessage = 'Failed to open case'
+      if (!startResponse.ok) {
+        let errorMessage = 'Failed to start case opening'
         try {
-          const errorData = await response.json()
+          const errorData = await startResponse.json()
           errorMessage = errorData.error || errorMessage
         } catch {
-          errorMessage = `Server error: ${response.status} ${response.statusText}`
+          errorMessage = `Server error: ${startResponse.status} ${startResponse.statusText}`
         }
         throw new Error(errorMessage)
       }
 
-      const result = await response.json()
+      const startResult = await startResponse.json()
 
-      if (!result.success) {
-        throw new Error(result.error || 'Case opening failed')
+      if (!startResult.success) {
+        throw new Error(startResult.error || 'Case opening start failed')
       }
 
+      // Show deduction message
+      toast.success('Case Opened', `-${formatCurrency(startResult.case_price, 'roubles')} spent on case`, {
+        duration: 2000
+      })
+
+      // Store the opening ID for completion
+      const openingId = startResult.opening_id
+
       // Generate carousel sequence and start animation
-      setTimeout(() => {
+      setTimeout(async () => {
         if (gameState.useCarousel) {
           try {
             // Set carousel setup state
             setGameState(prev => ({ ...prev, isOpening: false, isCarouselSetup: true }))
             
-            // Generate carousel item sequence with real case items
+            // Determine the winning item without crediting (for carousel sequence)
+            const previewResponse = await fetch('/api/games/cases/complete', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                caseTypeId: selectedCase.id,
+                openingId: openingId,
+                delayCredit: true // Get winner without crediting
+              })
+            })
+
+            if (!previewResponse.ok) {
+              throw new Error('Failed to preview case opening')
+            }
+
+            const previewResult = await previewResponse.json()
+            if (!previewResult.success) {
+              throw new Error(previewResult.error || 'Case opening preview failed')
+            }
+
+            // Now we have the winning item - generate sequence with winning item at winning position
+            const winningItem = previewResult.opening_result.item_won
             const winningPosition = calculateWinningPosition(CAROUSEL_TIMING.SEQUENCE_LENGTH)
-            
-            // Ensure we have a proper item pool - if case items aren't loaded, create a basic pool
+
+            // Ensure we have a proper item pool
             let itemPool = gameState.caseItems
             if (!itemPool || itemPool.length === 0) {
               // Create a basic item pool with the winning item and some variations
-              const winningItem = result.opening_result.item_won
               itemPool = [
                 winningItem,
                 // Add some common items as fallback with proper structure
-                { 
-                  id: 'fallback-1', 
-                  name: 'Bandage', 
-                  rarity: 'common', 
+                {
+                  id: 'fallback-1',
+                  name: 'Bandage',
+                  rarity: 'common',
                   base_value: 100,
                   category: 'medical',
                   is_active: true,
                   created_at: new Date().toISOString(),
                   updated_at: new Date().toISOString()
                 },
-                { 
-                  id: 'fallback-2', 
-                  name: 'Salewa First Aid Kit', 
-                  rarity: 'uncommon', 
+                {
+                  id: 'fallback-2',
+                  name: 'Salewa First Aid Kit',
+                  rarity: 'uncommon',
                   base_value: 300,
                   category: 'medical',
                   is_active: true,
                   created_at: new Date().toISOString(),
                   updated_at: new Date().toISOString()
                 },
-                { 
-                  id: 'fallback-3', 
-                  name: 'IFAK Personal Tactical First Aid Kit', 
-                  rarity: 'rare', 
-                  base_value: 800,
+                {
+                  id: 'fallback-3',
+                  name: 'IFAK Personal Tactical First Aid Kit',
+                  rarity: 'rare',
+                  base_value: 1000,
                   category: 'medical',
                   is_active: true,
                   created_at: new Date().toISOString(),
@@ -205,99 +244,145 @@ const CaseOpeningGame: React.FC = () => {
                 }
               ]
             }
-            
+
             // Filter out any invalid items
-            itemPool = itemPool.filter(item => 
-              item && 
-              item.id && 
-              item.name && 
-              item.rarity && 
+            itemPool = itemPool.filter(item =>
+              item &&
+              item.id &&
+              item.name &&
+              item.rarity &&
               typeof item.base_value === 'number'
             )
-            
-            // Ensure we still have items after filtering
-            if (itemPool.length === 0) {
-              throw new Error('No valid items available for carousel')
-            }
-            
-            const carouselItems = generateCarouselSequence(
-              itemPool,
-              result.opening_result.item_won,
-              CAROUSEL_TIMING.SEQUENCE_LENGTH,
-              winningPosition
-            )
 
-            // Validate the sequence
-            if (!validateCarouselSequence(carouselItems)) {
-              throw new Error('Invalid carousel sequence generated')
-            }
+            // Generate the full sequence with winning item at the correct position
+            const carouselSequence = generateCarouselSequence(itemPool, winningItem, CAROUSEL_TIMING.SEQUENCE_LENGTH, winningPosition)
 
-            // Start carousel animation after a brief setup delay
-            setTimeout(() => {
-              setGameState(prev => ({
-                ...prev,
-                isCarouselSetup: false,
-                isCarouselSpinning: true,
-                lastResult: result.opening_result,
-                carouselItems,
-                winningItemIndex: winningPosition
-                // Don't update history yet - wait for carousel to complete
-              }))
-            }, 500)
+            // Set the carousel state with winning item already in place
+            setGameState(prev => ({
+              ...prev,
+              carouselItems: carouselSequence,
+              winningItemIndex: winningPosition,
+              lastResult: previewResult.opening_result,
+              isCarouselSpinning: true,
+              isCarouselSetup: false
+            }))
 
-            // Update balance
-            refreshBalance()
-
-            // Track game for achievements
-            trackGamePlayed(
-              selectedCase.price, 
-              result.opening_result.currency_awarded, 
-              'case_opening'
-            )
+            // Store completion data for when carousel finishes
+            setGameState(prev => ({
+              ...prev,
+              pendingCompletion: {
+                caseTypeId: selectedCase.id,
+                openingId: openingId,
+                token: token,
+                predeterminedWinner: previewResult.opening_result
+              }
+            }))
 
           } catch (error) {
             console.error('Carousel setup error:', error)
             toast.error('Animation Error', 'Using fallback animation')
-            
-            // Fallback to original reveal animation
-            setGameState(prev => ({
-              ...prev,
-              isOpening: false,
-              isCarouselSetup: false,
-              isRevealing: true,
-              lastResult: result.opening_result,
-              openingHistory: [result.opening_result, ...prev.openingHistory.slice(0, 9)]
-            }))
-            
-            // Update balance even if carousel fails
-            refreshBalance()
-            
-            // Track game for achievements
-            trackGamePlayed(
-              selectedCase.price, 
-              result.opening_result.currency_awarded, 
-              'case_opening'
-            )
+
+            // For carousel errors, we need to complete the case opening first
+            ;(async () => {
+              try {
+                const completeResponse = await fetch('/api/games/cases/complete', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                  },
+                  body: JSON.stringify({
+                    caseTypeId: selectedCase.id,
+                    openingId: openingId
+                  })
+                })
+
+                if (completeResponse.ok) {
+                  const completeResult = await completeResponse.json()
+                  if (completeResult.success) {
+                  // Fallback to original reveal animation
+                  setGameState(prev => ({
+                    ...prev,
+                    isOpening: false,
+                    isCarouselSetup: false,
+                    isRevealing: true,
+                    lastResult: completeResult.opening_result,
+                    openingHistory: [completeResult.opening_result, ...prev.openingHistory.slice(0, 9)],
+                    isCarouselSpinning: false
+                  }))
+
+                // Show winnings message
+                setTimeout(() => {
+                  toast.success('Item Won!', `+${formatCurrency(completeResult.currency_awarded, 'roubles')} won!`, {
+                    duration: 3000
+                  })
+                }, 500)
+
+                    // Update balance and track game
+                    refreshBalance()
+                    trackGamePlayed(
+                      selectedCase.price,
+                      completeResult.currency_awarded,
+                      'case_opening'
+                    )
+                  }
+                }
+              } catch (error) {
+                console.error('Error in carousel fallback:', error)
+                setGameState(prev => ({ ...prev, isOpening: false }))
+              }
+            })()
           }
         } else {
           // Use original reveal animation if carousel is disabled
-          setGameState(prev => ({
-            ...prev,
-            isOpening: false,
-            isRevealing: true,
-            lastResult: result.opening_result,
-            openingHistory: [result.opening_result, ...prev.openingHistory.slice(0, 9)]
-          }))
-          
-          // Update balance
-          refreshBalance()
-          
-          // Track game for achievements
-          trackGamePlayed(
-            selectedCase.price, 
-            result.opening_result.currency_awarded, 
-            'case_opening'
-          )
+          // First complete the case opening to get the result
+          ;(async () => {
+            try {
+              const completeResponse = await fetch('/api/games/cases/complete', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                  caseTypeId: selectedCase.id,
+                  openingId: openingId
+                })
+              })
+
+              if (completeResponse.ok) {
+                const completeResult = await completeResponse.json()
+                if (completeResult.success) {
+                  setGameState(prev => ({
+                    ...prev,
+                    isOpening: false,
+                    isRevealing: true,
+                    lastResult: completeResult.opening_result,
+                    openingHistory: [completeResult.opening_result, ...prev.openingHistory.slice(0, 9)],
+                    isCarouselSpinning: false
+                  }))
+
+                  // Show winnings message
+                  setTimeout(() => {
+                    toast.success('Item Won!', `+${formatCurrency(completeResult.currency_awarded, 'roubles')} won!`, {
+                      duration: 3000
+                    })
+                  }, 500)
+
+                  // Update balance and track game
+                  refreshBalance()
+                  trackGamePlayed(
+                    selectedCase.price,
+                    completeResult.currency_awarded,
+                    'case_opening'
+                  )
+                }
+              }
+            } catch (error) {
+              console.error('Error completing case opening (non-carousel):', error)
+              setGameState(prev => ({ ...prev, isOpening: false }))
+            }
+          })()
         }
       }, 1000)
 
@@ -315,52 +400,94 @@ const CaseOpeningGame: React.FC = () => {
     }, 2000)
   }
 
-  const handleCarouselSpinComplete = () => {
-    if (!gameState.lastResult) return
+  const handleCarouselSpinComplete = async () => {
+    // Check if we have pending completion data
+    if (gameState.pendingCompletion) {
+      try {
+        // Call complete API to credit tokens using predetermined winner
+        const { caseTypeId, openingId, token, predeterminedWinner } = gameState.pendingCompletion
+        const completeResponse = await fetch('/api/games/cases/complete', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            caseTypeId,
+            openingId,
+            delayCredit: false, // Credit now
+            predeterminedWinner // Use the winner from preview
+          })
+        })
 
-    // Play reveal sound
-    playCaseReveal()
+        if (!completeResponse.ok) {
+          throw new Error('Failed to complete case opening')
+        }
 
-    // Play rarity-specific sound
-    setTimeout(() => {
-      playRarityReveal(gameState.lastResult!.item_won.rarity)
-    }, 500)
+        const completeResult = await completeResponse.json()
+        if (!completeResult.success) {
+          throw new Error(completeResult.error || 'Case opening completion failed')
+        }
 
-    // Play result sound based on profit/loss
-    setTimeout(() => {
-      if (gameState.lastResult!.currency_awarded > gameState.selectedCase!.price) {
-        playWinSound()
-      } else {
-        playLoseSound()
-      }
-    }, 1000)
+        const result = completeResult
+        const winningItem = result.opening_result.item_won
 
-    // Show toast notification
-    const profit = gameState.lastResult.currency_awarded - gameState.selectedCase!.price
-    setTimeout(() => {
-      if (profit > 0) {
-        toast.success(
-          `${gameState.lastResult!.item_won.rarity.toUpperCase()} Item!`,
-          `You won ${gameState.lastResult!.item_won.name} (+${formatCurrency(profit, 'roubles')})`,
-          { duration: 5000 }
+        // Set the final item for carousel display (carousel will show this at winning position)
+        setGameState(prev => ({
+          ...prev,
+          lastResult: result.opening_result,
+          revealedItem: winningItem
+        }))
+
+        // Play victory sounds and start victory animation
+        playCaseReveal()
+        setTimeout(() => {
+          playRarityReveal(winningItem.rarity)
+        }, 500)
+
+        setTimeout(() => {
+          if (result.currency_awarded > gameState.selectedCase!.price) {
+            playWinSound()
+          } else {
+            playLoseSound()
+          }
+        }, 1000)
+
+        // Show winnings toast as victory animation plays
+        setTimeout(() => {
+          toast.success('Item Won!', `+${formatCurrency(result.currency_awarded, 'roubles')} won!`, {
+            duration: 3000
+          })
+        }, 1500)
+
+        // Update balance and track game
+        refreshBalance()
+        trackGamePlayed(
+          gameState.selectedCase!.price,
+          result.currency_awarded,
+          'case_opening'
         )
-      } else {
-        toast.info(
-          'Item Received',
-          `You got ${gameState.lastResult!.item_won.name}`,
-          { duration: 4000 }
-        )
-      }
-    }, 1500)
 
-    // Add to history and stop carousel spinning after a delay
-    setTimeout(() => {
-      setGameState(prev => ({ 
-        ...prev, 
-        isCarouselSpinning: false,
-        openingHistory: [gameState.lastResult!, ...prev.openingHistory.slice(0, 9)]
-      }))
-    }, 3000)
+        // Add to history after victory animation completes
+        setTimeout(() => {
+          setGameState(prev => ({
+            ...prev,
+            isCarouselSpinning: false,
+            openingHistory: [result.opening_result, ...prev.openingHistory.slice(0, 9)],
+            pendingCompletion: undefined // Clear pending completion
+          }))
+        }, 3000)
+
+      } catch (error) {
+        console.error('Error completing case opening:', error)
+        toast.error('Failed to complete case opening')
+        setGameState(prev => ({
+          ...prev,
+          isCarouselSpinning: false,
+          pendingCompletion: undefined
+        }))
+      }
+    }
   }
 
   const handleSelectCase = async (caseType: CaseType) => {
@@ -549,6 +676,7 @@ const CaseOpeningGame: React.FC = () => {
                       isSpinning={gameState.isCarouselSpinning}
                       onSpinComplete={handleCarouselSpinComplete}
                       caseType={gameState.selectedCase!}
+                      finalItem={gameState.revealedItem}
                     />
                   ) : null}
                 </>
