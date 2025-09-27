@@ -9,7 +9,7 @@ import { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supab
 
 export interface GameStateUpdate {
   userId: string
-  gameType: 'roulette' | 'blackjack' | 'plinko'
+  gameType: 'roulette' | 'blackjack'
   gameId?: string
   status: 'betting' | 'playing' | 'completed'
   data?: any

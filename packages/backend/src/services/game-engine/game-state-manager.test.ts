@@ -169,15 +169,12 @@ describe('GameStateManager', () => {
     it('should return active games for user', async () => {
       const bet1: GameBet = { userId: 'user1', amount: 100, gameType: 'roulette' }
       const bet2: GameBet = { userId: 'user1', amount: 50, gameType: 'blackjack' }
-      const bet3: GameBet = { userId: 'user2', amount: 75, gameType: 'plinko' }
 
       const state1 = await manager.createGameState(bet1)
       const state2 = await manager.createGameState(bet2)
-      const state3 = await manager.createGameState(bet3)
 
       await manager.updateGameState(state1.gameId, { status: 'active' })
       await manager.updateGameState(state2.gameId, { status: 'active' })
-      await manager.updateGameState(state3.gameId, { status: 'active' })
 
       const activeGames = await manager.getActiveGamesForUser('user1')
 

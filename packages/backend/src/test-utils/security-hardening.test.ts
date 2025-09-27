@@ -1,7 +1,9 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'bun:test'
+import '../test-utils/setup' // Setup test environment
 import { Hono } from 'hono'
 import { rateLimitMiddleware, globalRateLimiter } from '../middleware/rate-limit'
 import { validationMiddleware, InputSanitizer, ThreatDetector } from '../middleware/validation'
+import { errorHandler } from '../middleware/error'
 import { AuditLogger } from '../middleware/audit'
 import { sessionManager, ipSecurityManager } from '../middleware/security'
 import { z } from 'zod'
@@ -23,6 +25,7 @@ describe('Security Hardening', () => {
 
     beforeEach(() => {
       app = new Hono()
+      app.onError(errorHandler) // Add error handler for HTTPException handling
       app.use('*', rateLimitMiddleware({
         windowMs: 1000, // 1 second for testing
         maxRequests: 3,
@@ -207,10 +210,13 @@ describe('Security Hardening', () => {
 
       beforeEach(() => {
         app = new Hono()
-        
+
+        // Add error handler (required for HTTPException handling)
+        app.onError(errorHandler)
+
         const schema = z.object({
-          email: z.string().email(),
-          username: z.string().min(3).max(20),
+          email: z.string().email().transform(InputSanitizer.sanitizeEmail),
+          username: z.string().min(3).max(20).transform(InputSanitizer.sanitizeUsername),
           age: z.number().min(0).max(150)
         })
 
@@ -253,10 +259,10 @@ describe('Security Hardening', () => {
 
         const res = await app.fetch(req)
         expect(res.status).toBe(400)
-        
+
         const body = await res.json()
         expect(body.error.message).toBe('Validation failed')
-        expect(body.error.cause.errors).toBeDefined()
+        expect(body.error.code).toBe('VALIDATION_ERROR')
       })
 
       it('should detect and reject malicious input', async () => {
@@ -299,7 +305,8 @@ describe('Security Hardening', () => {
     })
 
     it('should log successful actions', async () => {
-      await expect(AuditLogger.logSuccess(
+      // Should not throw any errors
+      await AuditLogger.logSuccess(
         'test_action',
         'test_resource',
         {
@@ -308,11 +315,12 @@ describe('Security Hardening', () => {
           ipAddress: '192.168.1.1',
           metadata: { test: true }
         }
-      )).resolves.not.toThrow()
+      )
     })
 
     it('should log failed actions', async () => {
-      await expect(AuditLogger.logFailure(
+      // Should not throw any errors
+      await AuditLogger.logFailure(
         'test_action',
         'test_resource',
         'Test error message',
@@ -321,7 +329,7 @@ describe('Security Hardening', () => {
           ipAddress: '192.168.1.1',
           metadata: { test: true }
         }
-      )).resolves.not.toThrow()
+      )
     })
   })
 
@@ -481,7 +489,8 @@ describe('Integration Tests', () => {
     const { securityHeadersMiddleware } = await import('../middleware/security')
     
     app = new Hono()
-    
+    app.onError(errorHandler) // Add error handler for HTTPException handling
+
     // Apply security middleware stack
     app.use('*', securityHeadersMiddleware())
     app.use('*', rateLimitMiddleware({ windowMs: 1000, maxRequests: 5 }))

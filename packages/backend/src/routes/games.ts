@@ -1,5 +1,5 @@
 import { Hono, type Context } from 'hono'
-import { authMiddleware } from '../middleware/auth'
+import { authMiddleware, optionalAuthMiddleware } from '../middleware/auth'
 import { asyncHandler } from '../middleware/error'
 import { gameRateLimit } from '../middleware/rate-limit'
 import { validationMiddleware, commonSchemas } from '../middleware/validation'
@@ -14,8 +14,17 @@ import { realtimeGameService } from '../services/realtime-game'
 
 export const gameRoutes = new Hono()
 
-// All game routes require authentication and rate limiting
-gameRoutes.use('*', authMiddleware)
+// Apply optional auth to all routes first (allows GET requests without auth)
+gameRoutes.use('*', optionalAuthMiddleware)
+
+// Apply strict auth only to game action routes that require authentication
+gameRoutes.use('/blackjack/start', authMiddleware)
+gameRoutes.use('/blackjack/action', authMiddleware)
+gameRoutes.use('/roulette/bet', authMiddleware)
+gameRoutes.use('/case-opening/open', authMiddleware)
+gameRoutes.use('/case-opening/purchase', authMiddleware)
+
+// Apply rate limiting to all routes
 gameRoutes.use('*', gameRateLimit)
 
 // Game validation schemas

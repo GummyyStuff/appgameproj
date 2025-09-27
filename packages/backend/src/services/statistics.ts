@@ -193,7 +193,7 @@ export class StatisticsService {
    * Calculate game type breakdown with trends
    */
   static calculateGameTypeBreakdown(games: GameHistory[]): GameTypeBreakdown[] {
-    const gameTypes = ['roulette', 'blackjack'] as const
+    const gameTypes = ['roulette', 'blackjack', 'case_opening'] as const
     const breakdown: GameTypeBreakdown[] = []
 
     gameTypes.forEach((gameType, index) => {

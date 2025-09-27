@@ -5,14 +5,27 @@
 
 import { beforeEach, afterEach } from 'bun:test'
 
+// Reset environment cache before setting test environment
+delete require.cache[require.resolve('../config/env')]
+
 // Set test environment variables
 process.env.NODE_ENV = 'test'
 process.env.SUPABASE_URL = 'http://localhost:54321'
 process.env.SUPABASE_ANON_KEY = 'test-anon-key'
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key'
-process.env.JWT_SECRET = 'test-jwt-secret'
+process.env.JWT_SECRET = 'test-jwt-secret-at-least-32-characters-long-for-security-compliance-and-validation-purposes-only'
 process.env.STARTING_BALANCE = '10000'
 process.env.DAILY_BONUS = '1000'
+process.env.LOG_LEVEL = 'error'
+process.env.ENABLE_REQUEST_LOGGING = 'false'
+process.env.ENABLE_GAME_LOGGING = 'false'
+process.env.ENABLE_SECURITY_LOGGING = 'false'
+process.env.MAX_REQUEST_SIZE = '10mb'
+process.env.REQUEST_TIMEOUT = '30000'
+process.env.RATE_LIMIT_WINDOW = '900000'
+process.env.RATE_LIMIT_MAX = '100'
+process.env.HEALTH_CHECK_TIMEOUT = '5000'
+process.env.METRICS_ENABLED = 'false'
 
 // Global test utilities
 export const testUtils = {

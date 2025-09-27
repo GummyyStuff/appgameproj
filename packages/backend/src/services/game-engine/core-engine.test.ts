@@ -152,21 +152,6 @@ describe('CoreGameEngine', () => {
       expect(result.winAmount).toBeGreaterThanOrEqual(0)
     })
 
-    it('should process a valid plinko game', async () => {
-      const bet: GameBet = {
-        userId: 'user3',
-        amount: 75,
-        gameType: 'plinko'
-      }
-
-      const result = await engine.processGame(bet)
-
-      expect(result.success).toBe(true)
-      expect(result.gameId).toBeDefined()
-      expect(result.resultData).toBeDefined()
-      expect(typeof result.winAmount).toBe('number')
-      expect(result.winAmount).toBeGreaterThanOrEqual(0)
-    })
 
     it('should reject invalid bets', async () => {
       const invalidBet: GameBet = {
@@ -295,23 +280,6 @@ describe('CoreGameEngine', () => {
       expect(lossPayout).toBe(0)
     })
 
-    it('should calculate correct plinko payouts', () => {
-      const bet: GameBet = {
-        userId: 'user1',
-        amount: 100,
-        gameType: 'plinko'
-      }
-
-      const plinkoResult = {
-        risk_level: 'medium',
-        ball_path: [1, 0, 1, 1, 0, 1, 0, 1],
-        multiplier: 2.1,
-        landing_slot: 7
-      }
-
-      const payout = engine.calculatePayout(bet, plinkoResult as any)
-      expect(payout).toBe(210) // 100 * 2.1
-    })
 
     it('should return 0 for invalid game types', () => {
       const bet: GameBet = {
@@ -377,12 +345,10 @@ describe('CoreGameEngine', () => {
     it('should handle multiple concurrent games from different users', async () => {
       const bet1: GameBet = { userId: 'user1', amount: 100, gameType: 'roulette' }
       const bet2: GameBet = { userId: 'user2', amount: 50, gameType: 'blackjack' }
-      const bet3: GameBet = { userId: 'user3', amount: 75, gameType: 'plinko' }
 
       const results = await Promise.all([
         engine.processGame(bet1),
-        engine.processGame(bet2),
-        engine.processGame(bet3)
+        engine.processGame(bet2)
       ])
 
       results.forEach(result => {

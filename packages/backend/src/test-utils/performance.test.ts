@@ -57,7 +57,7 @@ describe('Performance Testing', () => {
     it('should handle mixed game types concurrently', async () => {
       const gamesPerType = 20
       const promises: Promise<any>[] = []
-      const gameTypes = ['roulette', 'blackjack', 'plinko'] as const
+      const gameTypes = ['roulette', 'blackjack'] as const
 
       const startTime = Date.now()
 

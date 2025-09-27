@@ -6,7 +6,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { GameValidator } from './game-validator'
 import { GameBet } from './types'
-import { RouletteResult, BlackjackResult, PlinkoResult } from '../../types/database'
+import { RouletteResult, BlackjackResult } from '../../types/database'
 
 describe('GameValidator', () => {
   let validator: GameValidator
@@ -179,70 +179,6 @@ describe('GameValidator', () => {
       })
     })
 
-    describe('plinko validation', () => {
-      it('should validate correct plinko result', () => {
-        const result: PlinkoResult = {
-          risk_level: 'medium',
-          ball_path: [1, 1, 1, 1], // Path that leads to slot 8
-          multiplier: 5.6, // Correct multiplier for medium risk slot 8
-          landing_slot: 8
-        }
-        
-        expect(validator.validateGameResult('plinko', result)).toBe(true)
-      })
-
-      it('should reject invalid risk level', () => {
-        const result: PlinkoResult = {
-          risk_level: 'invalid' as any,
-          ball_path: [1, 0, 1, 1, 0, 1, 0, 1],
-          multiplier: 2.1,
-          landing_slot: 7
-        }
-        
-        expect(validator.validateGameResult('plinko', result)).toBe(false)
-      })
-
-      it('should reject invalid ball path', () => {
-        const result: PlinkoResult = {
-          risk_level: 'medium',
-          ball_path: [1, 0, 2, 1, 0, 1, 0, 1], // Contains invalid value (2)
-          multiplier: 2.1,
-          landing_slot: 7
-        }
-        
-        expect(validator.validateGameResult('plinko', result)).toBe(false)
-      })
-
-      it('should reject invalid landing slot', () => {
-        const result: PlinkoResult = {
-          risk_level: 'medium',
-          ball_path: [1, 0, 1, 1, 0, 1, 0, 1],
-          multiplier: 2.1,
-          landing_slot: 9 // Invalid (max is 8)
-        }
-        
-        expect(validator.validateGameResult('plinko', result)).toBe(false)
-      })
-
-      it('should validate multiplier matches slot', () => {
-        const correctResult: PlinkoResult = {
-          risk_level: 'low',
-          ball_path: [0, 0, 0, 0, 0, 0, 0, 0], // Should land in slot 0
-          multiplier: 1.5, // Correct multiplier for low risk slot 0
-          landing_slot: 0
-        }
-        
-        const incorrectResult: PlinkoResult = {
-          risk_level: 'low',
-          ball_path: [0, 0, 0, 0, 0, 0, 0, 0], // Should land in slot 0
-          multiplier: 2.0, // Incorrect multiplier for low risk slot 0
-          landing_slot: 0
-        }
-        
-        expect(validator.validateGameResult('plinko', correctResult)).toBe(true)
-        expect(validator.validateGameResult('plinko', incorrectResult)).toBe(false)
-      })
-    })
 
     it('should reject invalid game types', () => {
       const result = {} as any
@@ -292,23 +228,6 @@ describe('GameValidator', () => {
       expect(validator.validatePayout(bet, result, payout)).toBe(true)
     })
 
-    it('should validate correct plinko payout', () => {
-      const bet: GameBet = {
-        userId: 'user1',
-        amount: 100,
-        gameType: 'plinko'
-      }
-      
-      const result: PlinkoResult = {
-        risk_level: 'medium',
-        ball_path: [1, 0, 1, 1, 0, 1, 0, 1],
-        multiplier: 2.1,
-        landing_slot: 7
-      }
-      
-      const payout = 210 // 100 * 2.1
-      expect(validator.validatePayout(bet, result, payout)).toBe(true)
-    })
 
     it('should reject incorrect payouts', () => {
       const bet: GameBet = {
@@ -328,23 +247,6 @@ describe('GameValidator', () => {
       expect(validator.validatePayout(bet, result, incorrectPayout)).toBe(false)
     })
 
-    it('should handle floating point precision', () => {
-      const bet: GameBet = {
-        userId: 'user1',
-        amount: 100,
-        gameType: 'plinko'
-      }
-      
-      const result: PlinkoResult = {
-        risk_level: 'low',
-        ball_path: [1, 0, 1, 1, 0, 1, 0, 1],
-        multiplier: 1.1,
-        landing_slot: 6
-      }
-      
-      const payout = 110.001 // Very close to correct (110)
-      expect(validator.validatePayout(bet, result, payout)).toBe(true)
-    })
   })
 
   describe('validateBetAmount', () => {

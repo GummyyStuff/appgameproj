@@ -1,0 +1,522 @@
+/* OnlineUsers Component Styles - Tarkov Theme */
+
+.online-users {
+  display: flex;
+  flex-direction: column;
+  background: #1a1a1a;
+  border: 1px solid #4a4a4a;
+  border-radius: 4px;
+  font-family: 'Roboto Mono', 'Source Code Pro', monospace;
+  color: #e0e0e0;
+  min-height: 120px;
+  max-height: 300px;
+}
+
+.online-users__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #2d2d2d;
+  border-bottom: 1px solid #4a4a4a;
+  border-radius: 4px 4px 0 0;
+}
+
+.online-users__title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #b8b8b8;
+}
+
+.online-users__icon {
+  font-size: 14px;
+}
+
+.online-users__count {
+  display: flex;
+  align-items: center;
+}
+
+.online-users__count-number {
+  background: #4a7c59;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.online-users__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.online-users__empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 12px;
+}
+
+.online-users__empty-text {
+  font-size: 11px;
+  color: #666666;
+  font-style: italic;
+  text-align: center;
+}
+
+.online-users__list {
+  flex: 1;
+  padding: 8px 0;
+  overflow-y: hidden;
+}
+
+.online-users__list--scrollable {
+  overflow-y: auto;
+  max-height: 200px;
+}
+
+/* Custom scrollbar for Tarkov theme */
+.online-users__list--scrollable::-webkit-scrollbar {
+  width: 6px;
+}
+
+.online-users__list--scrollable::-webkit-scrollbar-track {
+  background: #1a1a1a;
+}
+
+.online-users__list--scrollable::-webkit-scrollbar-thumb {
+  background: #4a4a4a;
+  border-radius: 3px;
+}
+
+.online-users__list--scrollable::-webkit-scrollbar-thumb:hover {
+  background: #5a5a5a;
+}
+
+.online-users__more {
+  padding: 6px 12px;
+  border-top: 1px solid #333333;
+  background: #252525;
+}
+
+.online-users__more-text {
+  font-size: 10px;
+  color: #888888;
+  font-style: italic;
+  text-align: center;
+  display: block;
+}
+
+/* Individual user item styles */
+.online-user-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  transition: background-color 0.2s ease;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.online-user-item:hover {
+  background: #2a2a2a;
+}
+
+.online-user-item__indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  height: 12px;
+}
+
+.online-user-item__dot {
+  width: 6px;
+  height: 6px;
+  background: #4a7c59;
+  border-radius: 50%;
+  box-shadow: 0 0 4px rgba(74, 124, 89, 0.6);
+  animation: pulse 2s infinite;
+}
+
+.online-user-item__username {
+  flex: 1;
+  font-size: 12px;
+  color: #e0e0e0;
+  font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(0.9);
+  }
+}
+
+/* Mobile-specific optimizations */
+@media (max-width: 768px) {
+  .online-users {
+    min-height: 80px;
+    max-height: 150px;
+    border-radius: 8px;
+    background: rgba(26, 26, 26, 0.95);
+    backdrop-filter: blur(4px);
+  }
+  
+  .online-users__header {
+    padding: 8px 12px;
+    border-radius: 8px 8px 0 0;
+    background: rgba(45, 45, 45, 0.9);
+  }
+  
+  .online-users__title {
+    font-size: 12px;
+    gap: 4px;
+  }
+  
+  .online-users__count-number {
+    font-size: 10px;
+    padding: 2px 6px;
+    background: rgba(74, 124, 89, 0.8);
+    border: 1px solid rgba(74, 124, 89, 0.4);
+  }
+  
+  .online-user-item {
+    padding: 6px 12px;
+    min-height: 32px; /* Touch-friendly height */
+    border-radius: 4px;
+    margin: 1px 4px;
+    transition: all 0.2s ease;
+  }
+
+  .online-user-item:active {
+    background: rgba(255, 255, 255, 0.1);
+    transform: scale(0.98);
+  }
+  
+  .online-user-item__username {
+    font-size: 12px;
+    max-width: 120px;
+  }
+
+  .online-user-item__dot {
+    width: 8px;
+    height: 8px;
+    border: 1px solid #1a1a1a;
+  }
+
+  .online-users__list--scrollable {
+    max-height: 120px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .online-users__list--scrollable::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .online-users__list--scrollable::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+  }
+
+  .online-users__more {
+    padding: 8px 12px;
+    background: rgba(37, 37, 37, 0.9);
+    border-radius: 0 0 8px 8px;
+  }
+
+  .online-users__more-text {
+    font-size: 11px;
+    color: #aaa;
+  }
+}
+
+/* Small mobile devices */
+@media (max-width: 480px) {
+  .online-users {
+    min-height: 60px;
+    max-height: 100px;
+  }
+  
+  .online-users__header {
+    padding: 6px 8px;
+  }
+  
+  .online-users__title {
+    font-size: 11px;
+  }
+  
+  .online-users__count-number {
+    font-size: 9px;
+    padding: 1px 4px;
+  }
+  
+  .online-user-item {
+    padding: 4px 8px;
+    min-height: 28px;
+  }
+  
+  .online-user-item__username {
+    font-size: 11px;
+    max-width: 80px;
+  }
+
+  .online-user-item__dot {
+    width: 6px;
+    height: 6px;
+  }
+
+  .online-users__list--scrollable {
+    max-height: 80px;
+  }
+}
+
+/* Landscape mobile optimization */
+@media (max-width: 768px) and (orientation: landscape) and (max-height: 500px) {
+  .online-users {
+    display: none; /* Hide completely in landscape to save space */
+  }
+
+  /* Alternative: Show as horizontal strip when needed */
+  .online-users--horizontal {
+    display: flex;
+    flex-direction: row;
+    min-height: 40px;
+    max-height: 40px;
+    padding: 4px 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .online-users--horizontal .online-users__header {
+    display: none;
+  }
+
+  .online-users--horizontal .online-users__content {
+    flex-direction: row;
+  }
+
+  .online-users--horizontal .online-users__list {
+    display: flex;
+    flex-direction: row;
+    gap: 4px;
+    padding: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .online-users--horizontal .online-user-item {
+    flex-shrink: 0;
+    padding: 2px 6px;
+    min-height: 24px;
+    font-size: 10px;
+    white-space: nowrap;
+    margin: 0;
+  }
+
+  .online-users--horizontal .online-user-item__username {
+    max-width: 60px;
+    font-size: 9px;
+  }
+
+  .online-users--horizontal .online-user-item__dot {
+    width: 4px;
+    height: 4px;
+  }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+  .online-user-item {
+    /* Larger touch targets */
+    min-height: 44px;
+    cursor: default;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  .online-user-item:hover {
+    background: none; /* Disable hover on touch devices */
+  }
+
+  .online-user-item:active {
+    background: rgba(255, 255, 255, 0.15);
+    -webkit-tap-highlight-color: rgba(255, 255, 255, 0.1);
+  }
+}
+
+/* iOS Safari specific optimizations */
+@supports (-webkit-touch-callout: none) {
+  .online-users__list--scrollable {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+
+  .online-user-item {
+    -webkit-tap-highlight-color: rgba(255, 255, 255, 0.1);
+  }
+
+  /* Fix for iOS Safari rendering */
+  .online-users {
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+  }
+}
+
+/* High DPI displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .online-user-item__dot {
+    border-width: 0.5px;
+  }
+
+  .online-users__count-number {
+    border-width: 0.5px;
+  }
+}
+
+/* Accessibility enhancements for mobile */
+@media (max-width: 768px) {
+  .online-user-item:focus-visible {
+    outline: 2px solid #4a7c59;
+    outline-offset: 2px;
+    background: rgba(74, 124, 89, 0.2);
+  }
+
+  /* Screen reader improvements */
+  .online-user-item[aria-label] {
+    position: relative;
+  }
+
+  .online-user-item[aria-label]::after {
+    content: attr(aria-label);
+    position: absolute;
+    left: -10000px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+  }
+
+  /* Better focus management */
+  .online-users:focus-within {
+    outline: none;
+  }
+}
+
+/* Reduced motion for mobile */
+@media (prefers-reduced-motion: reduce) and (max-width: 768px) {
+  .online-user-item {
+    transition: none;
+    animation: none;
+  }
+
+  .online-user-item:active {
+    transform: none;
+  }
+
+  .online-user-item__dot {
+    animation: none;
+  }
+}
+
+/* Safe area handling for devices with notches */
+@supports (padding: max(0px)) {
+  @media (max-width: 768px) {
+    .online-users {
+      margin-left: max(4px, calc(4px + env(safe-area-inset-left)));
+      margin-right: max(4px, calc(4px + env(safe-area-inset-right)));
+    }
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .online-users {
+    border-color: #ffffff;
+  }
+  
+  .online-users__header {
+    background: #000000;
+    border-bottom-color: #ffffff;
+  }
+  
+  .online-user-item__dot {
+    background: #00ff00;
+    box-shadow: none;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .online-user-item {
+    animation: none;
+  }
+  
+  .online-user-item__dot {
+    animation: none;
+  }
+}
+
+/* Focus styles for accessibility */
+.online-user-item:focus-within {
+  outline: 2px solid #4a7c59;
+  outline-offset: -2px;
+}
+
+/* Loading state styles */
+.online-users--loading .online-users__content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.online-users--loading .online-users__empty-text::after {
+  content: '...';
+  animation: dots 1.5s infinite;
+}
+
+@keyframes dots {
+  0%, 20% {
+    content: '';
+  }
+  40% {
+    content: '.';
+  }
+  60% {
+    content: '..';
+  }
+  80%, 100% {
+    content: '...';
+  }
+}

@@ -3,7 +3,7 @@
  * Validates game results, payouts, and provably fair outcomes
  */
 
-import { GameResultData, RouletteResult, BlackjackResult, PlinkoResult, Card } from '../../types/database'
+import { GameResultData, RouletteResult, BlackjackResult, Card } from '../../types/database'
 import { IGameValidator, GameBet, ProvablyFairSeed, ProvablyFairResult } from './types'
 import { PayoutCalculator } from './payout-calculator'
 import { SecureRandomGenerator } from './random-generator'
@@ -26,8 +26,6 @@ export class GameValidator implements IGameValidator {
         return this.validateRouletteResult(result as RouletteResult)
       case 'blackjack':
         return this.validateBlackjackResult(result as BlackjackResult)
-      case 'plinko':
-        return this.validatePlinkoResult(result as PlinkoResult)
       default:
         return false
     }
@@ -53,13 +51,6 @@ export class GameValidator implements IGameValidator {
         const blackjackResult = result as BlackjackResult
         expectedPayout = this.payoutCalculator.calculateBlackjackPayout(
           blackjackResult.result,
-          bet.amount
-        )
-        break
-      case 'plinko':
-        const plinkoResult = result as PlinkoResult
-        expectedPayout = this.payoutCalculator.calculatePlinkoPayout(
-          plinkoResult.multiplier,
           bet.amount
         )
         break
@@ -160,47 +151,6 @@ export class GameValidator implements IGameValidator {
     return true
   }
 
-  /**
-   * Validate plinko result
-   */
-  private validatePlinkoResult(result: PlinkoResult): boolean {
-    // Validate risk level
-    if (!['low', 'medium', 'high'].includes(result.risk_level)) {
-      return false
-    }
-
-    // Validate ball path
-    if (!Array.isArray(result.ball_path)) {
-      return false
-    }
-
-    // Ball path should contain only 0s and 1s
-    if (!result.ball_path.every(move => move === 0 || move === 1)) {
-      return false
-    }
-
-    // Validate landing slot
-    if (result.landing_slot < 0 || result.landing_slot > 8) {
-      return false
-    }
-
-    // Validate multiplier matches the slot for the risk level
-    const expectedMultiplier = this.payoutCalculator.getPlinkoMultiplier(
-      result.risk_level,
-      result.landing_slot
-    )
-    if (Math.abs(result.multiplier - expectedMultiplier) > 0.01) {
-      return false
-    }
-
-    // Validate ball path leads to correct slot
-    const calculatedSlot = this.calculatePlinkoSlot(result.ball_path)
-    if (calculatedSlot !== result.landing_slot) {
-      return false
-    }
-
-    return true
-  }
 
   /**
    * Validate array of cards
@@ -241,24 +191,6 @@ export class GameValidator implements IGameValidator {
     return value
   }
 
-  /**
-   * Calculate plinko landing slot from ball path
-   */
-  private calculatePlinkoSlot(ballPath: number[]): number {
-    // Start at the middle position
-    let position = 4
-    
-    // Each move: 0 = left, 1 = right
-    for (const move of ballPath) {
-      if (move === 0) {
-        position = Math.max(0, position - 1)
-      } else {
-        position = Math.min(8, position + 1)
-      }
-    }
-
-    return position
-  }
 
   /**
    * Validate bet amount and user balance

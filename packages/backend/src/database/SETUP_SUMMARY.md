@@ -23,7 +23,7 @@
 ### 3. ✅ Create game_history table for tracking all game sessions
 - **File**: `migrations/001_initial_schema.sql`
 - **Features**:
-  - Records all game types (roulette, blackjack, plinko)
+  - Records all game types (roulette, blackjack)
   - Stores bet amounts, winnings, and game-specific result data
   - Includes game duration tracking
   - Optimized indexes for performance

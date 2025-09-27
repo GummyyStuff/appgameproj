@@ -312,80 +312,6 @@ describe('End-to-End User Workflows', () => {
     })
   })
 
-  describe('Plinko Game Workflow', () => {
-    beforeEach(async () => {
-      // Login and navigate to plinko
-      await mockBrowser.navigate('http://localhost:3000/login')
-      const emailInput = await mockBrowser.findElement('[data-testid="email-input"]')
-      const passwordInput = await mockBrowser.findElement('[data-testid="password-input"]')
-      const submitButton = await mockBrowser.findElement('[data-testid="submit-button"]')
-
-      await emailInput.type('test@example.com')
-      await passwordInput.type('SecurePass123!')
-      await submitButton.click()
-
-      await mockBrowser.navigate('http://localhost:3000/plinko')
-    })
-
-    it('should complete full plinko game workflow', async () => {
-      // Set bet amount
-      const betAmountInput = await mockBrowser.findElement('[data-testid="bet-amount-input"]')
-      await betAmountInput.type('100')
-
-      // Select risk level
-      const mediumRiskButton = await mockBrowser.findElement('[data-testid="medium-risk-button"]')
-      await mediumRiskButton.click()
-
-      // Drop ball
-      const dropBallButton = await mockBrowser.findElement('[data-testid="drop-ball-button"]')
-      await dropBallButton.click()
-
-      // Wait for ball animation
-      await mockBrowser.waitFor(() => true)
-
-      // Verify ball path animation
-      const plinkoBoard = await mockBrowser.findElement('[data-testid="plinko-board"]')
-      expect(await plinkoBoard.isVisible()).toBe(true)
-
-      // Verify game result
-      const gameResult = await mockBrowser.findElement('[data-testid="game-result"]')
-      expect(await gameResult.isVisible()).toBe(true)
-
-      // Verify multiplier and payout
-      const multiplierDisplay = await mockBrowser.findElement('[data-testid="multiplier-display"]')
-      const payoutDisplay = await mockBrowser.findElement('[data-testid="payout-display"]')
-      expect(await multiplierDisplay.isVisible()).toBe(true)
-      expect(await payoutDisplay.isVisible()).toBe(true)
-    })
-
-    it('should handle different risk levels', async () => {
-      const riskLevels = ['low', 'medium', 'high']
-
-      for (const riskLevel of riskLevels) {
-        // Set bet amount
-        const betAmountInput = await mockBrowser.findElement('[data-testid="bet-amount-input"]')
-        await betAmountInput.type('50')
-
-        // Select risk level
-        const riskButton = await mockBrowser.findElement(`[data-testid="${riskLevel}-risk-button"]`)
-        await riskButton.click()
-
-        // Verify risk level is selected
-        expect(await riskButton.isVisible()).toBe(true)
-
-        // Drop ball
-        const dropBallButton = await mockBrowser.findElement('[data-testid="drop-ball-button"]')
-        await dropBallButton.click()
-
-        // Wait for result
-        await mockBrowser.waitFor(() => true)
-
-        // Verify result
-        const gameResult = await mockBrowser.findElement('[data-testid="game-result"]')
-        expect(await gameResult.isVisible()).toBe(true)
-      }
-    })
-  })
 
   describe('User Profile and Statistics Workflow', () => {
     beforeEach(async () => {
@@ -446,11 +372,9 @@ describe('End-to-End User Workflows', () => {
       // Verify game breakdown by type
       const rouletteStats = await mockBrowser.findElement('[data-testid="roulette-stats"]')
       const blackjackStats = await mockBrowser.findElement('[data-testid="blackjack-stats"]')
-      const plinkoStats = await mockBrowser.findElement('[data-testid="plinko-stats"]')
 
       expect(await rouletteStats.isVisible()).toBe(true)
       expect(await blackjackStats.isVisible()).toBe(true)
-      expect(await plinkoStats.isVisible()).toBe(true)
     })
 
     it('should view game history', async () => {
@@ -518,8 +442,7 @@ describe('End-to-End User Workflows', () => {
     it('should navigate between all game pages', async () => {
       const gamePages = [
         { path: '/roulette', testId: 'roulette-game' },
-        { path: '/blackjack', testId: 'blackjack-game' },
-        { path: '/plinko', testId: 'plinko-game' }
+        { path: '/blackjack', testId: 'blackjack-game' }
       ]
 
       for (const page of gamePages) {
@@ -539,7 +462,6 @@ describe('End-to-End User Workflows', () => {
         { selector: '[data-testid="nav-home"]', expectedUrl: '/' },
         { selector: '[data-testid="nav-roulette"]', expectedUrl: '/roulette' },
         { selector: '[data-testid="nav-blackjack"]', expectedUrl: '/blackjack' },
-        { selector: '[data-testid="nav-plinko"]', expectedUrl: '/plinko' },
         { selector: '[data-testid="nav-profile"]', expectedUrl: '/profile' },
         { selector: '[data-testid="nav-history"]', expectedUrl: '/history' }
       ]

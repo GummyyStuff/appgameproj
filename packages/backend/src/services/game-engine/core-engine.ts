@@ -34,7 +34,7 @@ export class CoreGameEngine implements IGameEngine {
       }
 
       // Game type validation
-      const validGameTypes = ['roulette', 'blackjack', 'plinko']
+      const validGameTypes = ['roulette', 'blackjack']
       if (!validGameTypes.includes(bet.gameType)) {
         return false
       }
@@ -76,12 +76,6 @@ export class CoreGameEngine implements IGameEngine {
         const blackjackResult = result as any
         return this.payoutCalculator.calculateBlackjackPayout(
           blackjackResult.result,
-          bet.amount
-        )
-      case 'plinko':
-        const plinkoResult = result as any
-        return this.payoutCalculator.calculatePlinkoPayout(
-          plinkoResult.multiplier,
           bet.amount
         )
       default:
@@ -126,9 +120,6 @@ export class CoreGameEngine implements IGameEngine {
           break
         case 'blackjack':
           resultData = await this.generateBlackjackResult(seed, bet)
-          break
-        case 'plinko':
-          resultData = await this.generatePlinkoResult(seed, bet)
           break
         default:
           throw new Error(`Unsupported game type: ${bet.gameType}`)
@@ -230,36 +221,6 @@ export class CoreGameEngine implements IGameEngine {
     return blackjackResult as GameResultData
   }
 
-  /**
-   * Generate plinko game result
-   */
-  private async generatePlinkoResult(seed: ProvablyFairSeed, bet: any): Promise<GameResultData> {
-    const riskLevel = bet.riskLevel || 'medium' // Use bet risk level or default
-    const pathLength = 4 // Number of pegs to bounce off
-    
-    // Generate ball path
-    const randomValues = await this.randomGenerator.generateMultipleFromSeed(seed, pathLength)
-    const ballPath = randomValues.map(val => val < 0.5 ? 0 : 1)
-    
-    // Calculate landing slot - start at position 4 (middle)
-    let position = 4
-    for (const move of ballPath) {
-      position += move === 0 ? -1 : 1
-    }
-    const landingSlot = Math.max(0, Math.min(8, position))
-    
-    // Get multiplier for slot
-    const multiplier = this.payoutCalculator.getPlinkoMultiplier(riskLevel, landingSlot)
-
-    const plinkoResult = {
-      risk_level: riskLevel,
-      ball_path: ballPath,
-      multiplier,
-      landing_slot: landingSlot
-    }
-
-    return plinkoResult as GameResultData
-  }
 
   /**
    * Deal cards from random values

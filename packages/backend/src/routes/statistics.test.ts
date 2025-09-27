@@ -212,7 +212,7 @@ describe('Statistics API Routes', () => {
       expect(GAME_CONFIG).toBeDefined()
       expect(GAME_CONFIG.STARTING_BALANCE).toBe(10000)
       expect(GAME_CONFIG.DAILY_BONUS_AMOUNT).toBe(1000)
-      expect(GAME_CONFIG.GAME_TYPES).toEqual(['roulette', 'blackjack'])
+      expect(GAME_CONFIG.GAME_TYPES).toEqual(['roulette', 'blackjack', 'case_opening'])
     })
   })
 

@@ -216,11 +216,13 @@ export const gameRateLimit = rateLimitMiddleware({
 /**
  * API rate limiting for general endpoints
  */
-export const apiRateLimit = rateLimitMiddleware({
-  windowMs: config.rateLimitWindow,
-  maxRequests: config.rateLimitMax,
-  blockDurationMs: 10 * 60 * 1000 // Block for 10 minutes
-})
+export function apiRateLimit() {
+  return rateLimitMiddleware({
+    windowMs: config.rateLimitWindow,
+    maxRequests: config.rateLimitMax,
+    blockDurationMs: 10 * 60 * 1000 // Block for 10 minutes
+  })
+}
 
 /**
  * Aggressive rate limiting for sensitive operations

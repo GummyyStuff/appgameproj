@@ -9,7 +9,6 @@ export { CoreGameEngine } from './core-engine'
 // Game implementations
 export { RouletteGame } from './roulette-game'
 export { BlackjackGame } from './blackjack-game'
-export { PlinkoGame } from './plinko-game'
 
 // Component classes
 export { SecureRandomGenerator } from './random-generator'

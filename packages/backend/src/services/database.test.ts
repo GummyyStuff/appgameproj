@@ -146,7 +146,7 @@ describe('DatabaseService', () => {
       expect(mockGameRecord).toHaveProperty('result_data')
       expect(mockGameRecord).toHaveProperty('created_at')
 
-      expect(['roulette', 'blackjack', 'plinko']).toContain(mockGameRecord.game_type)
+      expect(['roulette', 'blackjack']).toContain(mockGameRecord.game_type)
       expect(mockGameRecord.bet_amount).toBeGreaterThan(0)
       expect(mockGameRecord.win_amount).toBeGreaterThanOrEqual(0)
       expect(typeof mockGameRecord.result_data).toBe('object')
@@ -200,13 +200,13 @@ describe('DatabaseService', () => {
       for (const query of validQueries) {
         expect(query.userId).toBeTruthy()
         if (query.gameType) {
-          expect(['roulette', 'blackjack', 'plinko']).toContain(query.gameType)
+          expect(['roulette', 'blackjack']).toContain(query.gameType)
         }
       }
 
       for (const query of invalidQueries) {
         const isValid = query.userId && 
-                        (!query.gameType || ['roulette', 'blackjack', 'plinko'].includes(query.gameType as any))
+                        (!query.gameType || ['roulette', 'blackjack'].includes(query.gameType as any))
         expect(isValid).toBe(false)
       }
     })

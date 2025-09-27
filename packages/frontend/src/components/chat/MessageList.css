@@ -1,0 +1,584 @@
+/**
+ * MessageList Component Styles
+ * Tarkov-themed styling for the chat message list with virtual scrolling
+ */
+
+.message-list {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: #1a1a1a;
+  border: 1px solid #2d2d2d;
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Scroll container for virtual scrolling */
+.message-list__scroll-container {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: #4a4a4a #2d2d2d;
+}
+
+.message-list__scroll-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.message-list__scroll-container::-webkit-scrollbar-track {
+  background: #2d2d2d;
+}
+
+.message-list__scroll-container::-webkit-scrollbar-thumb {
+  background: #4a4a4a;
+  border-radius: 4px;
+}
+
+.message-list__scroll-container::-webkit-scrollbar-thumb:hover {
+  background: #5a5a5a;
+}
+
+/* Individual message item container */
+.message-list__item {
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(45, 45, 45, 0.3);
+  display: flex;
+  align-items: flex-start;
+  min-height: 60px;
+  box-sizing: border-box;
+}
+
+.message-list__item:last-child {
+  border-bottom: none;
+}
+
+/* Empty state styling */
+.message-list__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 40px 20px;
+  text-align: center;
+  color: #888;
+}
+
+.message-list__empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.6;
+}
+
+.message-list__empty-text {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  color: #bbb;
+  font-family: 'Roboto Mono', monospace;
+}
+
+.message-list__empty-subtext {
+  font-size: 14px;
+  margin: 0;
+  color: #888;
+  font-family: 'Roboto Mono', monospace;
+}
+
+/* Loading states */
+.message-list__loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background-color: rgba(45, 45, 45, 0.8);
+  border-bottom: 1px solid #2d2d2d;
+  color: #bbb;
+  font-size: 14px;
+  font-family: 'Roboto Mono', monospace;
+  gap: 8px;
+}
+
+.message-list__initial-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #bbb;
+  font-family: 'Roboto Mono', monospace;
+  gap: 16px;
+}
+
+.message-list__initial-loading p {
+  margin: 0;
+  font-size: 16px;
+}
+
+/* Loading spinner animation */
+.message-list__loading-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #4a4a4a;
+  border-top: 2px solid #ffd700;
+  border-radius: 50%;
+  animation: message-list-spin 1s linear infinite;
+}
+
+@keyframes message-list-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Scroll to bottom button */
+.message-list__scroll-to-bottom {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  background: linear-gradient(135deg, #4a4a4a, #2d2d2d);
+  border: 1px solid #ffd700;
+  border-radius: 20px;
+  padding: 8px 16px;
+  color: #ffd700;
+  font-size: 12px;
+  font-family: 'Roboto Mono', monospace;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+
+.message-list__scroll-to-bottom:hover {
+  background: linear-gradient(135deg, #5a5a5a, #3d3d3d);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  transform: translateY(-1px);
+}
+
+.message-list__scroll-to-bottom:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.message-list__scroll-icon {
+  font-size: 14px;
+  font-weight: bold;
+  animation: message-list-bounce 2s infinite;
+}
+
+@keyframes message-list-bounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-3px);
+  }
+  60% {
+    transform: translateY(-1px);
+  }
+}
+
+/* Mobile-specific optimizations */
+@media (max-width: 768px) {
+  .message-list {
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+
+  .message-list__scroll-container {
+    /* Enhanced mobile scrolling */
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+    overscroll-behavior-y: contain;
+  }
+
+  .message-list__scroll-container::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .message-list__scroll-container::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+  }
+
+  .message-list__item {
+    padding: 8px 12px;
+    min-height: 60px;
+    border-bottom: 1px solid rgba(45, 45, 45, 0.5);
+  }
+
+  .message-list__empty {
+    padding: 40px 20px;
+  }
+
+  .message-list__empty-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+  }
+
+  .message-list__empty-text {
+    font-size: 18px;
+  }
+
+  .message-list__empty-subtext {
+    font-size: 14px;
+  }
+
+  .message-list__scroll-to-bottom {
+    bottom: 16px;
+    right: 16px;
+    padding: 12px 16px;
+    font-size: 12px;
+    min-height: 44px;
+    border-radius: 22px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  }
+
+  .message-list__scroll-to-bottom:active {
+    transform: scale(0.95);
+  }
+
+  /* Pull-to-refresh styling */
+  .message-list__pull-refresh {
+    position: absolute;
+    top: -60px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100px;
+    height: 40px;
+    background: rgba(45, 45, 45, 0.9);
+    border-radius: 20px;
+    color: #ffd700;
+    font-size: 12px;
+    font-family: 'Roboto Mono', monospace;
+    transition: top 0.3s ease, opacity 0.3s ease;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .message-list__pull-refresh.active {
+    top: 10px;
+    opacity: 1;
+  }
+
+  .message-list__pull-refresh-icon {
+    width: 16px;
+    height: 16px;
+    margin-right: 8px;
+    animation: spin 1s linear infinite;
+  }
+
+  /* Loading states for mobile */
+  .message-list__loading {
+    padding: 16px;
+    font-size: 14px;
+  }
+
+  .message-list__initial-loading {
+    gap: 20px;
+  }
+
+  .message-list__initial-loading p {
+    font-size: 16px;
+  }
+
+  .message-list__loading-spinner {
+    width: 20px;
+    height: 20px;
+    border-width: 3px;
+  }
+}
+
+/* Small mobile devices */
+@media (max-width: 480px) {
+  .message-list__item {
+    padding: 6px 8px;
+    min-height: 50px;
+  }
+
+  .message-list__empty {
+    padding: 20px 16px;
+  }
+
+  .message-list__empty-icon {
+    font-size: 36px;
+    margin-bottom: 12px;
+  }
+
+  .message-list__empty-text {
+    font-size: 16px;
+  }
+
+  .message-list__empty-subtext {
+    font-size: 12px;
+  }
+
+  .message-list__scroll-to-bottom {
+    bottom: 12px;
+    right: 12px;
+    padding: 8px 12px;
+    font-size: 11px;
+    min-height: 36px;
+    border-radius: 18px;
+  }
+
+  .message-list__loading {
+    padding: 12px;
+    font-size: 12px;
+  }
+
+  .message-list__loading-spinner {
+    width: 16px;
+    height: 16px;
+    border-width: 2px;
+  }
+}
+
+/* Landscape mobile optimization */
+@media (max-width: 768px) and (orientation: landscape) and (max-height: 500px) {
+  .message-list__item {
+    padding: 4px 8px;
+    min-height: 40px;
+  }
+
+  .message-list__empty {
+    padding: 16px 12px;
+  }
+
+  .message-list__empty-icon {
+    font-size: 32px;
+    margin-bottom: 8px;
+  }
+
+  .message-list__empty-text {
+    font-size: 14px;
+  }
+
+  .message-list__empty-subtext {
+    font-size: 11px;
+  }
+
+  .message-list__scroll-to-bottom {
+    bottom: 8px;
+    right: 8px;
+    padding: 6px 10px;
+    font-size: 10px;
+    min-height: 32px;
+  }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+  .message-list__scroll-container {
+    /* Improve touch scrolling performance */
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: y proximity;
+  }
+
+  .message-list__item {
+    /* Prevent text selection during scrolling */
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  .message-list__scroll-to-bottom {
+    /* Larger touch target */
+    min-width: 44px;
+    min-height: 44px;
+    cursor: default;
+  }
+
+  .message-list__scroll-to-bottom:hover {
+    transform: none; /* Disable hover on touch devices */
+  }
+
+  .message-list__scroll-to-bottom:active {
+    transform: scale(0.9);
+    background: linear-gradient(135deg, #6a6a6a, #4d4d4d);
+  }
+}
+
+/* iOS Safari specific optimizations */
+@supports (-webkit-touch-callout: none) {
+  .message-list__scroll-container {
+    -webkit-overflow-scrolling: touch;
+    /* Prevent rubber band scrolling at top/bottom */
+    overscroll-behavior-y: none;
+  }
+
+  /* Fix for iOS Safari scroll momentum */
+  .message-list {
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+  }
+
+  .message-list__item {
+    /* Improve rendering performance */
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+  }
+}
+
+/* Android Chrome specific optimizations */
+@media (max-width: 768px) {
+  .message-list__scroll-container {
+    /* Improve scroll performance on Android */
+    will-change: scroll-position;
+  }
+
+  .message-list__item {
+    /* Prevent layout thrashing */
+    contain: layout style paint;
+  }
+}
+
+/* High DPI displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .message-list__scroll-to-bottom {
+    border-width: 0.5px;
+  }
+
+  .message-list__loading-spinner {
+    border-width: 1.5px;
+  }
+}
+
+/* Accessibility enhancements for mobile */
+@media (max-width: 768px) {
+  .message-list__scroll-to-bottom:focus-visible {
+    outline: 3px solid #ffd700;
+    outline-offset: 3px;
+  }
+
+  /* Announce scroll position for screen readers */
+  .message-list[aria-label]::after {
+    content: attr(aria-label);
+    position: absolute;
+    left: -10000px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+  }
+
+  /* Better focus management */
+  .message-list__item:focus {
+    outline: 2px solid #ffd700;
+    outline-offset: 2px;
+    background: rgba(255, 215, 0, 0.1);
+  }
+}
+
+/* Reduced motion for mobile */
+@media (prefers-reduced-motion: reduce) and (max-width: 768px) {
+  .message-list__scroll-container {
+    scroll-behavior: auto;
+  }
+
+  .message-list__scroll-to-bottom {
+    transition: none;
+  }
+
+  .message-list__scroll-to-bottom:active {
+    transform: none;
+  }
+
+  .message-list__scroll-icon {
+    animation: none;
+  }
+
+  .message-list__loading-spinner {
+    animation: none;
+  }
+
+  .message-list__pull-refresh {
+    transition: none;
+  }
+
+  .message-list__pull-refresh-icon {
+    animation: none;
+  }
+}
+
+/* Safe area handling for devices with notches */
+@supports (padding: max(0px)) {
+  @media (max-width: 768px) {
+    .message-list {
+      padding-left: max(0px, env(safe-area-inset-left));
+      padding-right: max(0px, env(safe-area-inset-right));
+    }
+
+    .message-list__scroll-to-bottom {
+      right: max(16px, calc(16px + env(safe-area-inset-right)));
+      bottom: max(16px, calc(16px + env(safe-area-inset-bottom)));
+    }
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .message-list {
+    border-color: #fff;
+  }
+
+  .message-list__item {
+    border-bottom-color: #fff;
+  }
+
+  .message-list__empty-text,
+  .message-list__loading,
+  .message-list__initial-loading {
+    color: #fff;
+  }
+
+  .message-list__scroll-to-bottom {
+    border-color: #fff;
+    color: #fff;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .message-list__loading-spinner {
+    animation: none;
+  }
+
+  .message-list__scroll-icon {
+    animation: none;
+  }
+
+  .message-list__scroll-to-bottom {
+    transition: none;
+  }
+}
+
+/* Focus styles for accessibility */
+.message-list__scroll-to-bottom:focus {
+  outline: 2px solid #ffd700;
+  outline-offset: 2px;
+}
+
+/* Dark theme adjustments */
+@media (prefers-color-scheme: dark) {
+  .message-list {
+    background-color: #0d0d0d;
+    border-color: #1a1a1a;
+  }
+
+  .message-list__scroll-container::-webkit-scrollbar-track {
+    background: #1a1a1a;
+  }
+
+  .message-list__item {
+    border-bottom-color: rgba(26, 26, 26, 0.5);
+  }
+}

@@ -57,9 +57,9 @@ describe('Game API', () => {
       }
 
       for (const request of invalidRequests) {
-        const isValid = request.amount > 0 && 
-                       request.betType && 
-                       request.betValue !== undefined
+        const isValid = Boolean(request.amount > 0 &&
+                               request.betType &&
+                               request.betValue !== undefined)
         expect(isValid).toBe(false)
       }
     })
@@ -189,43 +189,9 @@ describe('Game API', () => {
       }
 
       for (const request of invalidRequests) {
-        const isValid = request.gameId && 
-                       request.action && 
-                       validActions.includes(request.action)
-        expect(isValid).toBe(false)
-      }
-    })
-  })
-
-  describe('POST /api/games/plinko/drop', () => {
-    it('should validate plinko drop request', () => {
-      const validRequests = [
-        { amount: 100, riskLevel: 'low' },
-        { amount: 50, riskLevel: 'medium' },
-        { amount: 25, riskLevel: 'high' }
-      ]
-
-      const invalidRequests = [
-        {}, // Missing all fields
-        { amount: 100 }, // Missing risk level
-        { riskLevel: 'low' }, // Missing amount
-        { amount: 0, riskLevel: 'low' }, // Zero amount
-        { amount: -100, riskLevel: 'low' }, // Negative amount
-        { amount: 100, riskLevel: 'invalid' }, // Invalid risk level
-        { amount: 100, riskLevel: '' } // Empty risk level
-      ]
-
-      const validRiskLevels = ['low', 'medium', 'high']
-
-      for (const request of validRequests) {
-        expect(request.amount).toBeGreaterThan(0)
-        expect(validRiskLevels).toContain(request.riskLevel)
-      }
-
-      for (const request of invalidRequests) {
-        const isValid = request.amount > 0 && 
-                       request.riskLevel && 
-                       validRiskLevels.includes(request.riskLevel)
+        const isValid = Boolean(request.gameId &&
+                               request.action &&
+                               validActions.includes(request.action))
         expect(isValid).toBe(false)
       }
     })
@@ -290,30 +256,6 @@ describe('Game API', () => {
       expect(Array.isArray(mockResponse.gameState.actions)).toBe(true)
     })
 
-    it('should validate plinko game response structure', () => {
-      const mockResponse = {
-        success: true,
-        gameId: 'game123',
-        result: {
-          risk_level: 'medium',
-          ball_path: [1, 0, 1, 1, 0, 1, 0, 1],
-          landing_slot: 7,
-          multiplier: 2.1,
-          payout: 210
-        },
-        balance: 10110,
-        timestamp: '2024-01-15T10:00:00Z'
-      }
-
-      expect(mockResponse.success).toBe(true)
-      expect(mockResponse.gameId).toBeTruthy()
-      expect(mockResponse.result).toBeDefined()
-      expect(['low', 'medium', 'high'].includes(mockResponse.result.risk_level)).toBe(true)
-      expect(Array.isArray(mockResponse.result.ball_path)).toBe(true)
-      expect(mockResponse.result.landing_slot).toBeGreaterThanOrEqual(0)
-      expect(mockResponse.result.multiplier).toBeGreaterThan(0)
-      expect(mockResponse.result.payout).toBeGreaterThanOrEqual(0)
-    })
   })
 
   describe('Error Response Validation', () => {
@@ -367,9 +309,9 @@ describe('Game API', () => {
       expect(validHeaders['Content-Type']).toBe('application/json')
 
       for (const headers of invalidHeaders) {
-        const hasValidAuth = headers.Authorization && 
-                            headers.Authorization.startsWith('Bearer ') &&
-                            headers.Authorization.length > 7
+        const hasValidAuth = Boolean(headers.Authorization &&
+                                    headers.Authorization.startsWith('Bearer ') &&
+                                    headers.Authorization.length > 7)
         expect(hasValidAuth).toBe(false)
       }
     })
@@ -379,8 +321,7 @@ describe('Game API', () => {
     it('should validate rate limiting configuration', () => {
       const rateLimits = {
         roulette: { maxRequests: 60, windowMs: 60000 }, // 60 per minute
-        blackjack: { maxRequests: 30, windowMs: 60000 }, // 30 per minute
-        plinko: { maxRequests: 120, windowMs: 60000 } // 120 per minute
+        blackjack: { maxRequests: 30, windowMs: 60000 } // 30 per minute
       }
 
       for (const [game, limit] of Object.entries(rateLimits)) {

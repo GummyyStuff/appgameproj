@@ -162,7 +162,6 @@ test_game_endpoints() {
     local endpoints=(
         "games/roulette/bet"
         "games/blackjack/start"
-        "games/plinko/drop"
     )
     
     for endpoint in "${endpoints[@]}"; do

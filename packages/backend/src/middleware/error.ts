@@ -1,6 +1,6 @@
 import { Context } from 'hono'
 import { HTTPException } from 'hono/http-exception'
-import { env, isDevelopment } from '../config/env'
+import { env, isDevelopment, isTest } from '../config/env'
 import { logger } from './logger'
 
 export interface ErrorResponse {
@@ -77,7 +77,7 @@ export function errorHandler(err: Error, c: Context): Response {
         message: 'Validation failed',
         code: 'VALIDATION_ERROR',
         requestId,
-        details: isDevelopment ? err : undefined
+        details: isDevelopment() && !isTest ? err : undefined
       },
       timestamp,
       path,

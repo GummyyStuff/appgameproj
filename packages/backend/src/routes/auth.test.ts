@@ -52,11 +52,11 @@ describe('Authentication API', () => {
       }
 
       for (const request of invalidRequests) {
-        const hasValidEmail = request.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(request.email)
-        const hasValidPassword = request.password && request.password.length >= 8
-        const hasValidUsername = request.username && 
-                                request.username.length >= 3 && 
-                                request.username.length <= 20
+        const hasValidEmail = Boolean(request.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(request.email))
+        const hasValidPassword = Boolean(request.password && request.password.length >= 8)
+        const hasValidUsername = Boolean(request.username &&
+                                        request.username.length >= 3 &&
+                                        request.username.length <= 20)
 
         const isValid = hasValidEmail && hasValidPassword && hasValidUsername
         expect(isValid).toBe(false)
@@ -84,16 +84,18 @@ describe('Authentication API', () => {
       for (const password of strongPasswords) {
         expect(password.length).toBeGreaterThanOrEqual(8)
         expect(password.length).toBeLessThanOrEqual(50)
-        // Should contain mix of characters
+        // Should contain mix of characters: letters, numbers, and special chars
         expect(/[a-z]/.test(password) || /[A-Z]/.test(password)).toBe(true)
-        expect(/\d/.test(password) || /[!@#$%^&*]/.test(password)).toBe(true)
+        expect(/\d/.test(password)).toBe(true)
+        expect(/[!@#$%^&*]/.test(password)).toBe(true)
       }
 
       for (const password of weakPasswords) {
-        const isStrong = password.length >= 8 && 
+        const isStrong = password.length >= 8 &&
                         password.length <= 50 &&
                         (/[a-z]/.test(password) || /[A-Z]/.test(password)) &&
-                        (/\d/.test(password) || /[!@#$%^&*]/.test(password))
+                        /\d/.test(password) &&
+                        /[!@#$%^&*]/.test(password)
         expect(isStrong).toBe(false)
       }
     })
@@ -104,7 +106,8 @@ describe('Authentication API', () => {
         'user123',
         'my_username',
         'player-one',
-        'TarkovFan2024'
+        'TarkovFan2024',
+        '123456' // Purely numeric is allowed
       ]
 
       const invalidUsernames = [
@@ -113,7 +116,7 @@ describe('Authentication API', () => {
         'a'.repeat(25), // Too long
         'user@name', // Invalid characters
         'user name', // Spaces
-        '123', // Only numbers
+        '12', // Too short even for numbers
         'user!', // Special characters
         'admin', // Reserved word
         'root' // Reserved word
@@ -129,7 +132,7 @@ describe('Authentication API', () => {
       }
 
       for (const username of invalidUsernames) {
-        const isValid = username.length >= 3 && 
+        const isValid = username.length >= 3 &&
                        username.length <= 20 &&
                        /^[a-zA-Z0-9_-]+$/.test(username) &&
                        !reservedWords.includes(username.toLowerCase())
@@ -166,8 +169,8 @@ describe('Authentication API', () => {
       }
 
       for (const request of invalidRequests) {
-        const hasValidEmail = request.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(request.email)
-        const hasValidPassword = request.password && request.password.length > 0
+        const hasValidEmail = Boolean(request.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(request.email))
+        const hasValidPassword = Boolean(request.password && request.password.length > 0)
 
         const isValid = hasValidEmail && hasValidPassword
         expect(isValid).toBe(false)
@@ -204,9 +207,9 @@ describe('Authentication API', () => {
       expect(validHeaders.Authorization).toMatch(/^Bearer .+/)
 
       for (const headers of invalidHeaders) {
-        const hasValidAuth = headers.Authorization && 
-                            headers.Authorization.startsWith('Bearer ') &&
-                            headers.Authorization.length > 7
+        const hasValidAuth = Boolean(headers.Authorization &&
+                                    headers.Authorization.startsWith('Bearer ') &&
+                                    headers.Authorization.length > 7)
         expect(hasValidAuth).toBe(false)
       }
     })
@@ -232,7 +235,7 @@ describe('Authentication API', () => {
       }
 
       for (const request of invalidRequests) {
-        const hasValidEmail = request.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(request.email)
+        const hasValidEmail = Boolean(request.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(request.email))
         expect(hasValidEmail).toBe(false)
       }
     })
@@ -327,10 +330,10 @@ describe('Authentication API', () => {
       }
 
       for (const session of invalidSessions) {
-        const isValid = session.user_id && 
-                       session.access_token && 
-                       session.refresh_token &&
-                       session.expires_at > Date.now()
+        const isValid = Boolean(session.user_id &&
+                               session.access_token &&
+                               session.refresh_token &&
+                               session.expires_at > Date.now())
         expect(isValid).toBe(false)
       }
     })

@@ -39,7 +39,7 @@ export type Env = z.infer<typeof envSchema>
 export function validateEnv(): Env {
   try {
     const parsed = envSchema.parse(process.env)
-    
+
     // Log configuration in development
     if (parsed.NODE_ENV === 'development') {
       console.log('🔧 Environment Configuration:')
@@ -49,41 +49,77 @@ export function validateEnv(): Env {
       console.log(`   LOG_LEVEL: ${parsed.LOG_LEVEL}`)
       console.log(`   METRICS_ENABLED: ${parsed.METRICS_ENABLED}`)
     }
-    
+
     return parsed
   } catch (error) {
     console.error('❌ Invalid environment variables:')
+    console.error('Error type:', typeof error)
+    console.error('Error keys:', Object.keys(error || {}))
+    console.error('Error:', error)
+
     if (error instanceof z.ZodError) {
       error.errors.forEach(err => {
         console.error(`   ${err.path.join('.')}: ${err.message}`)
       })
     } else {
-      console.error(error)
+      console.error('   Error:', error instanceof Error ? error.message : String(error))
     }
+
+    // In test environment, don't exit - just throw
+    if (process.env.NODE_ENV === 'test') {
+      throw error
+    }
+
     process.exit(1)
   }
 }
 
-export const env = validateEnv()
+// Lazy-loaded environment validation
+let _env: Env | null = null
+let _config: any = null
+
+function getEnv(): Env {
+  if (!_env) {
+    _env = validateEnv()
+  }
+  return _env
+}
+
+function getConfig(): any {
+  if (!_config) {
+    const env = getEnv()
+    _config = {
+      port: parseInt(env.PORT),
+      startingBalance: parseInt(env.STARTING_BALANCE),
+      dailyBonus: parseInt(env.DAILY_BONUS),
+      requestTimeout: parseInt(env.REQUEST_TIMEOUT),
+      rateLimitWindow: parseInt(env.RATE_LIMIT_WINDOW),
+      rateLimitMax: parseInt(env.RATE_LIMIT_MAX),
+      healthCheckTimeout: parseInt(env.HEALTH_CHECK_TIMEOUT),
+
+      // Boolean flags
+      enableRequestLogging: env.ENABLE_REQUEST_LOGGING === 'true',
+      enableGameLogging: env.ENABLE_GAME_LOGGING === 'true',
+      enableSecurityLogging: env.ENABLE_SECURITY_LOGGING === 'true',
+      metricsEnabled: env.METRICS_ENABLED === 'true',
+    }
+  }
+  return _config
+}
+
+export const env = new Proxy({} as Env, {
+  get(target, prop) {
+    return getEnv()[prop as keyof Env]
+  }
+})
+
+export const config = new Proxy({} as any, {
+  get(target, prop) {
+    return getConfig()[prop]
+  }
+})
 
 // Helper functions for environment-specific behavior
-export const isDevelopment = env.NODE_ENV === 'development'
-export const isProduction = env.NODE_ENV === 'production'
-export const isTest = env.NODE_ENV === 'test'
-
-// Parsed numeric values for convenience
-export const config = {
-  port: parseInt(env.PORT),
-  startingBalance: parseInt(env.STARTING_BALANCE),
-  dailyBonus: parseInt(env.DAILY_BONUS),
-  requestTimeout: parseInt(env.REQUEST_TIMEOUT),
-  rateLimitWindow: parseInt(env.RATE_LIMIT_WINDOW),
-  rateLimitMax: parseInt(env.RATE_LIMIT_MAX),
-  healthCheckTimeout: parseInt(env.HEALTH_CHECK_TIMEOUT),
-  
-  // Boolean flags
-  enableRequestLogging: env.ENABLE_REQUEST_LOGGING === 'true',
-  enableGameLogging: env.ENABLE_GAME_LOGGING === 'true',
-  enableSecurityLogging: env.ENABLE_SECURITY_LOGGING === 'true',
-  metricsEnabled: env.METRICS_ENABLED === 'true',
-}
+export const isDevelopment = () => getEnv().NODE_ENV === 'development'
+export const isProduction = () => getEnv().NODE_ENV === 'production'
+export const isTest = () => getEnv().NODE_ENV === 'test'

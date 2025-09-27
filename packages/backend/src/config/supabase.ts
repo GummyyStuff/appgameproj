@@ -1,26 +1,38 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import { env } from './env'
 
-// Server-side client with service role key for admin operations
-export const supabaseAdmin: SupabaseClient = createClient(
-  env.SUPABASE_URL,
-  env.SUPABASE_SERVICE_ROLE_KEY,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    },
-    db: {
-      schema: 'public'
+// Lazy-loaded Supabase admin client to avoid initialization issues in tests
+let _supabaseAdmin: SupabaseClient | null = null
+
+export const supabaseAdmin: SupabaseClient = new Proxy({} as SupabaseClient, {
+  get(target, prop) {
+    if (!_supabaseAdmin) {
+      _supabaseAdmin = createClient(
+        env.SUPABASE_URL,
+        env.SUPABASE_SERVICE_ROLE_KEY,
+        {
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false
+          },
+          db: {
+            schema: 'public'
+          }
+        }
+      )
     }
+    return _supabaseAdmin[prop as keyof SupabaseClient]
   }
-)
+})
 
 // Client-side compatible configuration for frontend
-export const supabaseConfig = {
-  url: env.SUPABASE_URL,
-  anonKey: env.SUPABASE_ANON_KEY,
-}
+export const supabaseConfig = new Proxy({} as { url: string; anonKey: string }, {
+  get(target, prop) {
+    if (prop === 'url') return env.SUPABASE_URL
+    if (prop === 'anonKey') return env.SUPABASE_ANON_KEY
+    return undefined
+  }
+})
 
 /**
  * Test database connection

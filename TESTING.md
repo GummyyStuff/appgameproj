@@ -25,7 +25,6 @@ The testing suite covers all aspects of the application including:
 │   │       ├── random-generator.test.ts        # Random number generation
 │   │       ├── roulette-game.test.ts          # Roulette game logic
 │   │       ├── blackjack-game.test.ts         # Blackjack game logic
-│   │       ├── plinko-game.test.ts            # Plinko game logic
 │   │       ├── game-state-manager.test.ts     # Game state management
 │   │       ├── game-validator.test.ts         # Game validation
 │   │       └── payout-calculator.test.ts      # Payout calculations
@@ -42,8 +41,7 @@ The testing suite covers all aspects of the application including:
 │   │   │   └── AuthForm.test.tsx              # Authentication forms
 │   │   ├── games/__tests__/
 │   │   │   ├── RouletteWheel.test.tsx         # Roulette interface
-│   │   │   ├── BlackjackGame.test.tsx         # Blackjack interface
-│   │   │   └── PlinkoGame.test.tsx            # Plinko interface
+│   │   │   └── BlackjackGame.test.tsx         # Blackjack interface
 │   │   └── ui/__tests__/
 │   │       ├── GameHistoryTable.test.tsx     # Game history display
 │   │       └── StatisticsDashboard.test.tsx  # Statistics dashboard
@@ -61,7 +59,7 @@ The testing suite covers all aspects of the application including:
 - Currency service operations and validation
 - Game engine core functionality
 - Random number generation and cryptographic security
-- Individual game logic (roulette, blackjack, plinko)
+- Individual game logic (roulette, blackjack)
 - Payout calculations and game validation
 - Database service methods
 - Statistics calculations
@@ -78,7 +76,7 @@ The testing suite covers all aspects of the application including:
 
 **API Integration:**
 - Authentication endpoints (register, login, logout, password reset)
-- Game endpoints (roulette, blackjack, plinko)
+- Game endpoints (roulette, blackjack)
 - User profile and statistics endpoints
 - Database operations with real data
 - Error handling and validation
@@ -101,7 +99,6 @@ The testing suite covers all aspects of the application including:
 **Game-Specific Fairness:**
 - Roulette wheel distribution and RTP (Return to Player)
 - Blackjack basic strategy expected values
-- Plinko ball distribution and multipliers
 - Cross-game consistency checks
 
 ### 4. Performance Testing
@@ -337,11 +334,6 @@ jobs:
 - Basic strategy expected values
 - House edge verification (~0.5%)
 
-**Plinko:**
-- Ball path randomness
-- Slot distribution following binomial probability
-- Risk level multiplier accuracy
-- Expected return validation
 
 ## Performance Benchmarks
 

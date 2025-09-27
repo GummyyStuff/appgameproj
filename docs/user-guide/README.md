@@ -36,7 +36,6 @@ Welcome to the Tarkov Casino - your destination for Escape from Tarkov themed ca
 - **Home**: Overview of available games and your stats
 - **Roulette**: Classic casino roulette with Tarkov theming
 - **Blackjack**: Strategic card game
-- **Plinko**: Ball-drop probability game
 - **Profile**: Account settings and detailed statistics
 - **History**: View your complete gaming history
 
@@ -131,30 +130,6 @@ Access your profile to:
 - Must stand on 17 or more
 - Dealer blackjack beats player 21
 
-### Plinko
-
-**Objective**: Drop a ball down a peg-filled board to land in high-multiplier slots.
-
-**How to Play**:
-1. Choose your bet amount
-2. Select risk level:
-   - **Low Risk**: More consistent, lower multipliers (0.5x - 16x)
-   - **Medium Risk**: Balanced risk/reward (0.2x - 33x)
-   - **High Risk**: High variance, extreme multipliers (0.1x - 1000x)
-3. Click "Drop Ball" to release
-4. Watch the ball bounce through pegs
-5. Collect winnings based on final slot
-
-**Payout Structure**:
-- 16 slots at bottom with different multipliers
-- Center slots typically have higher multipliers
-- Edge slots usually have lower multipliers
-- Risk level affects multiplier distribution
-
-**Strategy Notes**:
-- Higher risk = higher potential rewards but more losses
-- Ball physics are realistic and fair
-- Each drop is independent - no patterns
 
 ## Tips and Strategies
 
@@ -178,10 +153,6 @@ Access your profile to:
 - Never split 10s or 5s
 - Double on 11 against dealer 2-10
 
-**Plinko**:
-- Low risk for steady play
-- High risk for excitement and big wins
-- Medium risk for balanced gameplay
 
 
 

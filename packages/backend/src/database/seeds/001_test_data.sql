@@ -62,14 +62,6 @@ INSERT INTO game_history (user_id, game_type, bet_amount, win_amount, result_dat
 ('550e8400-e29b-41d4-a716-446655440003'::uuid, 'blackjack', 500.00, 1000.00, 
  '{"player_hand": [{"suit": "hearts", "value": "9"}, {"suit": "spades", "value": "10"}], "dealer_hand": [{"suit": "clubs", "value": "K"}, {"suit": "diamonds", "value": "6"}], "result": "player_win"}', 12000);
 
--- Plinko games
-INSERT INTO game_history (user_id, game_type, bet_amount, win_amount, result_data, game_duration) VALUES
-('550e8400-e29b-41d4-a716-446655440001'::uuid, 'plinko', 1500.00, 7500.00, 
- '{"risk_level": "high", "ball_path": [0, 1, 1, 0, 1, 0, 1, 1], "multiplier": 5.0, "landing_slot": 7}', 8000),
-('550e8400-e29b-41d4-a716-446655440002'::uuid, 'plinko', 200.00, 100.00, 
- '{"risk_level": "low", "ball_path": [0, 0, 1, 0, 0, 1, 0, 0], "multiplier": 0.5, "landing_slot": 2}', 6000),
-('550e8400-e29b-41d4-a716-446655440003'::uuid, 'plinko', 300.00, 900.00, 
- '{"risk_level": "medium", "ball_path": [1, 0, 1, 1, 0, 1, 1, 0], "multiplier": 3.0, "landing_slot": 5}', 7000);
 
 -- Sample daily bonus claims
 INSERT INTO daily_bonuses (user_id, bonus_amount, claimed_at) VALUES

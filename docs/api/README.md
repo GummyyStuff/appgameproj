@@ -197,7 +197,7 @@ Get game history with optional filtering.
 **Headers:** `Authorization: Bearer <token>`
 
 **Query Parameters:**
-- `gameType`: Filter by game type (roulette, blackjack, plinko)
+- `gameType`: Filter by game type (roulette, blackjack)
 - `limit`: Number of results (default: 50, max: 200)
 - `offset`: Pagination offset (default: 0)
 - `startDate`: Filter from date (ISO format)
@@ -257,12 +257,6 @@ Get detailed user statistics.
         "totalWagered": 15000,
         "totalWon": 14500,
         "winRate": 0.48
-      },
-      "plinko": {
-        "gamesPlayed": 25,
-        "totalWagered": 10000,
-        "totalWon": 8500,
-        "winRate": 0.40
       }
     }
   }
@@ -375,33 +369,6 @@ Perform blackjack action (hit, stand, double, split).
 }
 ```
 
-#### POST /games/plinko/drop
-Drop a plinko ball.
-
-**Headers:** `Authorization: Bearer <token>`
-
-**Request Body:**
-```json
-{
-  "betAmount": 100,
-  "riskLevel": "low|medium|high"
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "gameId": "uuid",
-    "ballPath": [0, 1, 1, 0, 1, 0, 1, 1],
-    "finalSlot": 5,
-    "multiplier": 2.5,
-    "winAmount": 250,
-    "newBalance": 10150
-  }
-}
-```
 
 ### Health Check
 
