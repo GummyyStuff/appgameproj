@@ -259,7 +259,7 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
 
       const animationConfig: AnimationConfig = {
         type: 'carousel',
-        duration: CAROUSEL_TIMING.TOTAL_DURATION,
+        duration: Math.min(CAROUSEL_TIMING.TOTAL_DURATION, 3000), // Shorter duration for smaller sequences
         easing: [0.25, 0.46, 0.45, 0.94], // Smooth deceleration easing
         items: caseItems
       }
@@ -287,10 +287,21 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
         typeof item.base_value === 'number'
       )
 
+      // If we still don't have enough items for a good carousel experience,
+      // duplicate the existing items to fill out the sequence
+      if (itemPool.length < 20) {
+        const originalItems = [...itemPool]
+        while (itemPool.length < 20) {
+          itemPool.push(...originalItems.slice(0, Math.min(5, 20 - itemPool.length)))
+        }
+        // Trim to exactly 20 items
+        itemPool = itemPool.slice(0, 20)
+      }
+
       recordFlowStep(flowId, 'item_pool_filtered', true, `${itemPool.length} valid items`)
 
       // Check if we have enough items for a proper carousel animation
-      const MIN_CAROUSEL_ITEMS = 10 // Need at least 10 items for smooth carousel experience
+      const MIN_CAROUSEL_ITEMS = 1 // Temporarily lowered to allow carousel with fallback items
       if (itemPool.length < MIN_CAROUSEL_ITEMS) {
         // Not enough items for carousel - use reveal animation instead
         recordFlowStep(flowId, 'insufficient_items_for_carousel', false, `Only ${itemPool.length} items, need ${MIN_CAROUSEL_ITEMS}`)
@@ -330,10 +341,12 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
         return
       }
 
-      // Generate the full sequence with winning item at the correct position
-      const winningPosition = calculateWinningPosition(CAROUSEL_TIMING.SEQUENCE_LENGTH)
+      // Generate the sequence with winning item at the correct position
+      // Use a smaller sequence length based on available items
+      const sequenceLength = Math.min(CAROUSEL_TIMING.SEQUENCE_LENGTH, itemPool.length * 3) // Max 3x the item pool size
+      const winningPosition = calculateWinningPosition(sequenceLength)
       const sequenceGenerationTiming = startTiming('sequence_generation')
-      const carouselSequence = generateCarouselSequence(itemPool, winningItem, CAROUSEL_TIMING.SEQUENCE_LENGTH, winningPosition)
+      const carouselSequence = generateCarouselSequence(itemPool, winningItem, sequenceLength, winningPosition)
       sequenceGenerationTiming()
       recordFlowStep(flowId, 'sequence_generated', true, `Sequence length: ${carouselSequence.length}`)
 
