@@ -3,7 +3,7 @@
  * Tests animations, user experience, and cross-device compatibility
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test'
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import CaseOpeningGame from '../CaseOpeningGame'
@@ -11,7 +11,7 @@ import AuthProvider from '../../providers/AuthProvider'
 import ToastProvider from '../../providers/ToastProvider'
 
 // Mock framer-motion
-vi.mock('framer-motion', () => ({
+mock.module('framer-motion', () => ({
   motion: {
     div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
     h1: ({ children, ...props }: any) => <h1 {...props}>{children}</h1>,
@@ -24,46 +24,46 @@ vi.mock('framer-motion', () => ({
 }))
 
 // Mock hooks
-vi.mock('../../../hooks/useAuth', () => ({
+mock.module('../../../hooks/useAuth', () => ({
   useAuth: () => ({
     user: { id: 'test-user', email: 'test@example.com' },
     loading: false
   })
 }))
 
-vi.mock('../../../hooks/useBalance', () => ({
+mock.module('../../../hooks/useBalance', () => ({
   useBalance: () => ({
     balance: 10000,
-    refetch: vi.fn()
+    refetch: mock()
   })
 }))
 
-vi.mock('../../../hooks/useAdvancedFeatures', () => ({
+mock.module('../../../hooks/useAdvancedFeatures', () => ({
   useAdvancedFeatures: () => ({
-    trackGamePlayed: vi.fn(),
-    updateAchievementProgress: vi.fn()
+    trackGamePlayed: mock(),
+    updateAchievementProgress: mock()
   })
 }))
 
-vi.mock('../../../hooks/useSoundEffects', () => ({
+mock.module('../../../hooks/useSoundEffects', () => ({
   useSoundEffects: () => ({
-    playBetSound: vi.fn(),
-    playWinSound: vi.fn(),
-    playLoseSound: vi.fn(),
-    playCaseOpen: vi.fn(),
-    playCaseReveal: vi.fn(),
-    playRarityReveal: vi.fn()
+    playBetSound: mock(),
+    playWinSound: mock(),
+    playLoseSound: mock(),
+    playCaseOpen: mock(),
+    playCaseReveal: mock(),
+    playRarityReveal: mock()
   }),
   useSoundPreferences: () => ({
     soundEnabled: true,
-    toggleSound: vi.fn()
+    toggleSound: mock()
   })
 }))
 
-vi.mock('../../../lib/supabase', () => ({
+mock.module('../../../lib/supabase', () => ({
   supabase: {
     auth: {
-      getSession: vi.fn().mockResolvedValue({
+      getSession: mock().mockResolvedValue({
         data: { session: { access_token: 'mock-token' } }
       })
     }
@@ -71,7 +71,7 @@ vi.mock('../../../lib/supabase', () => ({
 }))
 
 // Mock fetch
-const mockFetch = vi.fn()
+const mockFetch = mock()
 global.fetch = mockFetch
 
 describe('Case Opening Animation and UX Tests', () => {

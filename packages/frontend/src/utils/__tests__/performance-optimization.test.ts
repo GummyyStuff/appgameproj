@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'bun:test';
 
 // Mock browser APIs before importing modules
 const localStorageMock = {
-  getItem: vi.fn(),
+  getItem: vi.fn(() => null),
   setItem: vi.fn(),
   removeItem: vi.fn(),
   clear: vi.fn(),
@@ -105,6 +105,9 @@ describe('Performance Optimization', () => {
     it('should use persistent cache for long-term data', () => {
       const testData = { achievements: ['first_win'] };
       const cacheKey = 'user_achievements';
+      
+      // Mock localStorage to return the stored data
+      localStorageMock.getItem.mockReturnValue(JSON.stringify(testData));
       
       PersistentCache.set(cacheKey, testData);
       const retrieved = PersistentCache.get(cacheKey);

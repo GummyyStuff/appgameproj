@@ -251,6 +251,51 @@ export class CaseOpeningService {
   }
 
   /**
+   * Preview a case opening result without processing transactions
+   */
+  static async previewCase(userId: string, caseTypeId: string): Promise<CaseOpeningResult> {
+    try {
+      // Get case type
+      const caseType = await this.getCaseType(caseTypeId)
+      if (!caseType) {
+        throw new Error('Case type not found or inactive')
+      }
+
+      // Get item pool for the case
+      const itemPool = await this.getItemPool(caseTypeId)
+      if (itemPool.length === 0) {
+        throw new Error('No items available for this case type')
+      }
+
+      // Select random item using provably fair algorithm
+      const selectedWeightedItem = await this.selectRandomItem(caseType, itemPool)
+
+      // Calculate currency awarded
+      const currencyAwarded = this.calculateItemValue(
+        selectedWeightedItem.item,
+        selectedWeightedItem.value_multiplier
+      )
+
+      // Generate unique opening ID (preview)
+      const openingId = `preview_${Date.now()}_${userId.slice(-8)}`
+
+      // Create result object
+      const result: CaseOpeningResult = {
+        case_type: caseType,
+        item_won: selectedWeightedItem.item,
+        currency_awarded: currencyAwarded,
+        opening_id: openingId,
+        timestamp: new Date().toISOString()
+      }
+
+      return result
+    } catch (error) {
+      console.error('Error in previewCase:', error)
+      throw new Error('Failed to preview case')
+    }
+  }
+
+  /**
    * Open a case and return the result
    */
   static async openCase(userId: string, caseTypeId: string): Promise<CaseOpeningResult> {
@@ -269,10 +314,10 @@ export class CaseOpeningService {
 
       // Select random item using provably fair algorithm
       const selectedWeightedItem = await this.selectRandomItem(caseType, itemPool)
-      
+
       // Calculate currency awarded
       const currencyAwarded = this.calculateItemValue(
-        selectedWeightedItem.item, 
+        selectedWeightedItem.item,
         selectedWeightedItem.value_multiplier
       )
 

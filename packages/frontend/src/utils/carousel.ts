@@ -153,7 +153,7 @@ export function getWeightedRandomItem(
 
   // Get available rarities that have items
   const availableRarities = Object.keys(itemsByRarity).filter(rarity => 
-    itemsByRarity[rarity].length > 0
+    itemsByRarity[rarity] && itemsByRarity[rarity].length > 0
   )
 
   if (availableRarities.length === 0) {

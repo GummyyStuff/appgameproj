@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { motion, useAnimation } from 'framer-motion'
+import { motion, useAnimation, Easing } from 'framer-motion'
 import { TarkovItem } from './ItemReveal'
-import { CaseType } from './CaseSelector'
 import { formatCurrency } from '../../utils/currency'
 import { useSoundEffects } from '../../hooks/useSoundEffects'
+import VirtualizedCarousel from './VirtualizedCarousel'
+import { PerformanceMonitor, optimizeForPerformance } from '../../utils/performanceMonitor'
 
 export interface CarouselItemData {
   item: TarkovItem
@@ -16,12 +17,14 @@ interface CaseOpeningCarouselProps {
   winningIndex: number
   isSpinning: boolean
   onSpinComplete: () => void
-  caseType: CaseType
   finalItem?: TarkovItem | null
   animationDuration?: number
   itemWidth?: number
   visibleItems?: number
   soundEnabled?: boolean
+  // New unified animation props
+  duration?: number
+  easing?: Easing | Easing[]
 }
 
 interface CarouselAnimationConfig {
@@ -31,7 +34,6 @@ interface CarouselAnimationConfig {
   spinDuration: number
   decelerationDuration: number
   finalPosition: number
-  easing: string
 }
 
 const rarityColors = {
@@ -75,11 +77,12 @@ const CaseOpeningCarousel: React.FC<CaseOpeningCarouselProps> = ({
   winningIndex,
   isSpinning,
   onSpinComplete,
-  caseType,
   finalItem,
-  itemWidth = 120,
-  visibleItems = 5,
-  soundEnabled = true
+  itemWidth = 160,
+  visibleItems = 7,
+  soundEnabled = true,
+  duration,
+  easing
 }) => {
   const { playCaseOpen, playCaseReveal } = useSoundEffects(soundEnabled)
   const carouselRef = useRef<HTMLDivElement>(null)
@@ -89,22 +92,26 @@ const CaseOpeningCarousel: React.FC<CaseOpeningCarouselProps> = ({
   const [blurIntensity, setBlurIntensity] = useState(0)
   const [shouldShake, setShouldShake] = useState(false)
 
+  // Performance optimization: use virtualization only when not animating and for large item sets
+  const performanceOpts = optimizeForPerformance()
+  const shouldUseVirtualization = !isSpinning && (items.length > 15 || !performanceOpts.hardwareAcceleration)
+  const effectiveVisibleItems = shouldUseVirtualization ? Math.min(visibleItems, 7) : visibleItems
+
   // Calculate carousel dimensions
-  const viewportWidth = visibleItems * itemWidth
+  const viewportWidth = effectiveVisibleItems * itemWidth
   const centerOffset = viewportWidth / 2 - itemWidth / 2
   
   // Validate winning index
   const safeWinningIndex = Math.max(0, Math.min(winningIndex, items.length - 1))
 
-  // Animation configuration
+  // Animation configuration - use provided values or defaults
   const animationConfig: CarouselAnimationConfig = {
     totalItems: items.length,
     itemWidth,
     winningIndex: safeWinningIndex,
-    spinDuration: 2000, // 2 seconds fast spin
-    decelerationDuration: 3000, // 3 seconds deceleration
-    finalPosition: -(safeWinningIndex * itemWidth - centerOffset),
-    easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+    spinDuration: duration ? duration * 0.4 : 2000, // 40% for spinning phase
+    decelerationDuration: duration ? duration * 0.6 : 3000, // 60% for deceleration phase
+    finalPosition: -(safeWinningIndex * itemWidth - centerOffset)
   }
 
   // Calculate initial position - start at the beginning of the sequence
@@ -113,16 +120,23 @@ const CaseOpeningCarousel: React.FC<CaseOpeningCarouselProps> = ({
 
   // Reset animation state when items change
   useEffect(() => {
+    setAnimationPhase('idle')
+    setBlurIntensity(0)
+    setShouldShake(false)
+    // Reset to initial position when items change
+    if (items.length > 0) {
+      controls.set({ x: initialPosition })
+    }
+  }, [items, controls])
+
+  // Handle animation phase reset when spinning stops
+  useEffect(() => {
     if (!isSpinning) {
       setAnimationPhase('idle')
       setBlurIntensity(0)
       setShouldShake(false)
-      // Reset to initial position when not spinning
-      if (items.length > 0) {
-        controls.set({ x: initialPosition })
-      }
     }
-  }, [items, isSpinning, initialPosition, controls])
+  }, [isSpinning])
 
   useEffect(() => {
     if (isSpinning && items.length > 0) {
@@ -139,50 +153,40 @@ const CaseOpeningCarousel: React.FC<CaseOpeningCarouselProps> = ({
 
   const startCarouselAnimation = async () => {
     setAnimationPhase('spinning')
-    
+
+    // Start performance monitoring
+    const perfMonitor = PerformanceMonitor.getInstance()
+    perfMonitor.startAnimationMonitoring()
+
+    // Set up performance monitoring callback for fallback
+    let performanceIssueDetected = false
+    const unsubscribe = perfMonitor.subscribe((metrics) => {
+      if (metrics.frameRate < 30 && !performanceIssueDetected) {
+        performanceIssueDetected = true
+        console.warn('Performance issue detected, switching to optimized mode')
+        // Could trigger fallback animation here if needed
+      }
+    })
+
+    // Clean up subscription when animation completes
+    setTimeout(() => unsubscribe(), animationConfig.spinDuration + animationConfig.decelerationDuration + 1000)
+
     // Play carousel start sound
     playCaseOpen()
 
     try {
       // Calculate positions for smooth single-direction animation
       const finalPosition = animationConfig.finalPosition
-      
-      // Start far to the left for excitement
+
+      // Start far to the right for excitement (traditional slot machine spin direction)
       const extraSpinDistance = itemWidth * 50 // Extra distance for excitement
-      const startPosition = finalPosition - extraSpinDistance
+      const startPosition = finalPosition + extraSpinDistance
       
       // Debug the winning item position calculation
       const winningItemLeftEdge = safeWinningIndex * itemWidth
       const winningItemCenter = winningItemLeftEdge + (itemWidth / 2)
       const viewportCenter = centerOffset + (itemWidth / 2)
       
-      console.log('Detailed position analysis:', {
-        // Basic info
-        winningIndex: safeWinningIndex,
-        itemsLength: items.length,
-        itemWidth,
-        
-        // Viewport info
-        viewportWidth,
-        centerOffset,
-        viewportCenter,
-        
-        // Winning item info
-        winningItemLeftEdge,
-        winningItemCenter,
-        
-        // Animation positions
-        startPosition,
-        finalPosition,
-        extraSpinDistance,
-        
-        // Calculation check
-        calculatedFinalPosition: -(safeWinningIndex * itemWidth - centerOffset),
-        
-        // Direction info
-        direction: 'left-to-right only',
-        totalCarouselWidth: items.length * itemWidth
-      })
       
       // Firefox-compatible animation approach
       setBlurIntensity(8)
@@ -194,68 +198,78 @@ const CaseOpeningCarousel: React.FC<CaseOpeningCarouselProps> = ({
       const easing = isFirefox ? 'linear' : [0.1, 0.8, 0.9, 1]
       
       // Never-overshoot approach: Calculate positions to ensure we never go past the winning item
-      console.log('Using never-overshoot animation approach')
       
-      // The key insight: we must NEVER animate past the final position
-      // Calculate a safe intermediate position that's guaranteed to be before the final position
-      const totalDistance = finalPosition - startPosition // This should be positive (moving right)
-      
-      // Safety check: if totalDistance is negative or zero, something is wrong with our calculation
-      if (totalDistance <= 0) {
-        console.error('Invalid distance calculation - finalPosition should be to the right of startPosition', {
+      // The key insight: we must animate in the correct direction
+      // For right-to-left spin, finalPosition should be less than startPosition
+      const totalDistance = finalPosition - startPosition
+
+      // Safety check: ensure we have a valid animation distance
+      if (Math.abs(totalDistance) < 100) {
+        console.error('Animation distance too small - may cause jerky movement', {
           startPosition,
           finalPosition,
-          totalDistance,
-          winningIndex: safeWinningIndex,
-          centerOffset
+          totalDistance
         })
-        
+
         // Fallback: animate directly to final position
+        controls.set({ x: startPosition })
         await controls.start({
           x: finalPosition,
           transition: {
             duration: (animationConfig.spinDuration + animationConfig.decelerationDuration) / 1000,
-            ease: 'linear'
+            ease: [0.15, 0.8, 0.4, 1], // Same improved easing
+            type: "tween" as const
           }
         })
       } else {
         // SINGLE SMOOTH ANIMATION - No phases, no intermediate positions, no direction changes
-        console.log('🎯 Using SINGLE SMOOTH animation - absolutely no direction changes possible')
-        console.log('Single animation plan:', {
-          startPosition,
-          finalPosition,
-          totalDistance,
-          direction: 'single smooth left-to-right movement',
-          noIntermediatePositions: true,
-          guaranteedNoBackwards: true,
-          easingCurve: isFirefox ? 'linear' : 'fast start, then slow down [0.7, 0, 0.3, 1]'
-        })
-        
-        // Single animation from start directly to final position
+
+        // Single smooth animation from start directly to final position
+        // Use a custom easing that starts fast and decelerates naturally (like a real slot machine)
+        const animationEasing = easing ?? [0.15, 0.8, 0.4, 1] // More aggressive deceleration
+        const animationDuration = (animationConfig.spinDuration + animationConfig.decelerationDuration) / 1000
+
+        // Set initial position to start position for spinning effect
+        controls.set({ x: startPosition })
+
+        // Enable hardware acceleration and performance optimizations
         const animationPromise = controls.start({
           x: finalPosition,
           transition: {
-            duration: (animationConfig.spinDuration + animationConfig.decelerationDuration) / 1000,
-            ease: isFirefox ? 'linear' : [0.7, 0, 0.3, 1] // Fast start, then slow down to stop
+            duration: animationDuration,
+            ease: animationEasing as Easing | Easing[],
+            // Optimize for smooth animation
+            type: "tween" as const
           }
         })
-        
-        // Change visual phases during the animation (without interrupting the movement)
+
+        // Add timeout as backup in case animation promise doesn't resolve properly
+        const timeoutPromise = new Promise<void>((resolve) => {
+          setTimeout(() => {
+            resolve()
+          }, animationDuration * 1000 + 500) // Add 500ms buffer
+        })
+
+        // Smooth visual phase transitions during animation
+        // Start deceleration phase 80% through the spin duration
+        const decelerationStart = Math.floor(animationConfig.spinDuration * 0.8)
         setTimeout(() => {
           setAnimationPhase('decelerating')
-          setBlurIntensity(3)
+          setBlurIntensity(1.0) // Gentle blur during deceleration
           playCaseReveal()
-        }, animationConfig.spinDuration)
-        
+        }, decelerationStart)
+
+        // Start settling phase near the end
+        const settlingStart = animationConfig.spinDuration + Math.floor(animationConfig.decelerationDuration * 0.7)
         setTimeout(() => {
           setAnimationPhase('settling')
           setBlurIntensity(0)
-        }, animationConfig.spinDuration + animationConfig.decelerationDuration - 500)
-        
-        // Wait for the single smooth animation to complete
-        await animationPromise
+        }, settlingStart)
+
+        // Wait for either animation completion or timeout
+        await Promise.race([animationPromise, timeoutPromise])
       }
-      
+
       // Phase 3: Settling
       setAnimationPhase('settling')
       setBlurIntensity(0)
@@ -263,7 +277,10 @@ const CaseOpeningCarousel: React.FC<CaseOpeningCarouselProps> = ({
 
       // Animation complete
       setAnimationPhase('complete')
-      
+
+      // Stop performance monitoring
+      perfMonitor.stopAnimationMonitoring()
+
       // Check if winning item is high rarity for screen shake
       const winningItem = items[safeWinningIndex]
       if (winningItem && winningItem.item) {
@@ -273,12 +290,14 @@ const CaseOpeningCarousel: React.FC<CaseOpeningCarouselProps> = ({
           setTimeout(() => setShouldShake(false), 1000)
         }
       }
-      
+
       onSpinComplete()
 
     } catch (error) {
       console.error('Carousel animation error:', error)
       setAnimationPhase('complete')
+      // Stop performance monitoring even on error
+      perfMonitor.stopAnimationMonitoring()
       onSpinComplete()
     }
   }
@@ -304,9 +323,9 @@ const CaseOpeningCarousel: React.FC<CaseOpeningCarouselProps> = ({
               : 'bg-tarkov-dark/50 border-2 border-tarkov-accent/30'
           }
         `}
-        style={{ 
+        style={{
           width: viewportWidth, // Fixed width based on visible items
-          height: 180
+          height: 280
         }}
       >
         {/* Center Pointer Indicator */}
@@ -329,38 +348,53 @@ const CaseOpeningCarousel: React.FC<CaseOpeningCarouselProps> = ({
         />
 
         {/* Carousel Items Container */}
-        <motion.div
-          ref={carouselRef}
-          className="flex absolute top-0 left-0 h-full transition-all duration-300"
-          animate={controls}
-          initial={{ x: initialPosition }}
-          style={{ 
-            width: items.length * itemWidth,
-            filter: (animationPhase === 'spinning' || animationPhase === 'decelerating') && blurIntensity > 0 ? `blur(${blurIntensity}px)` : 'none',
-            willChange: 'transform', // Optimize for animations
-            backfaceVisibility: 'hidden', // Prevent flickering
-            // Firefox-specific optimizations
-            transformStyle: 'preserve-3d',
-            WebkitTransformStyle: 'preserve-3d'
-          }}
-        >
-          {items.map((itemData, index) => {
-            // Use finalItem for the winning index when animation is complete
-            const displayItemData = (index === winningIndex && animationPhase === 'complete' && finalItem)
-              ? { ...itemData, item: finalItem, isWinning: true }
-              : itemData
+        {shouldUseVirtualization ? (
+          <VirtualizedCarousel
+            items={items}
+            winningIndex={winningIndex}
+            phase={animationPhase}
+            visibleCount={effectiveVisibleItems}
+            itemWidth={itemWidth}
+            className="absolute top-0 left-0 h-full"
+          />
+        ) : (
+          <motion.div
+            ref={carouselRef}
+            className="flex absolute top-0 left-0 h-full transition-all duration-300"
+            animate={controls}
+            initial={{ x: initialPosition }}
+            style={{
+              width: items.length * itemWidth,
+              filter: (animationPhase === 'spinning' || animationPhase === 'decelerating') && blurIntensity > 0 ? `blur(${blurIntensity}px)` : 'none',
+              willChange: 'transform', // Optimize for animations
+              backfaceVisibility: 'hidden', // Prevent flickering
+              // Firefox-specific optimizations
+              transformStyle: 'preserve-3d',
+              WebkitTransformStyle: 'preserve-3d',
+              // Additional performance optimizations
+              contain: 'layout style paint',
+              WebkitFontSmoothing: 'antialiased',
+              MozOsxFontSmoothing: 'grayscale'
+            }}
+          >
+            {items.map((itemData, index) => {
+              // Use finalItem for the winning index when animation is complete
+              const displayItemData = (index === winningIndex && animationPhase === 'complete' && finalItem)
+                ? { ...itemData, item: finalItem, isWinning: true }
+                : itemData
 
-            return (
-              <CarouselItem
-                key={displayItemData.id}
-                itemData={displayItemData}
-                width={itemWidth}
-                isWinning={displayItemData.isWinning && animationPhase === 'complete'}
-                animationPhase={animationPhase}
-              />
-            )
-          })}
-        </motion.div>
+              return (
+                <CarouselItem
+                  key={displayItemData.id}
+                  itemData={displayItemData}
+                  width={itemWidth}
+                  isWinning={displayItemData.isWinning && animationPhase === 'complete'}
+                  animationPhase={animationPhase}
+                />
+              )
+            })}
+          </motion.div>
+        )}
 
         {/* Enhanced Gradient Fade Edges */}
         <div className="absolute top-0 left-0 w-12 h-full bg-gradient-to-r from-tarkov-dark via-tarkov-dark/60 to-transparent z-15 pointer-events-none" />
@@ -547,90 +581,6 @@ const CaseOpeningCarousel: React.FC<CaseOpeningCarouselProps> = ({
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
       >
-        <motion.div 
-          className={`
-            inline-flex items-center px-6 py-3 rounded-full border-2 transition-all duration-300
-            ${animationPhase === 'spinning' 
-              ? 'bg-tarkov-accent/20 border-tarkov-accent/50 text-tarkov-accent' 
-              : animationPhase === 'decelerating'
-                ? 'bg-blue-500/20 border-blue-500/50 text-blue-400'
-                : animationPhase === 'settling'
-                  ? 'bg-yellow-500/20 border-yellow-500/50 text-yellow-400'
-                  : animationPhase === 'complete'
-                    ? 'bg-green-500/20 border-green-500/50 text-green-400'
-                    : 'bg-gray-600/20 border-gray-600/50 text-gray-400'
-            }
-          `}
-          animate={animationPhase === 'spinning' ? {
-            scale: [1, 1.05, 1],
-            opacity: [0.8, 1, 0.8]
-          } : {}}
-          transition={{ duration: 1, repeat: animationPhase === 'spinning' ? Infinity : 0 }}
-        >
-          <motion.span 
-            className="text-lg mr-2"
-            animate={animationPhase === 'spinning' ? { rotate: 360 } : {}}
-            transition={{ duration: 1, repeat: animationPhase === 'spinning' ? Infinity : 0, ease: 'linear' }}
-          >
-            {animationPhase === 'spinning' && '🎰'}
-            {animationPhase === 'decelerating' && '⏳'}
-            {animationPhase === 'settling' && '🎯'}
-            {animationPhase === 'complete' && '✨'}
-          </motion.span>
-          
-          <span className="font-semibold uppercase tracking-wide text-sm">
-            {animationPhase === 'spinning' && 'Spinning...'}
-            {animationPhase === 'decelerating' && 'Slowing down...'}
-            {animationPhase === 'settling' && 'Landing...'}
-            {animationPhase === 'complete' && 'Complete!'}
-          </span>
-          
-          {/* Progress dots */}
-          {animationPhase !== 'complete' && (
-            <div className="flex space-x-1 ml-3">
-              {[...Array(3)].map((_, i) => (
-                <motion.div
-                  key={i}
-                  className="w-1.5 h-1.5 rounded-full bg-current opacity-50"
-                  animate={{ opacity: [0.3, 1, 0.3] }}
-                  transition={{ 
-                    duration: 1, 
-                    repeat: Infinity, 
-                    delay: i * 0.2 
-                  }}
-                />
-              ))}
-            </div>
-          )}
-        </motion.div>
-        
-        {/* Phase progress bar */}
-        <motion.div 
-          className="mt-3 w-64 h-1 bg-gray-700 rounded-full mx-auto overflow-hidden"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: animationPhase !== 'complete' ? 1 : 0 }}
-        >
-          <motion.div
-            className={`h-full rounded-full ${
-              animationPhase === 'spinning' 
-                ? 'bg-tarkov-accent' 
-                : animationPhase === 'decelerating'
-                  ? 'bg-blue-400'
-                  : 'bg-yellow-400'
-            }`}
-            initial={{ width: '0%' }}
-            animate={{ 
-              width: animationPhase === 'spinning' 
-                ? '30%' 
-                : animationPhase === 'decelerating'
-                  ? '70%'
-                  : animationPhase === 'settling'
-                    ? '100%'
-                    : '0%'
-            }}
-            transition={{ duration: 0.5, ease: 'easeOut' }}
-          />
-        </motion.div>
       </motion.div>
     </motion.div>
     </div>
@@ -660,8 +610,8 @@ const CarouselItem: React.FC<CarouselItemProps> = ({
     return (
       <div style={{ width }} className="flex-shrink-0 h-full p-2">
         <div className="h-full rounded-lg border-2 border-gray-400 bg-gray-400/10 flex flex-col items-center justify-center">
-          <div className="text-2xl mb-1">📦</div>
-          <div className="text-xs text-gray-400 text-center">
+          <div className="text-3xl mb-2">📦</div>
+          <div className="text-sm text-gray-400 text-center">
             Loading...
           </div>
         </div>
@@ -695,17 +645,28 @@ const CarouselItem: React.FC<CarouselItemProps> = ({
         `}
       >
         {/* Item Image */}
-        <div className="h-20 bg-gradient-to-br from-tarkov-secondary to-tarkov-dark flex items-center justify-center relative overflow-hidden">
+        <div className="h-32 bg-gradient-to-br from-tarkov-secondary to-tarkov-dark flex items-center justify-center relative overflow-hidden">
           {item.image_url ? (
-            <img 
+            <img
               src={item.image_url}
               alt={itemName}
               className="w-full h-full object-cover"
             />
           ) : (
-            <div className="text-2xl">
+            <motion.div
+              className="text-6xl"
+              animate={{
+                scale: [1, 1.15, 1],
+                rotate: [0, 5, -5, 0],
+              }}
+              transition={{
+                duration: 0.4,
+                repeat: Infinity,
+                ease: "easeInOut"
+              }}
+            >
               {categoryIcons[itemCategory] || '📦'}
-            </div>
+            </motion.div>
           )}
           
           {/* Winning item glow overlay */}
@@ -732,17 +693,17 @@ const CarouselItem: React.FC<CarouselItemProps> = ({
         </div>
 
         {/* Item Info */}
-        <div className="p-2 text-center">
-          <div className="text-xs font-semibold text-white truncate mb-1">
+        <div className="p-3 text-center">
+          <div className="text-sm font-semibold text-white truncate mb-2 leading-tight">
             {itemName}
           </div>
-          <div className="text-xs text-tarkov-accent font-bold">
+          <div className="text-sm text-tarkov-accent font-bold">
             {formatCurrency(itemValue, 'roubles')}
           </div>
         </div>
 
         {/* Rarity Indicator */}
-        <div className={`absolute top-1 right-1 w-2 h-2 rounded-full ${rarity.border.replace('border-', 'bg-')}`} />
+        <div className={`absolute top-2 right-2 w-3 h-3 rounded-full ${rarity.border.replace('border-', 'bg-')}`} />
 
         {/* Winning Item Effects */}
         {isWinning && animationPhase === 'complete' && (

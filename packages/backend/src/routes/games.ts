@@ -512,9 +512,15 @@ gameRoutes.post('/cases/complete',
   }
 }))
 
-// Legacy endpoint for backward compatibility (uses single transaction)
+// Simplified case opening endpoint (single transaction with optional preview)
+const simplifiedCaseOpeningSchema = z.object({
+  caseTypeId: z.string().min(1, 'Case type ID is required'),
+  previewOnly: z.boolean().optional().default(false),
+  requestId: z.string().optional() // For request deduplication
+})
+
 gameRoutes.post('/cases/open',
-  validationMiddleware(caseOpeningSchema),
+  validationMiddleware(simplifiedCaseOpeningSchema),
   auditGame('case_opening'),
   asyncHandler(async (c: Context) => {
   const user = c.get('user')
@@ -522,7 +528,23 @@ gameRoutes.post('/cases/open',
     return c.json({ error: 'Authentication required' }, 401)
   }
 
-  const { caseTypeId } = c.get('validatedData')
+  const { caseTypeId, previewOnly, requestId } = c.get('validatedData')
+
+  // Request deduplication check
+  if (requestId) {
+    const dedupKey = `case_open_${user.id}_${requestId}`
+    // Simple in-memory deduplication (in production, use Redis or similar)
+    if (global.requestCache?.[dedupKey]) {
+      return c.json({ error: 'Request already in progress' }, 429)
+    }
+    global.requestCache = global.requestCache || {}
+    global.requestCache[dedupKey] = true
+
+    // Clean up cache after 30 seconds
+    setTimeout(() => {
+      delete global.requestCache?.[dedupKey]
+    }, 30000)
+  }
 
   try {
     // Validate case opening request
@@ -533,6 +555,25 @@ gameRoutes.post('/cases/open',
 
     const caseType = validation.caseType!
 
+    // For preview mode, just determine the result without processing transaction
+    if (previewOnly) {
+      const previewResult = await CaseOpeningService.previewCase(user.id, caseTypeId)
+
+      return c.json({
+        success: true,
+        preview: true,
+        opening_result: {
+          case_type: caseType,
+          item_won: previewResult.item_won,
+          currency_awarded: previewResult.currency_awarded,
+          opening_id: previewResult.opening_id,
+          timestamp: previewResult.timestamp
+        },
+        case_price: caseType.price,
+        estimated_net_result: previewResult.currency_awarded - caseType.price
+      })
+    }
+
     // Log game start
     const ip = c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP')
     await auditLog.gamePlayStarted(user.id, 'case_opening', caseType.price, ip)
@@ -540,7 +581,7 @@ gameRoutes.post('/cases/open',
     // Open the case
     const openingResult = await CaseOpeningService.openCase(user.id, caseTypeId)
 
-    // Process currency transaction
+    // Process currency transaction atomically
     const transactionResult = await CurrencyService.processGameTransaction(
       user.id,
       'case_opening',
@@ -556,7 +597,8 @@ gameRoutes.post('/cases/open',
         item_category: openingResult.item_won.category,
         item_value: openingResult.item_won.base_value,
         currency_awarded: openingResult.currency_awarded,
-        opening_id: openingResult.opening_id
+        opening_id: openingResult.opening_id,
+        request_id: requestId
       }
     )
 

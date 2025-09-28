@@ -1,0 +1,426 @@
+/**
+ * Case Opening Game Design System
+ * Centralized styles for consistent visual design across all case opening components
+ */
+
+/* ===== COLOR SYSTEM ===== */
+
+/* Primary Tarkov Colors */
+:root {
+  --tarkov-primary: #1a1a1a;
+  --tarkov-darker: #0f0f0f;
+  --tarkov-dark: #2d3748;
+  --tarkov-secondary: #4a5568;
+  --tarkov-accent: #f6ad55;
+  --tarkov-danger: #e53e3e;
+  --tarkov-success: #38a169;
+  --tarkov-warning: #d69e2e;
+  --tarkov-info: #3182ce;
+}
+
+/* Rarity Colors */
+.rarity-common { color: #9ca3af; }
+.rarity-uncommon { color: #10b981; }
+.rarity-rare { color: #3b82f6; }
+.rarity-epic { color: #8b5cf6; }
+.rarity-legendary { color: #f59e0b; }
+
+/* Semantic Colors */
+.text-tarkov-accent { color: var(--tarkov-accent); }
+.text-tarkov-danger { color: var(--tarkov-danger); }
+.text-tarkov-success { color: var(--tarkov-success); }
+.text-tarkov-warning { color: var(--tarkov-warning); }
+.text-tarkov-info { color: var(--tarkov-info); }
+
+.bg-tarkov-accent { background-color: var(--tarkov-accent); }
+.bg-tarkov-danger { background-color: var(--tarkov-danger); }
+.bg-tarkov-success { background-color: var(--tarkov-success); }
+.bg-tarkov-warning { background-color: var(--tarkov-warning); }
+.bg-tarkov-info { background-color: var(--tarkov-info); }
+
+.border-tarkov-accent { border-color: var(--tarkov-accent); }
+.border-tarkov-danger { border-color: var(--tarkov-danger); }
+.border-tarkov-success { border-color: var(--tarkov-success); }
+.border-tarkov-warning { border-color: var(--tarkov-warning); }
+.border-tarkov-info { border-color: var(--tarkov-info); }
+
+/* ===== TYPOGRAPHY SYSTEM ===== */
+
+/* Font Families */
+.font-tarkov {
+  font-family: 'Tarkov', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+}
+
+/* Text Sizes */
+.text-display-2xl { font-size: 4.5rem; line-height: 1; }
+.text-display-xl { font-size: 3.75rem; line-height: 1; }
+.text-display-lg { font-size: 3rem; line-height: 1; }
+.text-display-md { font-size: 2.25rem; line-height: 1.1; }
+.text-display-sm { font-size: 1.875rem; line-height: 1.2; }
+.text-display-xs { font-size: 1.5rem; line-height: 1.3; }
+
+.text-heading-2xl { font-size: 3rem; line-height: 1.2; }
+.text-heading-xl { font-size: 2.25rem; line-height: 1.3; }
+.text-heading-lg { font-size: 1.875rem; line-height: 1.4; }
+.text-heading-md { font-size: 1.5rem; line-height: 1.4; }
+.text-heading-sm { font-size: 1.25rem; line-height: 1.5; }
+.text-heading-xs { font-size: 1.125rem; line-height: 1.5; }
+
+.text-body-lg { font-size: 1.125rem; line-height: 1.6; }
+.text-body-md { font-size: 1rem; line-height: 1.6; }
+.text-body-sm { font-size: 0.875rem; line-height: 1.6; }
+.text-body-xs { font-size: 0.75rem; line-height: 1.6; }
+
+/* Font Weights */
+.font-tarkov-light { font-weight: 300; }
+.font-tarkov-normal { font-weight: 400; }
+.font-tarkov-medium { font-weight: 500; }
+.font-tarkov-semibold { font-weight: 600; }
+.font-tarkov-bold { font-weight: 700; }
+.font-tarkov-extrabold { font-weight: 800; }
+
+/* ===== SPACING SYSTEM ===== */
+
+/* Consistent spacing scale */
+.spacing-xs { padding: 0.25rem; }
+.spacing-sm { padding: 0.5rem; }
+.spacing-md { padding: 1rem; }
+.spacing-lg { padding: 1.5rem; }
+.spacing-xl { padding: 2rem; }
+.spacing-2xl { padding: 3rem; }
+.spacing-3xl { padding: 4rem; }
+
+.spacing-y-xs > * + * { margin-top: 0.25rem; }
+.spacing-y-sm > * + * { margin-top: 0.5rem; }
+.spacing-y-md > * + * { margin-top: 1rem; }
+.spacing-y-lg > * + * { margin-top: 1.5rem; }
+.spacing-y-xl > * + * { margin-top: 2rem; }
+
+.spacing-x-xs > * + * { margin-left: 0.25rem; }
+.spacing-x-sm > * + * { margin-left: 0.5rem; }
+.spacing-x-md > * + * { margin-left: 1rem; }
+.spacing-x-lg > * + * { margin-left: 1.5rem; }
+.spacing-x-xl > * + * { margin-left: 2rem; }
+
+/* ===== COMPONENT STYLES ===== */
+
+/* Case Cards */
+.case-card {
+  @apply rounded-xl border-2 transition-all duration-300 overflow-hidden;
+  @apply bg-tarkov-secondary/50 hover:bg-tarkov-secondary/70;
+  @apply border-tarkov-secondary hover:border-tarkov-accent/50;
+}
+
+.case-card-affordable {
+  @apply cursor-pointer;
+  @apply hover:shadow-lg hover:shadow-tarkov-accent/20;
+  @apply hover:scale-[1.02];
+}
+
+.case-card-disabled {
+  @apply opacity-50 cursor-not-allowed;
+  @apply border-gray-600;
+}
+
+/* Case Card Sections */
+.case-card-image {
+  @apply relative h-36 md:h-40 bg-gradient-to-br rounded-t-xl overflow-hidden;
+  background: linear-gradient(135deg, var(--tarkov-primary) 0%, var(--tarkov-dark) 100%);
+}
+
+.case-card-content {
+  @apply p-4 md:p-5;
+}
+
+.case-card-title {
+  @apply font-tarkov font-bold text-white mb-3;
+  @apply text-lg md:text-xl;
+}
+
+.case-card-description {
+  @apply text-sm text-gray-300 mb-4 line-clamp-2 leading-relaxed;
+}
+
+/* Price Badge */
+.price-badge {
+  @apply absolute top-3 right-3 rounded-full px-3 py-2 border;
+  @apply bg-gradient-to-r from-tarkov-dark/95 to-tarkov-primary/95;
+  @apply border-tarkov-accent/50;
+}
+
+.price-badge-text {
+  @apply text-sm md:text-base font-bold text-tarkov-accent;
+}
+
+/* Rarity Distribution */
+.rarity-distribution {
+  @apply space-y-2;
+}
+
+.rarity-distribution-title {
+  @apply text-xs text-gray-400 mb-2 font-semibold uppercase tracking-wide;
+}
+
+.rarity-grid {
+  @apply grid gap-1 text-xs;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+}
+
+.rarity-item {
+  @apply px-2 py-1.5 rounded-lg bg-tarkov-dark/70 border border-opacity-50;
+  @apply font-semibold text-center transition-all duration-200;
+  @apply hover:scale-105 hover:bg-tarkov-dark/90;
+}
+
+.rarity-item-common { @apply text-gray-400 border-gray-400/50; }
+.rarity-item-uncommon { @apply text-green-400 border-green-400/50; }
+.rarity-item-rare { @apply text-blue-400 border-blue-400/50; }
+.rarity-item-epic { @apply text-purple-400 border-purple-400/50; }
+.rarity-item-legendary { @apply text-yellow-400 border-yellow-400/50; }
+
+/* Status Messages */
+.status-message {
+  @apply p-2 rounded-lg text-center;
+}
+
+.status-insufficient {
+  @apply bg-tarkov-danger/20 border border-tarkov-danger/50;
+}
+
+.status-insufficient-title {
+  @apply text-xs text-tarkov-danger font-semibold;
+}
+
+.status-insufficient-subtitle {
+  @apply text-xs text-tarkov-danger/80 mt-1;
+}
+
+.status-ready {
+  @apply bg-tarkov-accent/10 border border-tarkov-accent/30;
+  @apply group-hover:bg-tarkov-accent/20 group-hover:border-tarkov-accent/50;
+  @apply transition-all duration-300;
+}
+
+.status-ready-title {
+  @apply text-xs font-semibold text-center text-tarkov-accent;
+}
+
+/* Result Display */
+.result-container {
+  @apply text-center py-8;
+}
+
+.result-title {
+  @apply text-xl md:text-2xl font-tarkov font-bold mb-6 text-center;
+}
+
+.result-prize-name {
+  @apply text-4xl mb-4;
+}
+
+.result-prize-rarity {
+  @apply text-lg font-bold mb-2 uppercase;
+}
+
+.result-currency {
+  @apply text-tarkov-accent text-xl font-bold;
+}
+
+/* Animation Container */
+.animation-container {
+  @apply relative;
+}
+
+.animation-placeholder {
+  @apply text-center py-12;
+}
+
+.animation-placeholder-icon {
+  @apply text-6xl mb-4 opacity-30;
+}
+
+.animation-placeholder-text {
+  @apply text-gray-400 text-lg mb-2;
+}
+
+.animation-placeholder-subtext {
+  @apply text-gray-500 text-sm;
+}
+
+/* Loading States */
+.loading-dots {
+  @apply flex justify-center space-x-2;
+}
+
+.loading-dot {
+  @apply w-3 h-3 bg-tarkov-accent rounded-full;
+}
+
+.loading-shimmer {
+  @apply rounded-xl overflow-hidden;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Error States */
+.error-container {
+  @apply text-center py-8;
+}
+
+.error-title {
+  @apply text-xl md:text-2xl font-tarkov font-bold mb-6 text-center;
+}
+
+.error-message {
+  @apply text-gray-300 text-lg mb-4;
+}
+
+.error-severity-indicator {
+  @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-medium;
+}
+
+.error-severity-critical {
+  @apply bg-red-900/30 text-red-400 border border-red-500/30;
+}
+
+.error-severity-high {
+  @apply bg-orange-900/30 text-orange-400 border border-orange-500/30;
+}
+
+.error-severity-medium {
+  @apply bg-yellow-900/30 text-yellow-400 border border-yellow-500/30;
+}
+
+.error-severity-low {
+  @apply bg-gray-900/30 text-gray-400 border border-gray-500/30;
+}
+
+.error-actions {
+  @apply flex flex-col sm:flex-row gap-3 justify-center;
+}
+
+.error-button-primary {
+  @apply px-6 py-3 bg-tarkov-accent/20 border border-tarkov-accent/50 rounded-lg;
+  @apply text-tarkov-accent hover:bg-tarkov-accent/30 transition-colors font-semibold;
+}
+
+.error-button-secondary {
+  @apply px-6 py-3 bg-gray-600/50 border border-gray-500/50 rounded-lg;
+  @apply text-gray-300 hover:bg-gray-600/70 transition-colors font-semibold;
+}
+
+.error-help-text {
+  @apply mt-6 text-sm text-gray-400;
+}
+
+/* Button Styles */
+.btn-primary {
+  @apply px-6 py-3 bg-tarkov-accent/20 border border-tarkov-accent/50 rounded-lg;
+  @apply text-tarkov-accent hover:bg-tarkov-accent/30 transition-colors font-semibold;
+}
+
+.btn-secondary {
+  @apply px-6 py-3 bg-gray-600/50 border border-gray-500/50 rounded-lg;
+  @apply text-gray-300 hover:bg-gray-600/70 transition-colors font-semibold;
+}
+
+.btn-danger {
+  @apply px-6 py-3 bg-red-600/50 border border-red-500/50 rounded-lg;
+  @apply text-red-300 hover:bg-red-600/70 transition-colors font-semibold;
+}
+
+/* Balance Display */
+.balance-display {
+  @apply inline-flex items-center bg-tarkov-dark/50 rounded-full px-6 py-3;
+  @apply border border-tarkov-accent/30;
+}
+
+.balance-label {
+  @apply text-sm md:text-base text-gray-300 mr-2;
+}
+
+.balance-amount {
+  @apply text-lg md:text-xl font-tarkov font-bold text-tarkov-accent;
+}
+
+/* ===== RESPONSIVE DESIGN ===== */
+
+/* Mobile Optimizations */
+@media (max-width: 640px) {
+  .case-card-image { @apply h-32; }
+  .case-card-content { @apply p-3; }
+  .case-card-title { @apply text-base; }
+  .price-badge { @apply px-2 py-1 top-2 right-2; }
+  .price-badge-text { @apply text-xs; }
+  .rarity-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* Tablet Optimizations */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .case-card-image { @apply h-36; }
+  .case-card-title { @apply text-lg; }
+}
+
+/* ===== UTILITY CLASSES ===== */
+
+/* Flexbox utilities */
+.flex-center { @apply flex items-center justify-center; }
+.flex-between { @apply flex items-center justify-between; }
+.flex-col-center { @apply flex flex-col items-center justify-center; }
+
+/* Text utilities */
+.text-gradient {
+  background: linear-gradient(135deg, var(--tarkov-accent) 0%, #fbbf24 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Animation utilities */
+.animate-fade-in { animation: fadeIn 0.4s ease-out; }
+.animate-slide-up { animation: slideUp 0.4s ease-out; }
+.animate-scale-in { animation: scaleIn 0.4s ease-out; }
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

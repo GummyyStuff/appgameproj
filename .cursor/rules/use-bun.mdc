@@ -1,0 +1,96 @@
+---
+description: Always prefer Bun over npm and other package managers for all package management operations
+globs:
+  - "**/package.json"
+  - "**/bun.lock"
+  - "**/package-lock.json"
+  - "**/yarn.lock"
+  - "**/pnpm-lock.yaml"
+alwaysApply: true
+---
+
+# Bun Package Manager Preference
+
+Always use Bun instead of npm, yarn, or pnpm for all package management operations in this project.
+
+## Package Manager Commands
+
+When suggesting or running package management commands, always use Bun equivalents:
+
+- **Install dependencies**: `bun install` (not `npm install`, `yarn install`, or `pnpm install`)
+- **Add packages**: `bun add <package>` (not `npm install <package>`)
+- **Add dev dependencies**: `bun add -d <package>` (not `npm install --save-dev <package>`)
+- **Remove packages**: `bun remove <package>` (not `npm uninstall <package>`)
+- **Run scripts**: `bun run <script>` (not `npm run <script>`)
+- **Update packages**: `bun update` (not `npm update`)
+- **Check outdated**: `bun outdated` (not `npm outdated`)
+
+## Script Execution
+
+- Use `bun` directly for running TypeScript/JavaScript files: `bun <file.ts>` or `bun <file.js>`
+- Use `bun run` for package.json scripts: `bun run <script-name>`
+
+## Testing
+
+Always use Bun's built-in test runner instead of Jest, Vitest, or other testing frameworks:
+
+- **Run all tests**: `bun test` (not `npm test`, `jest`, or `vitest`)
+- **Run specific test file**: `bun test <file.test.ts>` (not `jest <file.test.ts>`)
+- **Run tests in directory**: `bun test <directory>` (not `jest <directory>`)
+- **Run tests with pattern**: `bun test <pattern>` (not `jest <pattern>`)
+- **Run debug build tests**: `bun bd test <...test file>` for testing with latest changes
+- **Run todo tests**: `bun test --todo` to run tests marked as `test.todo()`
+
+### Test Writing
+
+Use Bun's `bun:test` module for all test files:
+
+```typescript
+import { test, expect, describe } from "bun:test";
+
+describe("test suite", () => {
+  test("test case", () => {
+    expect(2 + 2).toBe(4);
+  });
+});
+```
+
+### Test Features
+
+- **Skip tests**: `test.skip()` instead of `it.skip()` or `test.skip()`
+- **Focus tests**: `test.only()` instead of `it.only()` or `test.only()`
+- **Todo tests**: `test.todo()` for unimplemented tests
+- **Failing tests**: `test.failing()` for known failing tests
+- **Conditional tests**: `test.if(condition)` and `test.skipIf(condition)`
+- **Parametrized tests**: `test.each()` and `describe.each()`
+- **Snapshot testing**: `expect().toMatchSnapshot()` built-in
+- **Testing Library support**: Works with `@testing-library/react` and `@testing-library/dom`
+
+### Test Dependencies
+
+When adding testing dependencies, use Bun:
+
+- **Testing Library**: `bun add -D @testing-library/react @testing-library/dom @testing-library/jest-dom`
+- **Test utilities**: `bun add -D <testing-package>` (not `npm install --save-dev`)
+
+## Lock Files
+
+- Prefer `bun.lock` over `package-lock.json`, `yarn.lock`, or `pnpm-lock.yaml`
+- When suggesting lock file operations, mention `bun.lock`
+
+## Performance Benefits
+
+Bun is significantly faster than npm/yarn for:
+- Package installation
+- Script execution
+- TypeScript compilation
+- Module resolution
+
+## Project Context
+
+This project already uses Bun as evidenced by:
+- `bun.lock` file present
+- `bunfig.toml` configuration file
+- Bun-specific configurations in package.json files
+
+Always recommend Bun commands and avoid suggesting npm, yarn, or pnpm alternatives unless specifically requested by the user.

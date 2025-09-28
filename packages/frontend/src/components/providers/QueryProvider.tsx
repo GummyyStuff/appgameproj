@@ -1,5 +1,6 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { initializeCaseCache } from '../../services/caseCache'
 
 interface QueryProviderProps {
   children: React.ReactNode
@@ -25,6 +26,15 @@ const queryClient = new QueryClient({
 })
 
 const QueryProvider: React.FC<QueryProviderProps> = ({ children }) => {
+  // Initialize case cache service with the query client
+  useEffect(() => {
+    const caseCache = initializeCaseCache(queryClient)
+    // Warm up cache with essential data for better performance
+    caseCache.warmCache().catch(error => {
+      console.warn('Cache warming failed:', error)
+    })
+  }, [])
+
   return (
     <QueryClientProvider client={queryClient}>
       {children}

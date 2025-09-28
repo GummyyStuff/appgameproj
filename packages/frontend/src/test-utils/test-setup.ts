@@ -4,6 +4,10 @@
  */
 
 import { mock } from 'bun:test'
+import { GlobalRegistrator } from '@happy-dom/global-registrator'
+
+// Setup happy-dom for React testing
+GlobalRegistrator.register()
 
 // Basic DOM setup will be handled by individual test files
 // This file provides utilities and mocks
