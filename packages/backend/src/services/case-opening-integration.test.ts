@@ -3,7 +3,7 @@
  * Tests the complete case opening workflow including API endpoints
  */
 
-import { describe, it, expect } from 'bun:test'
+import { describe, test, expect } from 'bun:test'
 
 // Set up environment variables
 process.env.NODE_ENV = 'test'
@@ -18,7 +18,7 @@ import { CaseOpeningService, type CaseType, type TarkovItem, type WeightedItem }
 
 describe('Case Opening Service Integration', () => {
   describe('Complete Case Opening Workflow', () => {
-    it('should demonstrate complete case opening logic flow', async () => {
+    test('should demonstrate complete case opening logic flow', async () => {
       // Mock case type
       const mockCaseType: CaseType = {
         id: 'test-case-123',
@@ -56,6 +56,21 @@ describe('Case Opening Service Integration', () => {
         },
         {
           item: {
+            id: 'item-3',
+            name: 'Painkillers',
+            rarity: 'uncommon',
+            base_value: 200,
+            category: 'medical',
+            is_active: true,
+            created_at: '2024-01-01T00:00:00Z',
+            updated_at: '2024-01-01T00:00:00Z'
+          },
+          weight: 1.0,
+          value_multiplier: 1.5,
+          effective_value: 300
+        },
+        {
+          item: {
             id: 'item-2',
             name: 'LEDX',
             rarity: 'legendary',
@@ -76,8 +91,8 @@ describe('Case Opening Service Integration', () => {
       
       expect(selectedItem).toBeDefined()
       expect(selectedItem.item).toBeDefined()
-      expect(['common', 'legendary']).toContain(selectedItem.item.rarity)
-      expect(['Bandage', 'LEDX']).toContain(selectedItem.item.name)
+      expect(['common', 'uncommon', 'legendary']).toContain(selectedItem.item.rarity)
+      expect(['Bandage', 'Painkillers', 'LEDX']).toContain(selectedItem.item.name)
 
       // Test value calculation
       const calculatedValue = CaseOpeningService.calculateItemValue(
@@ -89,7 +104,7 @@ describe('Case Opening Service Integration', () => {
       expect(calculatedValue).toBe(selectedItem.effective_value)
     })
 
-    it('should validate case opening request structure', () => {
+    test('should validate case opening request structure', () => {
       const validationLogic = {
         validateCaseTypeId: (caseTypeId: string) => {
           return {
@@ -129,7 +144,7 @@ describe('Case Opening Service Integration', () => {
       })
     })
 
-    it('should demonstrate provably fair algorithm properties', async () => {
+    test('should demonstrate provably fair algorithm properties', async () => {
       const mockCaseType: CaseType = {
         id: 'test-case-123',
         name: 'Test Case',
@@ -165,6 +180,21 @@ describe('Case Opening Service Integration', () => {
         },
         {
           item: {
+            id: 'uncommon-item',
+            name: 'Uncommon Item',
+            rarity: 'uncommon',
+            base_value: 300,
+            category: 'weapons',
+            is_active: true,
+            created_at: '2024-01-01T00:00:00Z',
+            updated_at: '2024-01-01T00:00:00Z'
+          },
+          weight: 1.0,
+          value_multiplier: 1.2,
+          effective_value: 360
+        },
+        {
+          item: {
             id: 'rare-item',
             name: 'Rare Item',
             rarity: 'rare',
@@ -177,6 +207,36 @@ describe('Case Opening Service Integration', () => {
           weight: 1.0,
           value_multiplier: 1.5,
           effective_value: 1500
+        },
+        {
+          item: {
+            id: 'epic-item',
+            name: 'Epic Item',
+            rarity: 'epic',
+            base_value: 2500,
+            category: 'weapons',
+            is_active: true,
+            created_at: '2024-01-01T00:00:00Z',
+            updated_at: '2024-01-01T00:00:00Z'
+          },
+          weight: 1.0,
+          value_multiplier: 2.0,
+          effective_value: 5000
+        },
+        {
+          item: {
+            id: 'legendary-item',
+            name: 'Legendary Item',
+            rarity: 'legendary',
+            base_value: 5000,
+            category: 'special',
+            is_active: true,
+            created_at: '2024-01-01T00:00:00Z',
+            updated_at: '2024-01-01T00:00:00Z'
+          },
+          weight: 1.0,
+          value_multiplier: 3.0,
+          effective_value: 15000
         }
       ]
 
@@ -193,11 +253,11 @@ describe('Case Opening Service Integration', () => {
       
       // All results should be valid rarities
       results.forEach(rarity => {
-        expect(['common', 'rare']).toContain(rarity)
+        expect(['common', 'uncommon', 'rare', 'epic', 'legendary']).toContain(rarity)
       })
     })
 
-    it('should handle case opening result structure correctly', () => {
+    test('should handle case opening result structure correctly', () => {
       const mockResult = {
         case_type: {
           id: 'case-123',
@@ -227,7 +287,7 @@ describe('Case Opening Service Integration', () => {
       expect(mockResult.currency_awarded).toBeGreaterThanOrEqual(mockResult.item_won.base_value)
     })
 
-    it('should demonstrate game history integration', () => {
+    test('should demonstrate game history integration', () => {
       const mockGameHistoryEntry = {
         id: 'history-123',
         user_id: 'user-456',
@@ -264,7 +324,7 @@ describe('Case Opening Service Integration', () => {
   })
 
   describe('API Endpoint Structure Validation', () => {
-    it('should validate GET /api/games/cases response structure', () => {
+    test('should validate GET /api/games/cases response structure', () => {
       const mockCaseTypesResponse = {
         message: 'Case opening game information',
         case_types: [
@@ -292,7 +352,7 @@ describe('Case Opening Service Integration', () => {
       expect(mockCaseTypesResponse.case_types[0].rarity_distribution).toBeDefined()
     })
 
-    it('should validate POST /api/games/cases/open response structure', () => {
+    test('should validate POST /api/games/cases/open response structure', () => {
       const mockOpenCaseResponse = {
         success: true,
         opening_result: {
@@ -328,7 +388,7 @@ describe('Case Opening Service Integration', () => {
       expect(mockOpenCaseResponse.transaction_id).toBeDefined()
     })
 
-    it('should validate GET /api/games/cases/stats response structure', () => {
+    test('should validate GET /api/games/cases/stats response structure', () => {
       const mockStatsResponse = {
         success: true,
         stats: {

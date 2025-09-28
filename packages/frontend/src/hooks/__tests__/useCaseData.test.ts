@@ -1,4 +1,4 @@
-import { describe, it, expect, mock, spyOn, beforeEach } from 'bun:test'
+import { describe, test, expect } from 'bun:test'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { useCaseData } from '../useCaseData'
 
@@ -39,7 +39,7 @@ describe('useCaseData', () => {
     mockToast.error.mockClear()
   })
 
-  it('should initialize with loading state', () => {
+  test('should initialize with loading state', () => {
     const { result } = renderHook(() => useCaseData())
 
     expect(result.current.isLoadingCases).toBe(true)
@@ -48,7 +48,7 @@ describe('useCaseData', () => {
     expect(result.current.selectedCase).toBeNull()
   })
 
-  it('should load case types on mount', async () => {
+  test('should load case types on mount', async () => {
     const { result } = renderHook(() => useCaseData())
 
     await waitFor(() => {
@@ -63,7 +63,7 @@ describe('useCaseData', () => {
     })
   })
 
-  it('should handle authentication error', async () => {
+  test('should handle authentication error', async () => {
     mockSupabase.auth.getSession.mockImplementationOnce(() =>
       Promise.resolve({ data: { session: null } })
     )
@@ -77,7 +77,7 @@ describe('useCaseData', () => {
     expect(result.current.error).toBe('Please log in to view cases')
   })
 
-  it('should handle API error', async () => {
+  test('should handle API error', async () => {
     global.fetch = mock(() => Promise.resolve({
       ok: false,
       status: 500,
@@ -93,7 +93,7 @@ describe('useCaseData', () => {
     expect(result.current.error).toBe('Failed to load case types')
   })
 
-  it('should select case', async () => {
+  test('should select case', async () => {
     const { result } = renderHook(() => useCaseData())
 
     await waitFor(() => {
@@ -107,7 +107,7 @@ describe('useCaseData', () => {
     expect(result.current.selectedCase).toEqual(mockCaseTypes[0])
   })
 
-  it('should clear error', async () => {
+  test('should clear error', async () => {
     global.fetch = mock(() => Promise.resolve({
       ok: false
     }))
@@ -125,7 +125,7 @@ describe('useCaseData', () => {
     expect(result.current.error).toBeNull()
   })
 
-  it('should reload case types manually', async () => {
+  test('should reload case types manually', async () => {
     let callCount = 0
     global.fetch = mock(() => {
       callCount++

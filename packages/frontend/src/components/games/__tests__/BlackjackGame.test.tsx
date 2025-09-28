@@ -7,7 +7,7 @@ import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { mock } from 'bun:test'
-import { describe, it, expect, beforeEach } from 'bun:test'
+import { describe, test, expect } from 'bun:test'
 import BlackjackGame from '../BlackjackGame'
 import { AuthContext } from '../../../hooks/useAuth'
 
@@ -86,14 +86,14 @@ describe('BlackjackGame', () => {
   })
 
   describe('Rendering', () => {
-    it('renders the blackjack game interface', () => {
+    test('renders the blackjack game interface', () => {
       renderWithProviders(<BlackjackGame />)
       
       expect(screen.getByText('Blackjack')).toBeInTheDocument()
       expect(screen.getByText(/place your bet/i)).toBeInTheDocument()
     })
 
-    it('renders betting controls', () => {
+    test('renders betting controls', () => {
       renderWithProviders(<BlackjackGame />)
       
       expect(screen.getByText('Bet Amount')).toBeInTheDocument()
@@ -101,7 +101,7 @@ describe('BlackjackGame', () => {
       expect(screen.getByRole('button', { name: /deal cards/i })).toBeInTheDocument()
     })
 
-    it('renders quick bet buttons', () => {
+    test('renders quick bet buttons', () => {
       renderWithProviders(<BlackjackGame />)
       
       const quickBetButtons = ['25', '50', '100', '250', '500']
@@ -113,7 +113,7 @@ describe('BlackjackGame', () => {
   })
 
   describe('Game Start', () => {
-    it('starts a new game when deal cards is clicked', async () => {
+    test('starts a new game when deal cards is clicked', async () => {
       renderWithProviders(<BlackjackGame />)
       
       const dealButton = screen.getByRole('button', { name: /deal cards/i })
@@ -131,7 +131,7 @@ describe('BlackjackGame', () => {
       })
     })
 
-    it('displays cards after dealing', async () => {
+    test('displays cards after dealing', async () => {
       renderWithProviders(<BlackjackGame />)
       
       const dealButton = screen.getByRole('button', { name: /deal cards/i })
@@ -148,7 +148,7 @@ describe('BlackjackGame', () => {
       })
     })
 
-    it('displays hand values', async () => {
+    test('displays hand values', async () => {
       renderWithProviders(<BlackjackGame />)
       
       const dealButton = screen.getByRole('button', { name: /deal cards/i })
@@ -160,7 +160,7 @@ describe('BlackjackGame', () => {
       })
     })
 
-    it('shows available actions', async () => {
+    test('shows available actions', async () => {
       renderWithProviders(<BlackjackGame />)
       
       const dealButton = screen.getByRole('button', { name: /deal cards/i })
@@ -185,7 +185,7 @@ describe('BlackjackGame', () => {
       })
     })
 
-    it('allows hitting for another card', async () => {
+    test('allows hitting for another card', async () => {
       // Mock hit response
       global.fetch = mock(() => Promise.resolve({
         ok: true,
@@ -227,7 +227,7 @@ describe('BlackjackGame', () => {
       })
     })
 
-    it('allows standing to end turn', async () => {
+    test('allows standing to end turn', async () => {
       // Mock stand response (game complete)
       ;(global.fetch as any).mockResolvedValueOnce({
         ok: true,
@@ -260,7 +260,7 @@ describe('BlackjackGame', () => {
       })
     })
 
-    it('shows double down option when available', async () => {
+    test('shows double down option when available', async () => {
       // Mock game state with double down available
       ;(global.fetch as any).mockResolvedValueOnce({
         ok: true,
@@ -295,7 +295,7 @@ describe('BlackjackGame', () => {
       })
     })
 
-    it('shows split option when available', async () => {
+    test('shows split option when available', async () => {
       // Mock game state with split available
       ;(global.fetch as any).mockResolvedValueOnce({
         ok: true,
@@ -332,7 +332,7 @@ describe('BlackjackGame', () => {
   })
 
   describe('Game Results', () => {
-    it('displays player win result', async () => {
+    test('displays player win result', async () => {
       renderWithProviders(<BlackjackGame />)
       
       // Mock game complete with player win
@@ -368,7 +368,7 @@ describe('BlackjackGame', () => {
       })
     })
 
-    it('displays blackjack result', async () => {
+    test('displays blackjack result', async () => {
       renderWithProviders(<BlackjackGame />)
       
       // Mock blackjack result
@@ -404,7 +404,7 @@ describe('BlackjackGame', () => {
       })
     })
 
-    it('displays dealer win result', async () => {
+    test('displays dealer win result', async () => {
       renderWithProviders(<BlackjackGame />)
       
       // Mock dealer win
@@ -439,7 +439,7 @@ describe('BlackjackGame', () => {
       })
     })
 
-    it('displays push result', async () => {
+    test('displays push result', async () => {
       renderWithProviders(<BlackjackGame />)
       
       // Mock push result
@@ -477,7 +477,7 @@ describe('BlackjackGame', () => {
   })
 
   describe('Validation', () => {
-    it('validates minimum bet amount', () => {
+    test('validates minimum bet amount', () => {
       renderWithProviders(<BlackjackGame />)
       
       const betInput = screen.getByDisplayValue('100')
@@ -489,7 +489,7 @@ describe('BlackjackGame', () => {
       expect(screen.getByText(/minimum bet is/i)).toBeInTheDocument()
     })
 
-    it('validates maximum bet amount', () => {
+    test('validates maximum bet amount', () => {
       renderWithProviders(<BlackjackGame />)
       
       const betInput = screen.getByDisplayValue('100')
@@ -501,11 +501,11 @@ describe('BlackjackGame', () => {
       expect(screen.getByText(/maximum bet is/i)).toBeInTheDocument()
     })
 
-    it('validates sufficient balance', () => {
+    test('validates sufficient balance', () => {
       // Mock insufficient balance
-      vi.mocked(require('../../../hooks/useBalance').useBalance).mockReturnValue({
+      jest.mocked(require('../../../hooks/useBalance').useBalance).mockReturnValue({
         balance: 50,
-        refetch: vi.fn()
+        refetch: mock()
       })
 
       renderWithProviders(<BlackjackGame />)
@@ -518,7 +518,7 @@ describe('BlackjackGame', () => {
   })
 
   describe('Card Display', () => {
-    it('displays cards with correct suits and values', async () => {
+    test('displays cards with correct suits and values', async () => {
       renderWithProviders(<BlackjackGame />)
       
       const dealButton = screen.getByRole('button', { name: /deal cards/i })
@@ -532,7 +532,7 @@ describe('BlackjackGame', () => {
       })
     })
 
-    it('shows hidden dealer card', async () => {
+    test('shows hidden dealer card', async () => {
       renderWithProviders(<BlackjackGame />)
       
       const dealButton = screen.getByRole('button', { name: /deal cards/i })
@@ -543,7 +543,7 @@ describe('BlackjackGame', () => {
       })
     })
 
-    it('reveals dealer card when game ends', async () => {
+    test('reveals dealer card when game ends', async () => {
       renderWithProviders(<BlackjackGame />)
       
       const dealButton = screen.getByRole('button', { name: /deal cards/i })
@@ -585,7 +585,7 @@ describe('BlackjackGame', () => {
   })
 
   describe('Game Flow', () => {
-    it('allows starting new game after completion', async () => {
+    test('allows starting new game after completion', async () => {
       renderWithProviders(<BlackjackGame />)
       
       // Complete a game
@@ -616,7 +616,7 @@ describe('BlackjackGame', () => {
       })
     })
 
-    it('disables actions during API calls', async () => {
+    test('disables actions during API calls', async () => {
       renderWithProviders(<BlackjackGame />)
       
       const dealButton = screen.getByRole('button', { name: /deal cards/i })
@@ -628,7 +628,7 @@ describe('BlackjackGame', () => {
   })
 
   describe('Accessibility', () => {
-    it('has proper ARIA labels for cards', async () => {
+    test('has proper ARIA labels for cards', async () => {
       renderWithProviders(<BlackjackGame />)
       
       const dealButton = screen.getByRole('button', { name: /deal cards/i })
@@ -640,7 +640,7 @@ describe('BlackjackGame', () => {
       })
     })
 
-    it('announces game results to screen readers', async () => {
+    test('announces game results to screen readers', async () => {
       renderWithProviders(<BlackjackGame />)
       
       const dealButton = screen.getByRole('button', { name: /deal cards/i })
@@ -652,7 +652,7 @@ describe('BlackjackGame', () => {
       })
     })
 
-    it('supports keyboard navigation', async () => {
+    test('supports keyboard navigation', async () => {
       renderWithProviders(<BlackjackGame />)
       
       const dealButton = screen.getByRole('button', { name: /deal cards/i })

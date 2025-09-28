@@ -3,11 +3,11 @@
  * Simplified setup for Bun test
  */
 
-import { mock } from 'bun:test'
-import { GlobalRegistrator } from '@happy-dom/global-registrator'
+import { mock, expect } from 'bun:test'
+import * as matchers from '@testing-library/jest-dom/matchers'
 
-// Setup happy-dom for React testing
-GlobalRegistrator.register()
+// Extend expect with Testing Library matchers
+expect.extend(matchers)
 
 // Basic DOM setup will be handled by individual test files
 // This file provides utilities and mocks

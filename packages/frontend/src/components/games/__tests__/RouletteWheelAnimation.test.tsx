@@ -5,7 +5,7 @@
 
 import React from 'react'
 import { render } from '@testing-library/react'
-import { describe, it, expect, beforeEach, mock } from 'bun:test'
+import { describe, test, expect } from 'bun:test'
 import RouletteWheel from '../RouletteWheel'
 
 // Mock framer-motion
@@ -44,7 +44,7 @@ describe('RouletteWheel Animation', () => {
   })
 
   describe('Animation Phases', () => {
-    it('starts continuous spinning when isSpinning=true and winningNumber=null', () => {
+    test('starts continuous spinning when isSpinning=true and winningNumber=null', () => {
       render(
         <RouletteWheel
           isSpinning={true}
@@ -65,7 +65,7 @@ describe('RouletteWheel Animation', () => {
       })
     })
 
-    it('decelerates to winning number when isSpinning=true and winningNumber is set', () => {
+    test('decelerates to winning number when isSpinning=true and winningNumber is set', () => {
       render(
         <RouletteWheel
           isSpinning={true}
@@ -87,7 +87,7 @@ describe('RouletteWheel Animation', () => {
       )
     })
 
-    it('positions at winning number when isSpinning=false and winningNumber is set', () => {
+    test('positions at winning number when isSpinning=false and winningNumber is set', () => {
       render(
         <RouletteWheel
           isSpinning={false}
@@ -109,7 +109,7 @@ describe('RouletteWheel Animation', () => {
       )
     })
 
-    it('resets to position 0 when isSpinning=false and winningNumber=null', () => {
+    test('resets to position 0 when isSpinning=false and winningNumber=null', () => {
       render(
         <RouletteWheel
           isSpinning={false}
@@ -131,7 +131,7 @@ describe('RouletteWheel Animation', () => {
   })
 
   describe('Animation State Changes', () => {
-    it('updates animation when props change from idle to spinning', () => {
+    test('updates animation when props change from idle to spinning', () => {
       const { rerender } = render(
         <RouletteWheel
           isSpinning={false}
@@ -164,7 +164,7 @@ describe('RouletteWheel Animation', () => {
       })
     })
 
-    it('updates animation when winning number is received during spin', () => {
+    test('updates animation when winning number is received during spin', () => {
       const { rerender } = render(
         <RouletteWheel
           isSpinning={true}
@@ -198,7 +198,7 @@ describe('RouletteWheel Animation', () => {
       )
     })
 
-    it('finalizes position when spinning stops', () => {
+    test('finalizes position when spinning stops', () => {
       const { rerender } = render(
         <RouletteWheel
           isSpinning={true}
@@ -234,7 +234,7 @@ describe('RouletteWheel Animation', () => {
   })
 
   describe('Rotation Calculations', () => {
-    it('calculates different rotations for different winning numbers', () => {
+    test('calculates different rotations for different winning numbers', () => {
       const rotations: number[] = []
 
       // Test multiple numbers
@@ -262,7 +262,7 @@ describe('RouletteWheel Animation', () => {
       expect(uniqueRotations.length).toBe(rotations.length)
     })
 
-    it('includes spin rotations in final position', () => {
+    test('includes spin rotations in final position', () => {
       render(
         <RouletteWheel
           isSpinning={false}
@@ -281,7 +281,7 @@ describe('RouletteWheel Animation', () => {
   })
 
   describe('Performance', () => {
-    it('does not cause excessive re-animations', () => {
+    test('does not cause excessive re-animations', () => {
       const { rerender } = render(
         <RouletteWheel
           isSpinning={false}

@@ -1,25 +1,25 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'bun:test';
+import { describe, test, expect } from 'bun:test';
 
 // Mock browser APIs before importing modules
 const localStorageMock = {
-  getItem: vi.fn(() => null),
-  setItem: vi.fn(),
-  removeItem: vi.fn(),
-  clear: vi.fn(),
+  getItem: jest.fn(() => null),
+  setItem: mock(),
+  removeItem: mock(),
+  clear: mock(),
 };
 
 const performanceMock = {
-  now: vi.fn(() => Date.now()),
-  getEntriesByType: vi.fn(() => []),
-  mark: vi.fn(),
-  measure: vi.fn(),
+  now: jest.fn(() => Date.now()),
+  getEntriesByType: jest.fn(() => []),
+  mark: mock(),
+  measure: mock(),
 };
 
 const windowMock = {
   localStorage: localStorageMock,
   performance: performanceMock,
-  addEventListener: vi.fn(),
-  removeEventListener: vi.fn(),
+  addEventListener: mock(),
+  removeEventListener: mock(),
   location: { href: 'http://localhost:3000', pathname: '/' },
   navigator: { userAgent: 'test-agent', language: 'en-US' },
   screen: { width: 1920, height: 1080 },
@@ -30,27 +30,27 @@ const windowMock = {
     title: 'Test Page',
     referrer: '',
     readyState: 'complete',
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
+    addEventListener: mock(),
+    removeEventListener: mock(),
   },
   Intl: {
     DateTimeFormat: () => ({ resolvedOptions: () => ({ timeZone: 'UTC' }) }),
   },
-  PerformanceObserver: vi.fn().mockImplementation(() => ({
-    observe: vi.fn(),
-    disconnect: vi.fn(),
+  PerformanceObserver: mock().mockImplementation(() => ({
+    observe: mock(),
+    disconnect: mock(),
   })),
-  fetch: vi.fn().mockResolvedValue({
+  fetch: mock().mockResolvedValue({
     ok: true,
-    json: vi.fn().mockResolvedValue({}),
+    json: mock().mockResolvedValue({}),
   }),
-  setInterval: vi.fn(),
-  clearInterval: vi.fn(),
-  setTimeout: vi.fn(),
-  clearTimeout: vi.fn(),
+  setInterval: mock(),
+  clearInterval: mock(),
+  setTimeout: mock(),
+  clearTimeout: mock(),
   URL: {
-    createObjectURL: vi.fn(),
-    revokeObjectURL: vi.fn(),
+    createObjectURL: mock(),
+    revokeObjectURL: mock(),
   },
 };
 
@@ -69,13 +69,13 @@ import { gameCache, PersistentCache, CACHE_KEYS } from '../cache';
 
 describe('Performance Optimization', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
     gameCache.clear();
     PersistentCache.clear();
   });
 
   describe('Caching System', () => {
-    it('should cache and retrieve data correctly', () => {
+    test('should cache and retrieve data correctly', () => {
       const testData = { id: 1, name: 'test' };
       const cacheKey = 'test_key';
       
@@ -87,7 +87,7 @@ describe('Performance Optimization', () => {
       expect(retrieved).toEqual(testData);
     });
 
-    it('should expire cache after TTL', async () => {
+    test('should expire cache after TTL', async () => {
       const testData = { id: 1, name: 'test' };
       const cacheKey = 'test_key';
       
@@ -102,7 +102,7 @@ describe('Performance Optimization', () => {
       expect(retrieved).toBeNull();
     });
 
-    it('should use persistent cache for long-term data', () => {
+    test('should use persistent cache for long-term data', () => {
       const testData = { achievements: ['first_win'] };
       const cacheKey = 'user_achievements';
       
@@ -116,7 +116,7 @@ describe('Performance Optimization', () => {
       expect(localStorageMock.setItem).toHaveBeenCalled();
     });
 
-    it('should handle cache cleanup', () => {
+    test('should handle cache cleanup', () => {
       gameCache.set('key1', 'data1', 1000);
       gameCache.set('key2', 'data2', 1000);
       
@@ -128,7 +128,7 @@ describe('Performance Optimization', () => {
   });
 
   describe('Performance Monitoring', () => {
-    it('should measure function performance', async () => {
+    test('should measure function performance', async () => {
       const testFunction = () => {
         // Simulate work
         return 'result';
@@ -139,7 +139,7 @@ describe('Performance Optimization', () => {
       expect(result).toBe('result');
     });
 
-    it('should handle async function performance measurement', async () => {
+    test('should handle async function performance measurement', async () => {
       const asyncFunction = async () => {
         await new Promise(resolve => setTimeout(resolve, 10));
         return 'async_result';
@@ -152,7 +152,7 @@ describe('Performance Optimization', () => {
   });
 
   describe('Basic Functionality', () => {
-    it('should support caching operations', () => {
+    test('should support caching operations', () => {
       // Cache some data
       gameCache.set(CACHE_KEYS.USER_BALANCE, { balance: 1000 });
       
@@ -160,7 +160,7 @@ describe('Performance Optimization', () => {
       expect(gameCache.get(CACHE_KEYS.USER_BALANCE)).toEqual({ balance: 1000 });
     });
 
-    it('should support persistent cache', () => {
+    test('should support persistent cache', () => {
       const testData = { achievements: ['first_win'] };
       const cacheKey = 'user_achievements';
       
@@ -173,14 +173,14 @@ describe('Performance Optimization', () => {
 });
 
 describe('Bundle Optimization', () => {
-  it('should support lazy loading', async () => {
+  test('should support lazy loading', async () => {
     // Test that lazy loading utilities work
     const { withLazyLoading } = await import('../lazy-loading');
     
     expect(typeof withLazyLoading).toBe('function');
   });
 
-  it('should support progressive loading', async () => {
+  test('should support progressive loading', async () => {
     const { useProgressiveLoading } = await import('../lazy-loading');
     
     expect(typeof useProgressiveLoading).toBe('function');

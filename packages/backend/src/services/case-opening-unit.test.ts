@@ -3,11 +3,11 @@
  * Tests the mathematical and logical components without database dependencies
  */
 
-import { describe, it, expect } from 'bun:test'
+import { describe, test, expect } from 'bun:test'
 
 describe('Case Opening Core Algorithms', () => {
   describe('Item Value Calculation', () => {
-    it('should calculate correct item value with multiplier', () => {
+    test('should calculate correct item value with multiplier', () => {
       const calculateItemValue = (baseValue: number, multiplier: number): number => {
         return Math.floor(baseValue * multiplier)
       }
@@ -20,7 +20,7 @@ describe('Case Opening Core Algorithms', () => {
   })
 
   describe('Rarity Distribution Algorithm', () => {
-    it('should select correct rarity based on probability distribution', () => {
+    test('should select correct rarity based on probability distribution', () => {
       const distribution = {
         common: 60,
         uncommon: 25,
@@ -63,7 +63,7 @@ describe('Case Opening Core Algorithms', () => {
       expect(selectRarityByDistribution(0.9)).toBe('common')      // 90% should be common
     })
 
-    it('should handle edge cases in distribution', () => {
+    test('should handle edge cases in distribution', () => {
       const edgeDistribution = {
         common: 0,
         uncommon: 0,
@@ -90,7 +90,7 @@ describe('Case Opening Core Algorithms', () => {
   })
 
   describe('Weighted Item Selection Algorithm', () => {
-    it('should select items based on weight distribution', () => {
+    test('should select items based on weight distribution', () => {
       const items = [
         { name: 'Item A', weight: 1.0 },
         { name: 'Item B', weight: 2.0 },
@@ -122,7 +122,7 @@ describe('Case Opening Core Algorithms', () => {
       expect(selectWeightedItem(0.9).name).toBe('Item C') // 90% of 4 = 3.6, should select Item C
     })
 
-    it('should handle single item selection', () => {
+    test('should handle single item selection', () => {
       const items = [
         { name: 'Only Item', weight: 1.0 }
       ]
@@ -148,7 +148,7 @@ describe('Case Opening Core Algorithms', () => {
   })
 
   describe('Opening ID Generation', () => {
-    it('should generate unique opening IDs', async () => {
+    test('should generate unique opening IDs', async () => {
       const generateOpeningId = (userId: string) => {
         return `case_${Date.now()}_${userId.slice(-8)}`
       }
@@ -165,7 +165,7 @@ describe('Case Opening Core Algorithms', () => {
       expect(id1).not.toBe(id2) // Should be different due to timestamp
     })
 
-    it('should handle short user IDs', () => {
+    test('should handle short user IDs', () => {
       const generateOpeningId = (userId: string) => {
         return `case_${Date.now()}_${userId.slice(-8)}`
       }
@@ -178,7 +178,7 @@ describe('Case Opening Core Algorithms', () => {
   })
 
   describe('Validation Logic', () => {
-    it('should validate balance calculation logic', () => {
+    test('should validate balance calculation logic', () => {
       const validateBalance = (userBalance: number, casePrice: number) => {
         return {
           isValid: userBalance >= casePrice,
@@ -191,7 +191,7 @@ describe('Case Opening Core Algorithms', () => {
       expect(validateBalance(500, 500)).toEqual({ isValid: true, shortfall: 0 })
     })
 
-    it('should validate case type structure', () => {
+    test('should validate case type structure', () => {
       const validateCaseType = (caseType: any) => {
         return {
           isValid: caseType !== null && caseType !== undefined && caseType.is_active === true,
@@ -210,7 +210,7 @@ describe('Case Opening Core Algorithms', () => {
   })
 
   describe('Statistics Calculation Logic', () => {
-    it('should calculate case opening statistics correctly', () => {
+    test('should calculate case opening statistics correctly', () => {
       const mockGameHistory = [
         {
           id: '1',
@@ -274,7 +274,7 @@ describe('Case Opening Core Algorithms', () => {
   })
 
   describe('Provably Fair Algorithm Properties', () => {
-    it('should demonstrate deterministic behavior with same inputs', () => {
+    test('should demonstrate deterministic behavior with same inputs', () => {
       // Simulate deterministic random generation for testing
       const mockRandom = (seed: number) => {
         // Simple deterministic pseudo-random function for testing
@@ -323,7 +323,7 @@ describe('Case Opening Core Algorithms', () => {
       expect(['common', 'uncommon', 'rare', 'epic', 'legendary']).toContain(result3)
     })
 
-    it('should validate rarity distribution percentages', () => {
+    test('should validate rarity distribution percentages', () => {
       const validateDistribution = (distribution: Record<string, number>) => {
         const total = Object.values(distribution).reduce((sum, val) => sum + val, 0)
         const isValid = total === 100

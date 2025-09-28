@@ -7,7 +7,7 @@ import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { mock } from 'bun:test'
-import { describe, it, expect, beforeEach } from 'bun:test'
+import { describe, test, expect, beforeEach } from 'bun:test'
 import RouletteWheel from '../RouletteWheel'
 import { AuthContext } from '../../../hooks/useAuth'
 
@@ -79,14 +79,14 @@ describe('RouletteWheel', () => {
   })
 
   describe('Rendering', () => {
-    it('renders the roulette wheel', () => {
+    test('renders the roulette wheel', () => {
       renderWithProviders(<RouletteWheel />)
       
       expect(screen.getByText('European Roulette')).toBeInTheDocument()
       expect(screen.getByText(/place your bets/i)).toBeInTheDocument()
     })
 
-    it('renders betting options', () => {
+    test('renders betting options', () => {
       renderWithProviders(<RouletteWheel />)
       
       // Color bets
@@ -107,7 +107,7 @@ describe('RouletteWheel', () => {
       expect(screen.getByText('3rd 12')).toBeInTheDocument()
     })
 
-    it('renders number grid', () => {
+    test('renders number grid', () => {
       renderWithProviders(<RouletteWheel />)
       
       // Check for some key numbers
@@ -116,14 +116,14 @@ describe('RouletteWheel', () => {
       expect(screen.getByText('36')).toBeInTheDocument()
     })
 
-    it('renders bet amount controls', () => {
+    test('renders bet amount controls', () => {
       renderWithProviders(<RouletteWheel />)
       
       expect(screen.getByText('Bet Amount')).toBeInTheDocument()
       expect(screen.getByDisplayValue('100')).toBeInTheDocument() // Default bet amount
     })
 
-    it('renders spin button', () => {
+    test('renders spin button', () => {
       renderWithProviders(<RouletteWheel />)
       
       expect(screen.getByRole('button', { name: /spin/i })).toBeInTheDocument()
@@ -131,7 +131,7 @@ describe('RouletteWheel', () => {
   })
 
   describe('Betting Interface', () => {
-    it('allows selecting bet amount', () => {
+    test('allows selecting bet amount', () => {
       renderWithProviders(<RouletteWheel />)
       
       const betInput = screen.getByDisplayValue('100')
@@ -140,7 +140,7 @@ describe('RouletteWheel', () => {
       expect(screen.getByDisplayValue('250')).toBeInTheDocument()
     })
 
-    it('provides quick bet amount buttons', () => {
+    test('provides quick bet amount buttons', () => {
       renderWithProviders(<RouletteWheel />)
       
       const quickBetButtons = ['25', '50', '100', '250', '500']
@@ -150,7 +150,7 @@ describe('RouletteWheel', () => {
       }
     })
 
-    it('updates bet amount when quick bet button is clicked', () => {
+    test('updates bet amount when quick bet button is clicked', () => {
       renderWithProviders(<RouletteWheel />)
       
       const quickBet250 = screen.getByRole('button', { name: '250' })
@@ -159,7 +159,7 @@ describe('RouletteWheel', () => {
       expect(screen.getByDisplayValue('250')).toBeInTheDocument()
     })
 
-    it('allows placing bets on colors', () => {
+    test('allows placing bets on colors', () => {
       renderWithProviders(<RouletteWheel />)
       
       const redBetButton = screen.getByText('Red')
@@ -169,7 +169,7 @@ describe('RouletteWheel', () => {
       expect(redBetButton).toHaveClass('active') // Assuming active class is applied
     })
 
-    it('allows placing bets on numbers', () => {
+    test('allows placing bets on numbers', () => {
       renderWithProviders(<RouletteWheel />)
       
       const number17 = screen.getByText('17')
@@ -179,7 +179,7 @@ describe('RouletteWheel', () => {
       expect(number17).toHaveClass('bet-placed') // Assuming bet-placed class is applied
     })
 
-    it('shows current bet summary', () => {
+    test('shows current bet summary', () => {
       renderWithProviders(<RouletteWheel />)
       
       // Place a bet
@@ -194,7 +194,7 @@ describe('RouletteWheel', () => {
   })
 
   describe('Game Flow', () => {
-    it('disables betting during spin', async () => {
+    test('disables betting during spin', async () => {
       renderWithProviders(<RouletteWheel />)
       
       // Place a bet and spin
@@ -211,7 +211,7 @@ describe('RouletteWheel', () => {
       })
     })
 
-    it('shows spinning animation', async () => {
+    test('shows spinning animation', async () => {
       renderWithProviders(<RouletteWheel />)
       
       const redBetButton = screen.getByText('Red')
@@ -225,7 +225,7 @@ describe('RouletteWheel', () => {
       })
     })
 
-    it('displays game result', async () => {
+    test('displays game result', async () => {
       renderWithProviders(<RouletteWheel />)
       
       const redBetButton = screen.getByText('Red')
@@ -240,7 +240,7 @@ describe('RouletteWheel', () => {
       })
     })
 
-    it('updates balance after game', async () => {
+    test('updates balance after game', async () => {
       renderWithProviders(<RouletteWheel />)
       
       const redBetButton = screen.getByText('Red')
@@ -255,7 +255,7 @@ describe('RouletteWheel', () => {
       })
     })
 
-    it('clears bets after spin', async () => {
+    test('clears bets after spin', async () => {
       renderWithProviders(<RouletteWheel />)
       
       const redBetButton = screen.getByText('Red')
@@ -272,7 +272,7 @@ describe('RouletteWheel', () => {
   })
 
   describe('Validation', () => {
-    it('prevents spinning without placing bets', () => {
+    test('prevents spinning without placing bets', () => {
       renderWithProviders(<RouletteWheel />)
       
       const spinButton = screen.getByRole('button', { name: /spin/i })
@@ -281,7 +281,7 @@ describe('RouletteWheel', () => {
       expect(screen.getByText(/please place a bet/i)).toBeInTheDocument()
     })
 
-    it('validates minimum bet amount', () => {
+    test('validates minimum bet amount', () => {
       renderWithProviders(<RouletteWheel />)
       
       const betInput = screen.getByDisplayValue('100')
@@ -293,7 +293,7 @@ describe('RouletteWheel', () => {
       expect(screen.getByText(/minimum bet is/i)).toBeInTheDocument()
     })
 
-    it('validates maximum bet amount', () => {
+    test('validates maximum bet amount', () => {
       renderWithProviders(<RouletteWheel />)
       
       const betInput = screen.getByDisplayValue('100')
@@ -305,7 +305,7 @@ describe('RouletteWheel', () => {
       expect(screen.getByText(/maximum bet is/i)).toBeInTheDocument()
     })
 
-    it('validates sufficient balance', () => {
+    test('validates sufficient balance', () => {
       // Mock insufficient balance - this would need to be handled differently in actual implementation
       // For now, we'll skip this test as it requires module mocking which is different in Bun
 
@@ -322,7 +322,7 @@ describe('RouletteWheel', () => {
   })
 
   describe('Error Handling', () => {
-    it('handles API errors gracefully', async () => {
+    test('handles API errors gracefully', async () => {
       // Mock API error
       global.fetch = mock(() => Promise.resolve({
         ok: false,
@@ -346,7 +346,7 @@ describe('RouletteWheel', () => {
       })
     })
 
-    it('handles network errors', async () => {
+    test('handles network errors', async () => {
       // Mock network error
       global.fetch = mock(() => Promise.reject(new Error('Network error')))
 
@@ -365,7 +365,7 @@ describe('RouletteWheel', () => {
   })
 
   describe('Accessibility', () => {
-    it('has proper ARIA labels', () => {
+    test('has proper ARIA labels', () => {
       renderWithProviders(<RouletteWheel />)
       
       const spinButton = screen.getByRole('button', { name: /spin/i })
@@ -375,7 +375,7 @@ describe('RouletteWheel', () => {
       expect(betInput).toHaveAttribute('aria-label')
     })
 
-    it('announces game results to screen readers', async () => {
+    test('announces game results to screen readers', async () => {
       renderWithProviders(<RouletteWheel />)
       
       const redBetButton = screen.getByText('Red')
@@ -390,7 +390,7 @@ describe('RouletteWheel', () => {
       })
     })
 
-    it('supports keyboard navigation', () => {
+    test('supports keyboard navigation', () => {
       renderWithProviders(<RouletteWheel />)
       
       const redBetButton = screen.getByText('Red')
@@ -406,7 +406,7 @@ describe('RouletteWheel', () => {
   })
 
   describe('Responsive Design', () => {
-    it('adapts to mobile viewport', () => {
+    test('adapts to mobile viewport', () => {
       // Mock mobile viewport
       Object.defineProperty(window, 'innerWidth', {
         writable: true,
@@ -420,7 +420,7 @@ describe('RouletteWheel', () => {
       expect(screen.getByTestId('mobile-roulette-layout')).toBeInTheDocument()
     })
 
-    it('shows desktop layout on larger screens', () => {
+    test('shows desktop layout on larger screens', () => {
       // Mock desktop viewport
       Object.defineProperty(window, 'innerWidth', {
         writable: true,
@@ -436,20 +436,20 @@ describe('RouletteWheel', () => {
   })
 
   describe('Game Statistics', () => {
-    it('displays recent winning numbers', () => {
+    test('displays recent winning numbers', () => {
       renderWithProviders(<RouletteWheel />)
       
       expect(screen.getByText(/recent numbers/i)).toBeInTheDocument()
     })
 
-    it('shows hot and cold numbers', () => {
+    test('shows hot and cold numbers', () => {
       renderWithProviders(<RouletteWheel />)
       
       expect(screen.getByText(/hot numbers/i)).toBeInTheDocument()
       expect(screen.getByText(/cold numbers/i)).toBeInTheDocument()
     })
 
-    it('displays payout information', () => {
+    test('displays payout information', () => {
       renderWithProviders(<RouletteWheel />)
       
       expect(screen.getByText(/payouts/i)).toBeInTheDocument()

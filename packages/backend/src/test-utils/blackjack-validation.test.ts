@@ -1,11 +1,11 @@
-import { describe, it, expect } from 'bun:test'
+import { describe, test, expect } from 'bun:test'
 import { z } from 'zod'
 
 // Test the updated gameId validation schema
 const gameIdSchema = z.string().min(10).max(200).regex(/^[a-zA-Z0-9\-_]+$/, 'Invalid game ID format')
 
 describe('Blackjack Game ID Validation', () => {
-  it('should accept blackjack game ID format', () => {
+  test('should accept blackjack game ID format', () => {
     const blackjackGameId = 'blackjack-1758476684395-c6e8eac9-9398-40f0-a366-07b521d8d433'
     
     expect(() => gameIdSchema.parse(blackjackGameId)).not.toThrow()
@@ -14,7 +14,7 @@ describe('Blackjack Game ID Validation', () => {
     expect(result).toBe(blackjackGameId)
   })
 
-  it('should accept other game ID formats', () => {
+  test('should accept other game ID formats', () => {
     const validGameIds = [
       'roulette-123456789-user-id',
       'blackjack-987654321-another-user',
@@ -28,7 +28,7 @@ describe('Blackjack Game ID Validation', () => {
     })
   })
 
-  it('should reject invalid game ID formats', () => {
+  test('should reject invalid game ID formats', () => {
     const invalidGameIds = [
       'short',  // too short
       'game id with spaces',  // contains spaces
@@ -43,7 +43,7 @@ describe('Blackjack Game ID Validation', () => {
     })
   })
 
-  it('should work with blackjack action schema', () => {
+  test('should work with blackjack action schema', () => {
     const blackjackActionSchema = z.object({
       gameId: gameIdSchema,
       action: z.enum(['hit', 'stand', 'double', 'split']),

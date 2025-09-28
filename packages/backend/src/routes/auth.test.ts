@@ -3,7 +3,7 @@
  * Tests for all authentication endpoints and middleware
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
+import { describe, test, expect } from 'bun:test'
 import { Hono } from 'hono'
 
 // Mock environment variables
@@ -21,7 +21,7 @@ describe('Authentication API', () => {
   })
 
   describe('POST /api/auth/register', () => {
-    it('should validate registration request structure', () => {
+    test('should validate registration request structure', () => {
       const validRequests = [
         {
           email: 'test@example.com',
@@ -63,7 +63,7 @@ describe('Authentication API', () => {
       }
     })
 
-    it('should validate password strength requirements', () => {
+    test('should validate password strength requirements', () => {
       const strongPasswords = [
         'SecurePass123!',
         'MyP@ssw0rd2024',
@@ -100,7 +100,7 @@ describe('Authentication API', () => {
       }
     })
 
-    it('should validate username requirements', () => {
+    test('should validate username requirements', () => {
       const validUsernames = [
         'testuser',
         'user123',
@@ -142,7 +142,7 @@ describe('Authentication API', () => {
   })
 
   describe('POST /api/auth/login', () => {
-    it('should validate login request structure', () => {
+    test('should validate login request structure', () => {
       const validRequests = [
         {
           email: 'test@example.com',
@@ -177,7 +177,7 @@ describe('Authentication API', () => {
       }
     })
 
-    it('should handle rate limiting parameters', () => {
+    test('should handle rate limiting parameters', () => {
       const rateLimitConfig = {
         maxAttempts: 5,
         windowMs: 15 * 60 * 1000, // 15 minutes
@@ -191,7 +191,7 @@ describe('Authentication API', () => {
   })
 
   describe('POST /api/auth/logout', () => {
-    it('should validate logout request', () => {
+    test('should validate logout request', () => {
       const validHeaders = {
         'Authorization': 'Bearer valid-jwt-token',
         'Content-Type': 'application/json'
@@ -216,7 +216,7 @@ describe('Authentication API', () => {
   })
 
   describe('POST /api/auth/reset-password', () => {
-    it('should validate password reset request', () => {
+    test('should validate password reset request', () => {
       const validRequests = [
         { email: 'test@example.com' },
         { email: 'user@domain.co.uk' }
@@ -242,7 +242,7 @@ describe('Authentication API', () => {
   })
 
   describe('Authentication Middleware', () => {
-    it('should validate JWT token structure', () => {
+    test('should validate JWT token structure', () => {
       const validTokens = [
         'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c',
         'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoidGVzdC11c2VyIiwiaWF0IjoxNjQwOTk1MjAwLCJleHAiOjE2NDA5OTg4MDB9.test-signature'
@@ -275,7 +275,7 @@ describe('Authentication API', () => {
       }
     })
 
-    it('should validate token expiration logic', () => {
+    test('should validate token expiration logic', () => {
       const now = Math.floor(Date.now() / 1000)
       
       const validExpirations = [
@@ -302,7 +302,7 @@ describe('Authentication API', () => {
   })
 
   describe('Session Management', () => {
-    it('should validate session data structure', () => {
+    test('should validate session data structure', () => {
       const validSessions = [
         {
           user_id: 'user123',
@@ -340,7 +340,7 @@ describe('Authentication API', () => {
   })
 
   describe('Error Handling', () => {
-    it('should handle authentication errors properly', () => {
+    test('should handle authentication errors properly', () => {
       const authErrors = [
         { code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' },
         { code: 'USER_NOT_FOUND', message: 'User not found' },
@@ -359,7 +359,7 @@ describe('Authentication API', () => {
       }
     })
 
-    it('should validate error response structure', () => {
+    test('should validate error response structure', () => {
       const errorResponse = {
         success: false,
         error: {
@@ -378,7 +378,7 @@ describe('Authentication API', () => {
   })
 
   describe('Security Measures', () => {
-    it('should validate password hashing requirements', () => {
+    test('should validate password hashing requirements', () => {
       const hashingConfig = {
         algorithm: 'bcrypt',
         saltRounds: 12,
@@ -392,7 +392,7 @@ describe('Authentication API', () => {
       expect(hashingConfig.maxLength).toBeLessThanOrEqual(100)
     })
 
-    it('should validate CORS configuration', () => {
+    test('should validate CORS configuration', () => {
       const corsConfig = {
         origin: ['http://localhost:3000', 'https://tarkov-casino.com'],
         methods: ['GET', 'POST', 'PUT', 'DELETE'],
@@ -407,7 +407,7 @@ describe('Authentication API', () => {
       expect(corsConfig.credentials).toBe(true)
     })
 
-    it('should validate input sanitization', () => {
+    test('should validate input sanitization', () => {
       const maliciousInputs = [
         '<script>alert("xss")</script>',
         'javascript:alert("xss")',

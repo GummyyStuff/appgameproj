@@ -3,7 +3,7 @@
  * Tests core logic, rarity distribution, and provably fair algorithms
  */
 
-import { describe, it, expect } from 'bun:test'
+import { describe, test, expect } from 'bun:test'
 
 // Set up environment variables before any imports
 process.env.NODE_ENV = 'test'
@@ -19,7 +19,7 @@ import { CaseOpeningService, type CaseType, type TarkovItem, type WeightedItem, 
 describe('Case Opening Service', () => {
 
   describe('Item Value Calculation', () => {
-    it('should calculate correct item value with multiplier', () => {
+    test('should calculate correct item value with multiplier', () => {
       const mockItem: TarkovItem = {
         id: '1',
         name: 'Test Item',
@@ -35,7 +35,7 @@ describe('Case Opening Service', () => {
       expect(result).toBe(150)
     })
 
-    it('should floor the result correctly', () => {
+    test('should floor the result correctly', () => {
       const mockItem: TarkovItem = {
         id: '1',
         name: 'Test Item',
@@ -51,7 +51,7 @@ describe('Case Opening Service', () => {
       expect(result).toBe(133) // Math.floor(133.33)
     })
 
-    it('should handle zero multiplier', () => {
+    test('should handle zero multiplier', () => {
       const mockItem: TarkovItem = {
         id: '1',
         name: 'Test Item',
@@ -67,7 +67,7 @@ describe('Case Opening Service', () => {
       expect(result).toBe(0)
     })
 
-    it('should handle large values', () => {
+    test('should handle large values', () => {
       const mockItem: TarkovItem = {
         id: '1',
         name: 'Test Item',
@@ -85,7 +85,7 @@ describe('Case Opening Service', () => {
   })
 
   describe('Rarity Distribution Logic', () => {
-    it('should select correct rarity based on probability distribution', () => {
+    test('should select correct rarity based on probability distribution', () => {
       const mockCaseType: CaseType = {
         id: '1',
         name: 'Test Case',
@@ -120,7 +120,7 @@ describe('Case Opening Service', () => {
       expect(distribution.legendary).toBeGreaterThan(0)
     })
 
-    it('should handle edge cases in distribution', () => {
+    test('should handle edge cases in distribution', () => {
       const edgeDistribution = {
         common: 0,
         uncommon: 0,
@@ -136,7 +136,7 @@ describe('Case Opening Service', () => {
       expect(edgeDistribution.legendary).toBe(100)
     })
 
-    it('should validate rarity distribution totals', () => {
+    test('should validate rarity distribution totals', () => {
       const validDistribution = {
         common: 60,
         uncommon: 25,
@@ -162,7 +162,7 @@ describe('Case Opening Service', () => {
   })
 
   describe('Weighted Item Selection Logic', () => {
-    it('should select items based on weight distribution', () => {
+    test('should select items based on weight distribution', () => {
       const mockItems: WeightedItem[] = [
         {
           item: {
@@ -236,7 +236,7 @@ describe('Case Opening Service', () => {
       expect(selectWeightedItem(0.9, mockItems).item.name).toBe('Item C') // 90% of 4 = 3.6, should select Item C
     })
 
-    it('should handle single item selection', () => {
+    test('should handle single item selection', () => {
       const mockItems: WeightedItem[] = [
         {
           item: {
@@ -274,7 +274,7 @@ describe('Case Opening Service', () => {
       expect(selectWeightedItem(0.9, mockItems).item.name).toBe('Only Item')
     })
 
-    it('should handle zero weight items correctly', () => {
+    test('should handle zero weight items correctly', () => {
       const mockItems: WeightedItem[] = [
         {
           item: {
@@ -314,7 +314,7 @@ describe('Case Opening Service', () => {
   })
 
   describe('Opening ID Generation', () => {
-    it('should generate unique opening IDs', async () => {
+    test('should generate unique opening IDs', async () => {
       const generateOpeningId = (userId: string) => {
         return `case_${Date.now()}_${userId.slice(-8)}`
       }
@@ -331,7 +331,7 @@ describe('Case Opening Service', () => {
       expect(id1).not.toBe(id2) // Should be different due to timestamp
     })
 
-    it('should handle short user IDs', () => {
+    test('should handle short user IDs', () => {
       const generateOpeningId = (userId: string) => {
         return `case_${Date.now()}_${userId.slice(-8)}`
       }
@@ -342,7 +342,7 @@ describe('Case Opening Service', () => {
       expect(id).toMatch(/^case_\d+_user123$/)
     })
 
-    it('should include timestamp for uniqueness', () => {
+    test('should include timestamp for uniqueness', () => {
       const userId = 'test-user-12345678'
       const beforeTime = Date.now()
       
@@ -364,7 +364,7 @@ describe('Case Opening Service', () => {
   })
 
   describe('Validation Logic', () => {
-    it('should validate balance calculation logic', () => {
+    test('should validate balance calculation logic', () => {
       const validateBalance = (userBalance: number, casePrice: number) => {
         return {
           isValid: userBalance >= casePrice,
@@ -377,7 +377,7 @@ describe('Case Opening Service', () => {
       expect(validateBalance(500, 500)).toEqual({ isValid: true, shortfall: 0 })
     })
 
-    it('should validate case type structure', () => {
+    test('should validate case type structure', () => {
       const validateCaseType = (caseType: any) => {
         return {
           isValid: caseType !== null && caseType !== undefined && caseType.is_active === true,
@@ -394,7 +394,7 @@ describe('Case Opening Service', () => {
       expect(validateCaseType(null)).toEqual({ isValid: false, error: 'Case type not found' })
     })
 
-    it('should validate item pool structure', () => {
+    test('should validate item pool structure', () => {
       const validateItemPool = (itemPool: any) => {
         const isValid = Boolean(itemPool && Array.isArray(itemPool) && itemPool.length > 0)
         return {
@@ -410,7 +410,7 @@ describe('Case Opening Service', () => {
   })
 
   describe('Provably Fair Algorithm Logic', () => {
-    it('should demonstrate rarity selection algorithm', () => {
+    test('should demonstrate rarity selection algorithm', () => {
       const distribution = {
         common: 60,
         uncommon: 25,
@@ -453,7 +453,7 @@ describe('Case Opening Service', () => {
       expect(selectRarityByDistribution(0.9)).toBe('common')      // 90% should be common
     })
 
-    it('should demonstrate weighted item selection algorithm', () => {
+    test('should demonstrate weighted item selection algorithm', () => {
       const items = [
         { name: 'Item A', weight: 1.0 },
         { name: 'Item B', weight: 2.0 },
@@ -487,7 +487,7 @@ describe('Case Opening Service', () => {
   })
 
   describe('Statistics Calculation Logic', () => {
-    it('should calculate case opening statistics correctly', () => {
+    test('should calculate case opening statistics correctly', () => {
       const mockGameHistory = [
         {
           id: '1',

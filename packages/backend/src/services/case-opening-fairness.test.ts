@@ -3,7 +3,7 @@
  * Tests statistical distribution, provably fair algorithms, and edge cases
  */
 
-import { describe, it, expect } from 'bun:test'
+import { describe, test, expect } from 'bun:test'
 
 // Set up environment variables
 process.env.NODE_ENV = 'test'
@@ -114,7 +114,7 @@ describe('Case Opening Fairness and Distribution Tests', () => {
       }
     ]
 
-    it('should maintain statistical distribution over large sample size', async () => {
+    test('should maintain statistical distribution over large sample size', async () => {
       const sampleSize = 10000
       const itemPool = createMockItemPool()
       const results: ItemRarity[] = []
@@ -164,7 +164,7 @@ describe('Case Opening Fairness and Distribution Tests', () => {
       console.log(`Legendary: ${percentages.legendary.toFixed(2)}% (expected: ${expected.legendary}%)`)
     }, 30000) // 30 second timeout for large sample
 
-    it('should ensure no bias in consecutive selections', async () => {
+    test('should ensure no bias in consecutive selections', async () => {
       const itemPool = createMockItemPool()
       const consecutiveTests = 1000
       const results: ItemRarity[] = []
@@ -208,7 +208,7 @@ describe('Case Opening Fairness and Distribution Tests', () => {
       console.log(`Max consecutive legendary items: ${maxConsecutiveLegendary}`)
     })
 
-    it('should validate chi-square goodness of fit test', async () => {
+    test('should validate chi-square goodness of fit test', async () => {
       const sampleSize = 5000
       const itemPool = createMockItemPool()
       const results: ItemRarity[] = []
@@ -262,7 +262,7 @@ describe('Case Opening Fairness and Distribution Tests', () => {
   })
 
   describe('Weighted Item Selection Fairness', () => {
-    it('should respect item weights within same rarity', async () => {
+    test('should respect item weights within same rarity', async () => {
       const mockCaseType: CaseType = {
         id: 'weight-test-case',
         name: 'Weight Test Case',
@@ -339,7 +339,7 @@ describe('Case Opening Fairness and Distribution Tests', () => {
   })
 
   describe('Edge Case Fairness Tests', () => {
-    it('should handle extreme rarity distributions correctly', async () => {
+    test('should handle extreme rarity distributions correctly', async () => {
       const extremeCaseType: CaseType = {
         id: 'extreme-case',
         name: 'Extreme Case',
@@ -416,7 +416,7 @@ describe('Case Opening Fairness and Distribution Tests', () => {
       console.log(`Legendary: ${legendaryPercentage.toFixed(2)}% (expected: 1%)`)
     }, 15000)
 
-    it('should handle single item pools correctly', async () => {
+    test('should handle single item pools correctly', async () => {
       const singleItemCase: CaseType = {
         id: 'single-item-case',
         name: 'Single Item Case',
@@ -462,7 +462,7 @@ describe('Case Opening Fairness and Distribution Tests', () => {
   })
 
   describe('Value Calculation Fairness', () => {
-    it('should apply value multipliers consistently', () => {
+    test('should apply value multipliers consistently', () => {
       const testCases = [
         { baseValue: 100, multiplier: 1.0, expected: 100 },
         { baseValue: 100, multiplier: 1.5, expected: 150 },
@@ -489,7 +489,7 @@ describe('Case Opening Fairness and Distribution Tests', () => {
       })
     })
 
-    it('should ensure value calculations are deterministic', () => {
+    test('should ensure value calculations are deterministic', () => {
       const mockItem: TarkovItem = {
         id: 'deterministic-item',
         name: 'Deterministic Item',
@@ -513,7 +513,7 @@ describe('Case Opening Fairness and Distribution Tests', () => {
   })
 
   describe('Randomness Quality Tests', () => {
-    it('should pass basic randomness tests', async () => {
+    test('should pass basic randomness tests', async () => {
       const sampleSize = 1000
       const mockCaseType: CaseType = {
         id: 'randomness-test',

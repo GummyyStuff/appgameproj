@@ -1,11 +1,11 @@
-import { describe, it, expect, beforeEach, vi } from 'bun:test';
+import { describe, test, expect } from 'bun:test';
 
 // Mock localStorage
 const localStorageMock = {
-  getItem: vi.fn(),
-  setItem: vi.fn(),
-  removeItem: vi.fn(),
-  clear: vi.fn(),
+  getItem: mock(),
+  setItem: mock(),
+  removeItem: mock(),
+  clear: mock(),
 };
 Object.defineProperty(globalThis, 'localStorage', { value: localStorageMock });
 
@@ -13,13 +13,13 @@ import { gameCache, PersistentCache, CACHE_KEYS, CACHE_TTL } from '../cache';
 
 describe('Caching System', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
     gameCache.clear();
     PersistentCache.clear();
   });
 
   describe('GameDataCache', () => {
-    it('should cache and retrieve data correctly', () => {
+    test('should cache and retrieve data correctly', () => {
       const testData = { id: 1, name: 'test' };
       const cacheKey = 'test_key';
       
@@ -31,12 +31,12 @@ describe('Caching System', () => {
       expect(retrieved).toEqual(testData);
     });
 
-    it('should return null for non-existent keys', () => {
+    test('should return null for non-existent keys', () => {
       const retrieved = gameCache.get('non_existent_key');
       expect(retrieved).toBeNull();
     });
 
-    it('should expire cache after TTL', async () => {
+    test('should expire cache after TTL', async () => {
       const testData = { id: 1, name: 'test' };
       const cacheKey = 'test_key';
       
@@ -51,7 +51,7 @@ describe('Caching System', () => {
       expect(retrieved).toBeNull();
     });
 
-    it('should check if cache has valid item', () => {
+    test('should check if cache has valid item', () => {
       const testData = { id: 1, name: 'test' };
       const cacheKey = 'test_key';
       
@@ -61,7 +61,7 @@ describe('Caching System', () => {
       expect(gameCache.has(cacheKey)).toBe(true);
     });
 
-    it('should handle cache cleanup', () => {
+    test('should handle cache cleanup', () => {
       gameCache.set('key1', 'data1', 1000);
       gameCache.set('key2', 'data2', 1000);
       
@@ -71,7 +71,7 @@ describe('Caching System', () => {
       expect(gameCache.size()).toBe(0);
     });
 
-    it('should cleanup expired items', async () => {
+    test('should cleanup expired items', async () => {
       gameCache.set('key1', 'data1', 10); // Short TTL
       gameCache.set('key2', 'data2', 1000); // Long TTL
       
@@ -87,7 +87,7 @@ describe('Caching System', () => {
   });
 
   describe('PersistentCache', () => {
-    it('should use localStorage for persistent data', () => {
+    test('should use localStorage for persistent data', () => {
       const testData = { achievements: ['first_win'] };
       const cacheKey = 'user_achievements';
       
@@ -99,7 +99,7 @@ describe('Caching System', () => {
       );
     });
 
-    it('should retrieve data from localStorage', () => {
+    test('should retrieve data from localStorage', () => {
       const testData = { achievements: ['first_win'] };
       const cacheKey = 'user_achievements';
       
@@ -114,7 +114,7 @@ describe('Caching System', () => {
       expect(retrieved).toEqual(testData);
     });
 
-    it('should return null for expired data', () => {
+    test('should return null for expired data', () => {
       const testData = { achievements: ['first_win'] };
       const cacheKey = 'user_achievements';
       
@@ -130,7 +130,7 @@ describe('Caching System', () => {
       expect(localStorageMock.removeItem).toHaveBeenCalled();
     });
 
-    it('should handle localStorage errors gracefully', () => {
+    test('should handle localStorage errors gracefully', () => {
       localStorageMock.setItem.mockImplementation(() => {
         throw new Error('Storage quota exceeded');
       });
@@ -141,7 +141,7 @@ describe('Caching System', () => {
       }).not.toThrow();
     });
 
-    it('should remove items from localStorage', () => {
+    test('should remove items from localStorage', () => {
       const cacheKey = 'test_key';
       
       PersistentCache.remove(cacheKey);
@@ -149,14 +149,14 @@ describe('Caching System', () => {
       expect(localStorageMock.removeItem).toHaveBeenCalledWith('tarkov_casino_test_key');
     });
 
-    it('should clear all cache items', () => {
+    test('should clear all cache items', () => {
       // Mock localStorage keys
       Object.defineProperty(localStorageMock, 'keys', {
         value: ['tarkov_casino_key1', 'tarkov_casino_key2', 'other_key'],
         configurable: true,
       });
       
-      Object.keys = vi.fn().mockReturnValue(['tarkov_casino_key1', 'tarkov_casino_key2', 'other_key']);
+      Object.keys = mock().mockReturnValue(['tarkov_casino_key1', 'tarkov_casino_key2', 'other_key']);
       
       PersistentCache.clear();
       
@@ -167,7 +167,7 @@ describe('Caching System', () => {
   });
 
   describe('Cache Constants', () => {
-    it('should have defined cache keys', () => {
+    test('should have defined cache keys', () => {
       expect(CACHE_KEYS.USER_PROFILE).toBe('user_profile');
       expect(CACHE_KEYS.USER_BALANCE).toBe('user_balance');
       expect(CACHE_KEYS.GAME_HISTORY).toBe('game_history');
@@ -176,7 +176,7 @@ describe('Caching System', () => {
       expect(CACHE_KEYS.ACHIEVEMENTS).toBe('achievements');
     });
 
-    it('should have defined cache TTL values', () => {
+    test('should have defined cache TTL values', () => {
       expect(CACHE_TTL.USER_PROFILE).toBe(10 * 60 * 1000);
       expect(CACHE_TTL.USER_BALANCE).toBe(30 * 1000);
       expect(CACHE_TTL.GAME_HISTORY).toBe(5 * 60 * 1000);

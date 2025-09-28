@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'bun:test'
+import { describe, test, expect } from 'bun:test'
 
 // Set test environment variables
 process.env.NODE_ENV = 'test'
@@ -11,7 +11,7 @@ process.env.DAILY_BONUS = '1000'
 
 describe('Currency API Integration', () => {
   describe('API Endpoint Validation', () => {
-    it('should validate balance request parameters', () => {
+    test('should validate balance request parameters', () => {
       const { z } = require('zod')
       
       const balanceValidationSchema = z.object({
@@ -27,7 +27,7 @@ describe('Currency API Integration', () => {
       expect(() => balanceValidationSchema.parse({})).toThrow()
     })
 
-    it('should validate transaction history query parameters', () => {
+    test('should validate transaction history query parameters', () => {
       // Simulate query parameter parsing
       const parseQueryParams = (query: Record<string, string>) => {
         const limit = parseInt(query.limit || '50')
@@ -61,7 +61,7 @@ describe('Currency API Integration', () => {
       expect(() => parseQueryParams({ game_type: 'invalid' })).toThrow()
     })
 
-    it('should format API responses correctly', () => {
+    test('should format API responses correctly', () => {
       const formatBalanceResponse = (balance: number, dailyBonusStatus: any) => {
         return {
           balance,
@@ -92,7 +92,7 @@ describe('Currency API Integration', () => {
       expect(response.daily_bonus.formatted_bonus).toBe('₽1,000')
     })
 
-    it('should format transaction history responses correctly', () => {
+    test('should format transaction history responses correctly', () => {
       const formatTransactionResponse = (transactions: any[]) => {
         return {
           transactions: transactions.map(tx => ({
@@ -138,7 +138,7 @@ describe('Currency API Integration', () => {
       expect(response.transactions[1].formatted_net).toBe('₽-500')
     })
 
-    it('should format statistics responses correctly', () => {
+    test('should format statistics responses correctly', () => {
       const formatStatsResponse = (stats: any) => {
         return {
           stats: {
@@ -177,7 +177,7 @@ describe('Currency API Integration', () => {
   })
 
   describe('Error Handling', () => {
-    it('should handle currency service errors appropriately', () => {
+    test('should handle currency service errors appropriately', () => {
       const handleCurrencyError = (error: Error) => {
         if (error.message.includes('already claimed')) {
           return { status: 400, message: error.message }
@@ -216,7 +216,7 @@ describe('Currency API Integration', () => {
       })
     })
 
-    it('should validate authentication requirements', () => {
+    test('should validate authentication requirements', () => {
       const requireAuth = (authHeader?: string) => {
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
           throw new Error('Missing or invalid authorization header')

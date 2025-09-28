@@ -3,7 +3,7 @@
  * Tests for roulette game API endpoints including authentication, validation, and game flow
  */
 
-import { describe, it, expect, beforeEach, mock } from 'bun:test'
+import { describe, test, expect } from 'bun:test'
 import { Hono } from 'hono'
 import { RouletteGame } from '../services/game-engine/roulette-game'
 
@@ -119,7 +119,7 @@ describe('Roulette API Endpoints', () => {
   })
 
   describe('GET /roulette', () => {
-    it('should return roulette game information', async () => {
+    test('should return roulette game information', async () => {
       const res = await app.request('/roulette')
       const data = await res.json()
 
@@ -146,7 +146,7 @@ describe('Roulette API Endpoints', () => {
   })
 
   describe('POST /roulette/bet', () => {
-    it('should successfully place a valid roulette bet', async () => {
+    test('should successfully place a valid roulette bet', async () => {
       const betData = {
         amount: 100,
         betType: 'red',
@@ -175,7 +175,7 @@ describe('Roulette API Endpoints', () => {
       expect(mockCurrencyService.processGameTransaction).toHaveBeenCalled()
     })
 
-    it('should validate required fields', async () => {
+    test('should validate required fields', async () => {
       const invalidBets = [
         {}, // Missing all fields
         { amount: 100 }, // Missing betType and betValue
@@ -196,7 +196,7 @@ describe('Roulette API Endpoints', () => {
       }
     })
 
-    it('should validate bet amounts', async () => {
+    test('should validate bet amounts', async () => {
       const invalidAmounts = [-10, 0, 10001]
 
       for (const amount of invalidAmounts) {
@@ -218,7 +218,7 @@ describe('Roulette API Endpoints', () => {
       }
     })
 
-    it('should reject bets with insufficient balance', async () => {
+    test('should reject bets with insufficient balance', async () => {
       // Mock insufficient balance
       mockCurrencyService.getBalance.mockResolvedValueOnce(50)
 
@@ -241,7 +241,7 @@ describe('Roulette API Endpoints', () => {
       expect(mockCurrencyService.processGameTransaction).not.toHaveBeenCalled()
     })
 
-    it('should handle different bet types correctly', async () => {
+    test('should handle different bet types correctly', async () => {
       const betTypes = [
         { betType: 'number', betValue: 17 },
         { betType: 'red', betValue: 'red' },
@@ -269,7 +269,7 @@ describe('Roulette API Endpoints', () => {
       }
     })
 
-    it('should validate winning number range in game results', async () => {
+    test('should validate winning number range in game results', async () => {
       const betData = {
         amount: 100,
         betType: 'red',

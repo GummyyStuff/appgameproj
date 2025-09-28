@@ -2,7 +2,7 @@
  * Integration tests for Blackjack API endpoints
  */
 
-import { describe, it, expect, beforeEach } from 'bun:test'
+import { describe, test, expect } from 'bun:test'
 import { Hono } from 'hono'
 import { gameRoutes } from './games'
 
@@ -15,7 +15,7 @@ describe('Blackjack API Endpoints', () => {
   })
 
   describe('GET /api/games/blackjack', () => {
-    it('should return blackjack game information', async () => {
+    test('should return blackjack game information', async () => {
       const res = await app.request('/api/games/blackjack')
       expect(res.status).toBe(200)
       
@@ -33,7 +33,7 @@ describe('Blackjack API Endpoints', () => {
   })
 
   describe('POST /api/games/blackjack/start', () => {
-    it('should require authentication', async () => {
+    test('should require authentication', async () => {
       const res = await app.request('/api/games/blackjack/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -45,7 +45,7 @@ describe('Blackjack API Endpoints', () => {
       expect(data.error).toBe('Authentication required')
     })
 
-    it('should validate required fields', async () => {
+    test('should validate required fields', async () => {
       // Mock authenticated user
       const mockUser = { id: 'test-user', email: 'test@example.com' }
       
@@ -56,7 +56,7 @@ describe('Blackjack API Endpoints', () => {
   })
 
   describe('POST /api/games/blackjack/action', () => {
-    it('should require authentication', async () => {
+    test('should require authentication', async () => {
       const res = await app.request('/api/games/blackjack/action', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -71,7 +71,7 @@ describe('Blackjack API Endpoints', () => {
       expect(data.error).toBe('Authentication required')
     })
 
-    it('should validate required fields', async () => {
+    test('should validate required fields', async () => {
       // This would test field validation with proper auth mocking
       expect(true).toBe(true) // Placeholder
     })

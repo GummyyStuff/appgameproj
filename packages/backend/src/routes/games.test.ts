@@ -3,7 +3,7 @@
  * Tests for all game endpoints and game flow
  */
 
-import { describe, it, expect, beforeEach } from 'bun:test'
+import { describe, test, expect } from 'bun:test'
 import { Hono } from 'hono'
 
 // Mock environment variables
@@ -21,7 +21,7 @@ describe('Game API', () => {
   })
 
   describe('POST /api/games/roulette/bet', () => {
-    it('should validate roulette bet request structure', () => {
+    test('should validate roulette bet request structure', () => {
       const validRequests = [
         {
           amount: 100,
@@ -64,7 +64,7 @@ describe('Game API', () => {
       }
     })
 
-    it('should validate roulette bet types and values', () => {
+    test('should validate roulette bet types and values', () => {
       const validBets = [
         { betType: 'red', betValue: 'red' },
         { betType: 'black', betValue: 'black' },
@@ -133,7 +133,7 @@ describe('Game API', () => {
   })
 
   describe('POST /api/games/blackjack/start', () => {
-    it('should validate blackjack start request', () => {
+    test('should validate blackjack start request', () => {
       const validRequests = [
         { amount: 100 },
         { amount: 50 },
@@ -164,7 +164,7 @@ describe('Game API', () => {
   })
 
   describe('POST /api/games/blackjack/action', () => {
-    it('should validate blackjack action request', () => {
+    test('should validate blackjack action request', () => {
       const validRequests = [
         { gameId: 'game123', action: 'hit' },
         { gameId: 'game456', action: 'stand' },
@@ -198,7 +198,7 @@ describe('Game API', () => {
   })
 
   describe('Game Response Validation', () => {
-    it('should validate roulette game response structure', () => {
+    test('should validate roulette game response structure', () => {
       const mockResponse = {
         success: true,
         gameId: 'game123',
@@ -224,7 +224,7 @@ describe('Game API', () => {
       expect(mockResponse.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)
     })
 
-    it('should validate blackjack game response structure', () => {
+    test('should validate blackjack game response structure', () => {
       const mockResponse = {
         success: true,
         gameId: 'game123',
@@ -259,7 +259,7 @@ describe('Game API', () => {
   })
 
   describe('Error Response Validation', () => {
-    it('should validate game error responses', () => {
+    test('should validate game error responses', () => {
       const errorResponses = [
         {
           success: false,
@@ -292,7 +292,7 @@ describe('Game API', () => {
   })
 
   describe('Authentication Requirements', () => {
-    it('should validate authentication headers for game endpoints', () => {
+    test('should validate authentication headers for game endpoints', () => {
       const validHeaders = {
         'Authorization': 'Bearer valid-jwt-token',
         'Content-Type': 'application/json'
@@ -318,7 +318,7 @@ describe('Game API', () => {
   })
 
   describe('Rate Limiting', () => {
-    it('should validate rate limiting configuration', () => {
+    test('should validate rate limiting configuration', () => {
       const rateLimits = {
         roulette: { maxRequests: 60, windowMs: 60000 }, // 60 per minute
         blackjack: { maxRequests: 30, windowMs: 60000 } // 30 per minute
@@ -334,7 +334,7 @@ describe('Game API', () => {
   })
 
   describe('Balance Validation', () => {
-    it('should validate balance checks before game play', () => {
+    test('should validate balance checks before game play', () => {
       const balanceChecks = [
         { balance: 1000, betAmount: 100, canPlay: true },
         { balance: 1000, betAmount: 1000, canPlay: true },
@@ -351,7 +351,7 @@ describe('Game API', () => {
   })
 
   describe('Game State Management', () => {
-    it('should validate game state transitions', () => {
+    test('should validate game state transitions', () => {
       const validTransitions = [
         { from: 'waiting', to: 'playing', valid: true },
         { from: 'playing', to: 'won', valid: true },
@@ -382,7 +382,7 @@ describe('Game API', () => {
   })
 
   describe('Concurrent Game Handling', () => {
-    it('should validate concurrent game restrictions', () => {
+    test('should validate concurrent game restrictions', () => {
       const gameStates = [
         { userId: 'user1', gameId: 'game1', status: 'playing' },
         { userId: 'user1', gameId: 'game2', status: 'waiting' }, // Should not be allowed

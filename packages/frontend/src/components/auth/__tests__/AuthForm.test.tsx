@@ -7,7 +7,7 @@ import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { mock } from 'bun:test'
-import { describe, it, expect, beforeEach } from 'bun:test'
+import { describe, test, expect, beforeEach } from 'bun:test'
 import AuthForm from '../AuthForm'
 import { AuthContext } from '../../../hooks/useAuth'
 
@@ -57,7 +57,7 @@ describe('AuthForm', () => {
   })
 
   describe('Login Form', () => {
-    it('renders login form by default', () => {
+    test('renders login form by default', () => {
       renderWithProviders(<AuthForm />)
       
       expect(screen.getByText('Sign In')).toBeInTheDocument()
@@ -66,7 +66,7 @@ describe('AuthForm', () => {
       expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument()
     })
 
-    it('validates email format', async () => {
+    test('validates email format', async () => {
       renderWithProviders(<AuthForm />)
       
       const emailInput = screen.getByLabelText(/email/i)
@@ -80,7 +80,7 @@ describe('AuthForm', () => {
       })
     })
 
-    it('validates required fields', async () => {
+    test('validates required fields', async () => {
       renderWithProviders(<AuthForm />)
       
       const submitButton = screen.getByRole('button', { name: /sign in/i })
@@ -92,7 +92,7 @@ describe('AuthForm', () => {
       })
     })
 
-    it('calls signIn with correct parameters', async () => {
+    test('calls signIn with correct parameters', async () => {
       const mockSignIn = mock(() => Promise.resolve({ success: true }))
       mockAuthValue.signIn = mockSignIn
 
@@ -111,7 +111,7 @@ describe('AuthForm', () => {
       })
     })
 
-    it('displays error message on login failure', async () => {
+    test('displays error message on login failure', async () => {
       const mockSignIn = mock(() => Promise.reject(new Error('Invalid credentials')))
       mockAuthValue.signIn = mockSignIn
 
@@ -130,7 +130,7 @@ describe('AuthForm', () => {
       })
     })
 
-    it('shows loading state during login', async () => {
+    test('shows loading state during login', async () => {
       const mockSignIn = mock(() => new Promise(resolve => setTimeout(resolve, 100)))
       mockAuthValue.signIn = mockSignIn
 
@@ -150,7 +150,7 @@ describe('AuthForm', () => {
   })
 
   describe('Registration Form', () => {
-    it('switches to registration form', () => {
+    test('switches to registration form', () => {
       renderWithProviders(<AuthForm />)
       
       const switchButton = screen.getByText(/don't have an account/i)
@@ -163,7 +163,7 @@ describe('AuthForm', () => {
       expect(screen.getByLabelText(/confirm password/i)).toBeInTheDocument()
     })
 
-    it('validates username requirements', async () => {
+    test('validates username requirements', async () => {
       renderWithProviders(<AuthForm />)
       
       // Switch to registration
@@ -197,7 +197,7 @@ describe('AuthForm', () => {
       })
     })
 
-    it('validates password strength', async () => {
+    test('validates password strength', async () => {
       renderWithProviders(<AuthForm />)
       
       // Switch to registration
@@ -215,7 +215,7 @@ describe('AuthForm', () => {
       })
     })
 
-    it('validates password confirmation', async () => {
+    test('validates password confirmation', async () => {
       renderWithProviders(<AuthForm />)
       
       // Switch to registration
@@ -234,7 +234,7 @@ describe('AuthForm', () => {
       })
     })
 
-    it('calls signUp with correct parameters', async () => {
+    test('calls signUp with correct parameters', async () => {
       const mockSignUp = mock(() => Promise.resolve({ success: true }))
       mockAuthValue.signUp = mockSignUp
 
@@ -262,7 +262,7 @@ describe('AuthForm', () => {
   })
 
   describe('Password Reset', () => {
-    it('shows forgot password form', () => {
+    test('shows forgot password form', () => {
       renderWithProviders(<AuthForm />)
       
       const forgotPasswordLink = screen.getByText(/forgot password/i)
@@ -273,7 +273,7 @@ describe('AuthForm', () => {
       expect(screen.getByRole('button', { name: /send reset email/i })).toBeInTheDocument()
     })
 
-    it('validates email for password reset', async () => {
+    test('validates email for password reset', async () => {
       renderWithProviders(<AuthForm />)
       
       // Go to forgot password form
@@ -287,7 +287,7 @@ describe('AuthForm', () => {
       })
     })
 
-    it('calls resetPassword with correct email', async () => {
+    test('calls resetPassword with correct email', async () => {
       const mockResetPassword = mock(() => Promise.resolve({ success: true }))
       mockAuthValue.resetPassword = mockResetPassword
 
@@ -309,7 +309,7 @@ describe('AuthForm', () => {
   })
 
   describe('Form Navigation', () => {
-    it('switches between login and registration forms', () => {
+    test('switches between login and registration forms', () => {
       renderWithProviders(<AuthForm />)
       
       // Start with login form
@@ -324,7 +324,7 @@ describe('AuthForm', () => {
       expect(screen.getByText('Sign In')).toBeInTheDocument()
     })
 
-    it('returns to login from password reset', () => {
+    test('returns to login from password reset', () => {
       renderWithProviders(<AuthForm />)
       
       // Go to forgot password
@@ -338,14 +338,14 @@ describe('AuthForm', () => {
   })
 
   describe('Accessibility', () => {
-    it('has proper form labels', () => {
+    test('has proper form labels', () => {
       renderWithProviders(<AuthForm />)
       
       expect(screen.getByLabelText(/email/i)).toBeInTheDocument()
       expect(screen.getByLabelText(/password/i)).toBeInTheDocument()
     })
 
-    it('has proper ARIA attributes', () => {
+    test('has proper ARIA attributes', () => {
       renderWithProviders(<AuthForm />)
       
       const form = screen.getByRole('form')
@@ -355,7 +355,7 @@ describe('AuthForm', () => {
       expect(submitButton).toHaveAttribute('type', 'submit')
     })
 
-    it('shows error messages with proper ARIA attributes', async () => {
+    test('shows error messages with proper ARIA attributes', async () => {
       renderWithProviders(<AuthForm />)
       
       const submitButton = screen.getByRole('button', { name: /sign in/i })
@@ -369,7 +369,7 @@ describe('AuthForm', () => {
   })
 
   describe('Keyboard Navigation', () => {
-    it('supports tab navigation', () => {
+    test('supports tab navigation', () => {
       renderWithProviders(<AuthForm />)
       
       const emailInput = screen.getByLabelText(/email/i)
@@ -388,8 +388,8 @@ describe('AuthForm', () => {
       expect(document.activeElement).toBe(submitButton)
     })
 
-    it('submits form on Enter key', async () => {
-      const mockSignIn = vi.fn().mockResolvedValue({ success: true })
+    test('submits form on Enter key', async () => {
+      const mockSignIn = mock().mockResolvedValue({ success: true })
       mockAuthValue.signIn = mockSignIn
 
       renderWithProviders(<AuthForm />)

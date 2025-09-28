@@ -3,11 +3,11 @@
  * Tests key statistics endpoints with basic functionality
  */
 
-import { describe, it, expect } from 'bun:test'
+import { describe, test, expect } from 'bun:test'
 
 describe('Statistics API Routes', () => {
   describe('Route Structure', () => {
-    it('should have all required statistics routes defined', async () => {
+    test('should have all required statistics routes defined', async () => {
       // Import the routes to check they exist
       const { statisticsRoutes } = await import('./statistics')
       
@@ -17,7 +17,7 @@ describe('Statistics API Routes', () => {
   })
 
   describe('Route Dependencies', () => {
-    it('should import all required services', async () => {
+    test('should import all required services', async () => {
       const { StatisticsService } = await import('../services/statistics')
       const { DatabaseService } = await import('../services/database')
       
@@ -40,7 +40,7 @@ describe('Statistics API Routes', () => {
   })
 
   describe('Validation Schemas', () => {
-    it('should validate statistics filters correctly', async () => {
+    test('should validate statistics filters correctly', async () => {
       // Test that the validation schemas work as expected
       const { z } = await import('zod')
       const { isValidGameType } = await import('../types/database')
@@ -58,7 +58,7 @@ describe('Statistics API Routes', () => {
   })
 
   describe('Error Handling', () => {
-    it('should have proper error handling middleware', async () => {
+    test('should have proper error handling middleware', async () => {
       const { asyncHandler } = await import('../middleware/error')
       const { HTTPException } = await import('hono/http-exception')
       
@@ -69,7 +69,7 @@ describe('Statistics API Routes', () => {
   })
 
   describe('Authentication', () => {
-    it('should have authentication middleware', async () => {
+    test('should have authentication middleware', async () => {
       const { authMiddleware } = await import('../middleware/auth')
       
       expect(authMiddleware).toBeDefined()
@@ -78,7 +78,7 @@ describe('Statistics API Routes', () => {
   })
 
   describe('Statistics Service Integration', () => {
-    it('should handle empty statistics correctly', () => {
+    test('should handle empty statistics correctly', () => {
       const { StatisticsService } = require('../services/statistics')
       
       const emptyStats = StatisticsService.getEmptyStatistics()
@@ -94,7 +94,7 @@ describe('Statistics API Routes', () => {
       expect(emptyGameStats.totalWon).toBe(0)
     })
 
-    it('should calculate statistics with sample data', () => {
+    test('should calculate statistics with sample data', () => {
       const { StatisticsService } = require('../services/statistics')
       
       const sampleGames = [
@@ -168,7 +168,7 @@ describe('Statistics API Routes', () => {
   })
 
   describe('Database Service Integration', () => {
-    it('should have all required database methods', () => {
+    test('should have all required database methods', () => {
       const { DatabaseService } = require('../services/database')
       
       // Check that all required methods exist
@@ -187,7 +187,7 @@ describe('Statistics API Routes', () => {
   })
 
   describe('Type Safety', () => {
-    it('should have proper TypeScript types', async () => {
+    test('should have proper TypeScript types', async () => {
       const { 
         GameHistory, 
         UserStatistics, 
@@ -217,7 +217,7 @@ describe('Statistics API Routes', () => {
   })
 
   describe('API Route Structure', () => {
-    it('should export statistics routes properly', async () => {
+    test('should export statistics routes properly', async () => {
       const statisticsModule = await import('./statistics')
       
       expect(statisticsModule.statisticsRoutes).toBeDefined()
@@ -229,7 +229,7 @@ describe('Statistics API Routes', () => {
   })
 
   describe('Middleware Integration', () => {
-    it('should have proper middleware setup', async () => {
+    test('should have proper middleware setup', async () => {
       // Check that all required middleware exists
       const authModule = await import('../middleware/auth')
       const errorModule = await import('../middleware/error')

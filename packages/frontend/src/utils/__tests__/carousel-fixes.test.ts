@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'bun:test'
+import { describe, test, expect } from 'bun:test'
 import { generateCarouselSequence, validateCarouselSequence, getWeightedRandomItem } from '../carousel'
 
 /**
@@ -14,7 +14,7 @@ describe('Carousel Fixes Validation', () => {
   ] as any[]
 
   describe('Consistent Item Population', () => {
-    it('should populate carousel entirely with real items from case pool', () => {
+    test('should populate carousel entirely with real items from case pool', () => {
       const sequence = generateCarouselSequence(mockItems, mockItems[1], 50, 30)
       
       // Every item in the sequence should be from the original case pool
@@ -25,7 +25,7 @@ describe('Carousel Fixes Validation', () => {
       })
     })
 
-    it('should use weighted rarity distribution', () => {
+    test('should use weighted rarity distribution', () => {
       const sequence = generateCarouselSequence(mockItems, mockItems[1], 100, 75)
       
       // Count items by rarity
@@ -44,7 +44,7 @@ describe('Carousel Fixes Validation', () => {
       expect(Object.keys(rarityCounts).length).toBeGreaterThan(1)
     })
 
-    it('should handle edge cases gracefully', () => {
+    test('should handle edge cases gracefully', () => {
       // Test with single item
       const singleItem = [mockItems[0]]
       const sequence = generateCarouselSequence(singleItem, singleItem[0], 20, 10)
@@ -57,7 +57,7 @@ describe('Carousel Fixes Validation', () => {
   })
 
   describe('Weighted Random Selection', () => {
-    it('should respect rarity weights', () => {
+    test('should respect rarity weights', () => {
       const results: { [key: string]: number } = {}
       const iterations = 1000
       
@@ -74,7 +74,7 @@ describe('Carousel Fixes Validation', () => {
       expect(results.common || 0).toBeGreaterThan(iterations * 0.3) // At least 30% common
     })
 
-    it('should handle missing rarities gracefully', () => {
+    test('should handle missing rarities gracefully', () => {
       const itemsWithMissingRarity = [
         { ...mockItems[0], rarity: undefined },
         mockItems[1]
@@ -89,7 +89,7 @@ describe('Carousel Fixes Validation', () => {
   })
 
   describe('Animation Direction Consistency', () => {
-    it('should calculate consistent left-to-right movement', () => {
+    test('should calculate consistent left-to-right movement', () => {
       const itemWidth = 120
       const visibleItems = 5
       const viewportCenter = (visibleItems * itemWidth) / 2 - itemWidth / 2 // 240px
@@ -113,7 +113,7 @@ describe('Carousel Fixes Validation', () => {
       })
     })
 
-    it('should maintain consistent direction without bounce-back', () => {
+    test('should maintain consistent direction without bounce-back', () => {
       // Test that the animation logic doesn't create direction reversals
       const itemWidth = 120
       const visibleItems = 5
@@ -133,7 +133,7 @@ describe('Carousel Fixes Validation', () => {
       expect(totalDistance).toBeGreaterThan(0) // Always moving right
     })
 
-    it('should fix the slowing down phase direction issue', () => {
+    test('should fix the slowing down phase direction issue', () => {
       // Test the specific fix for the "slowing down" phase direction swap
       const itemWidth = 120
       const visibleItems = 5
@@ -167,7 +167,7 @@ describe('Carousel Fixes Validation', () => {
       })
     })
 
-    it('should handle never-go-backwards animation logic', () => {
+    test('should handle never-go-backwards animation logic', () => {
       // Test the simplified approach that guarantees no backwards movement
       const itemWidth = 120
       const visibleItems = 5
@@ -205,7 +205,7 @@ describe('Carousel Fixes Validation', () => {
       expect(intermediatePosition).toBeLessThanOrEqual(finalPosition - (itemWidth * 10))
     })
 
-    it('should handle the exact scenario from console logs', () => {
+    test('should handle the exact scenario from console logs', () => {
       // Test the exact values from the console logs that were causing issues
       const startPosition = -10680
       const finalPosition = -4680
@@ -242,7 +242,7 @@ describe('Carousel Fixes Validation', () => {
       expect(phase2Movement).toBeGreaterThan(0)
     })
 
-    it('should ensure consistent direction for all sequences', () => {
+    test('should ensure consistent direction for all sequences', () => {
       const sequences = [
         { length: 50, winningPos: 30 },
         { length: 75, winningPos: 60 },
@@ -263,7 +263,7 @@ describe('Carousel Fixes Validation', () => {
   })
 
   describe('Real Item Validation', () => {
-    it('should only use items with valid properties', () => {
+    test('should only use items with valid properties', () => {
       const sequence = generateCarouselSequence(mockItems, mockItems[2], 30, 20)
       
       sequence.forEach(carouselItem => {
@@ -276,7 +276,7 @@ describe('Carousel Fixes Validation', () => {
       })
     })
 
-    it('should generate unique carousel item IDs', () => {
+    test('should generate unique carousel item IDs', () => {
       const sequence = generateCarouselSequence(mockItems, mockItems[0], 50, 25)
       
       const ids = sequence.map(item => item.id)
@@ -286,7 +286,7 @@ describe('Carousel Fixes Validation', () => {
       expect(uniqueIds.size).toBe(sequence.length)
     })
 
-    it('should eliminate blank spots by filtering invalid items', () => {
+    test('should eliminate blank spots by filtering invalid items', () => {
       // Test with some invalid items mixed in
       const itemsWithInvalid = [
         mockItems[0],

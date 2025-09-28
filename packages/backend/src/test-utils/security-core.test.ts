@@ -1,9 +1,9 @@
-import { describe, it, expect } from 'bun:test'
+import { describe, test, expect } from 'bun:test'
 import { InputSanitizer, ThreatDetector } from '../middleware/validation'
 
 describe('Security Core Functions', () => {
   describe('InputSanitizer', () => {
-    it('should sanitize strings', () => {
+    test('should sanitize strings', () => {
       const malicious = '<script>alert("xss")</script>\x00\x01test'
       const sanitized = InputSanitizer.sanitizeString(malicious)
       expect(sanitized).toBe('<script>alert("xss")</script>test')
@@ -11,32 +11,32 @@ describe('Security Core Functions', () => {
       expect(sanitized).not.toContain('\x01')
     })
 
-    it('should escape HTML', () => {
+    test('should escape HTML', () => {
       const html = '<div onclick="alert(1)">Test & "quotes"</div>'
       const escaped = InputSanitizer.escapeHtml(html)
       expect(escaped).toBe('&lt;div onclick=&quot;alert(1)&quot;&gt;Test &amp; &quot;quotes&quot;&lt;&#x2F;div&gt;')
     })
 
-    it('should sanitize email addresses', () => {
+    test('should sanitize email addresses', () => {
       const email = '  TEST@EXAMPLE.COM  '
       const sanitized = InputSanitizer.sanitizeEmail(email)
       expect(sanitized).toBe('test@example.com')
     })
 
-    it('should sanitize usernames', () => {
+    test('should sanitize usernames', () => {
       const username = '  test<>user123!@#  '
       const sanitized = InputSanitizer.sanitizeUsername(username)
       expect(sanitized).toBe('testuser123')
     })
 
-    it('should sanitize numbers', () => {
+    test('should sanitize numbers', () => {
       expect(InputSanitizer.sanitizeNumber('123.45')).toBe(123.45)
       expect(InputSanitizer.sanitizeNumber('invalid')).toBe(null)
       expect(InputSanitizer.sanitizeNumber(Infinity)).toBe(null)
       expect(InputSanitizer.sanitizeNumber(NaN)).toBe(null)
     })
 
-    it('should deep sanitize objects', () => {
+    test('should deep sanitize objects', () => {
       const obj = {
         name: '<script>alert(1)</script>',
         age: '25',
@@ -56,7 +56,7 @@ describe('Security Core Functions', () => {
   })
 
   describe('ThreatDetector', () => {
-    it('should detect SQL injection attempts', () => {
+    test('should detect SQL injection attempts', () => {
       const sqlInjections = [
         "'; DROP TABLE users; --",
         "1' OR '1'='1",
@@ -72,7 +72,7 @@ describe('Security Core Functions', () => {
       expect(ThreatDetector.detectSqlInjection('normal text')).toBe(false)
     })
 
-    it('should detect XSS attempts', () => {
+    test('should detect XSS attempts', () => {
       const xssAttempts = [
         '<script>alert("xss")</script>',
         '<iframe src="javascript:alert(1)"></iframe>',
@@ -88,7 +88,7 @@ describe('Security Core Functions', () => {
       expect(ThreatDetector.detectXss('normal text')).toBe(false)
     })
 
-    it('should detect path traversal attempts', () => {
+    test('should detect path traversal attempts', () => {
       const pathTraversals = [
         '../../../etc/passwd',
         '..\\..\\windows\\system32',
@@ -103,7 +103,7 @@ describe('Security Core Functions', () => {
       expect(ThreatDetector.detectPathTraversal('normal/path/file.txt')).toBe(false)
     })
 
-    it('should detect command injection attempts', () => {
+    test('should detect command injection attempts', () => {
       const commandInjections = [
         'test; rm -rf /',
         'file | cat /etc/passwd',
@@ -119,7 +119,7 @@ describe('Security Core Functions', () => {
       expect(ThreatDetector.detectCommandInjection('normal text')).toBe(false)
     })
 
-    it('should analyze input for multiple threats', () => {
+    test('should analyze input for multiple threats', () => {
       const maliciousInput = "'; DROP TABLE users; <script>alert(1)</script> ../../../etc/passwd"
       const threats = ThreatDetector.analyzeInput(maliciousInput)
       

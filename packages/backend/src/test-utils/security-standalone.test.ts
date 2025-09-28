@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'bun:test'
+import { describe, test, expect } from 'bun:test'
 
 // Standalone security functions for testing (copied from middleware)
 class TestInputSanitizer {
@@ -91,7 +91,7 @@ class TestThreatDetector {
 
 describe('Security Hardening - Standalone Tests', () => {
   describe('Input Sanitization', () => {
-    it('should sanitize strings by removing control characters', () => {
+    test('should sanitize strings by removing control characters', () => {
       const malicious = '<script>alert("xss")</script>\x00\x01test'
       const sanitized = TestInputSanitizer.sanitizeString(malicious)
       expect(sanitized).toBe('<script>alert("xss")</script>test')
@@ -99,32 +99,32 @@ describe('Security Hardening - Standalone Tests', () => {
       expect(sanitized).not.toContain('\x01')
     })
 
-    it('should escape HTML characters', () => {
+    test('should escape HTML characters', () => {
       const html = '<div onclick="alert(1)">Test & "quotes"</div>'
       const escaped = TestInputSanitizer.escapeHtml(html)
       expect(escaped).toBe('&lt;div onclick=&quot;alert(1)&quot;&gt;Test &amp; &quot;quotes&quot;&lt;&#x2F;div&gt;')
     })
 
-    it('should normalize email addresses', () => {
+    test('should normalize email addresses', () => {
       const email = '  TEST@EXAMPLE.COM  '
       const sanitized = TestInputSanitizer.sanitizeEmail(email)
       expect(sanitized).toBe('test@example.com')
     })
 
-    it('should clean usernames', () => {
+    test('should clean usernames', () => {
       const username = '  test<>user123!@#  '
       const sanitized = TestInputSanitizer.sanitizeUsername(username)
       expect(sanitized).toBe('testuser123')
     })
 
-    it('should handle empty and invalid inputs', () => {
+    test('should handle empty and invalid inputs', () => {
       expect(TestInputSanitizer.sanitizeString('')).toBe('')
       expect(TestInputSanitizer.escapeHtml('')).toBe('')
       expect(TestInputSanitizer.sanitizeEmail('')).toBe('')
       expect(TestInputSanitizer.sanitizeUsername('')).toBe('')
     })
 
-    it('should limit string length', () => {
+    test('should limit string length', () => {
       const longString = 'a'.repeat(20000)
       const sanitized = TestInputSanitizer.sanitizeString(longString)
       expect(sanitized.length).toBe(10000)
@@ -132,7 +132,7 @@ describe('Security Hardening - Standalone Tests', () => {
   })
 
   describe('Threat Detection', () => {
-    it('should detect SQL injection patterns', () => {
+    test('should detect SQL injection patterns', () => {
       const sqlInjections = [
         "'; DROP TABLE users; --",
         "1' OR '1'='1",
@@ -159,7 +159,7 @@ describe('Security Hardening - Standalone Tests', () => {
       })
     })
 
-    it('should detect XSS patterns', () => {
+    test('should detect XSS patterns', () => {
       const xssAttempts = [
         '<script>alert("xss")</script>',
         '<iframe src="javascript:alert(1)"></iframe>',
@@ -187,7 +187,7 @@ describe('Security Hardening - Standalone Tests', () => {
       expect(TestThreatDetector.detectXss('user@example.com')).toBe(false)
     })
 
-    it('should detect path traversal patterns', () => {
+    test('should detect path traversal patterns', () => {
       const pathTraversals = [
         '../../../etc/passwd',
         '..\\..\\windows\\system32',
@@ -213,7 +213,7 @@ describe('Security Hardening - Standalone Tests', () => {
       })
     })
 
-    it('should detect command injection patterns', () => {
+    test('should detect command injection patterns', () => {
       const commandInjections = [
         'test; rm -rf /',
         'file | cat /etc/passwd',
@@ -242,7 +242,7 @@ describe('Security Hardening - Standalone Tests', () => {
       })
     })
 
-    it('should analyze input for multiple threat types', () => {
+    test('should analyze input for multiple threat types', () => {
       const multiThreatInput = "'; DROP TABLE users; <script>alert(1)</script> ../../../etc/passwd && rm -rf /"
       const threats = TestThreatDetector.analyzeInput(multiThreatInput)
       
@@ -253,13 +253,13 @@ describe('Security Hardening - Standalone Tests', () => {
       expect(threats.length).toBe(4)
     })
 
-    it('should return empty array for safe input', () => {
+    test('should return empty array for safe input', () => {
       const safeInput = 'This is completely safe user input'
       const threats = TestThreatDetector.analyzeInput(safeInput)
       expect(threats).toEqual([])
     })
 
-    it('should handle edge cases', () => {
+    test('should handle edge cases', () => {
       expect(TestThreatDetector.analyzeInput('')).toEqual([])
       expect(TestThreatDetector.analyzeInput(' ')).toEqual([])
       expect(TestThreatDetector.analyzeInput('123')).toEqual([])
@@ -267,7 +267,7 @@ describe('Security Hardening - Standalone Tests', () => {
   })
 
   describe('Rate Limiting Logic', () => {
-    it('should implement basic rate limiting logic', () => {
+    test('should implement basic rate limiting logic', () => {
       // Simple rate limiter simulation
       const rateLimiter = new Map<string, { count: number; resetTime: number }>()
       const windowMs = 1000 // 1 second
@@ -304,7 +304,7 @@ describe('Security Hardening - Standalone Tests', () => {
   })
 
   describe('Session Management Logic', () => {
-    it('should implement basic session validation', () => {
+    test('should implement basic session validation', () => {
       interface Session {
         userId: string
         createdAt: number
@@ -362,7 +362,7 @@ describe('Security Hardening - Standalone Tests', () => {
 })
 
 describe('Security Integration', () => {
-  it('should demonstrate complete security pipeline', () => {
+  test('should demonstrate complete security pipeline', () => {
     // Simulate a complete security check pipeline
     function securityPipeline(input: any): { valid: boolean; threats: string[]; sanitized: any } {
       // Step 1: Basic type checking

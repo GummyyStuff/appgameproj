@@ -3,14 +3,14 @@
  * Comprehensive test to verify all roulette functionality works correctly
  */
 
-import { describe, it, expect } from 'bun:test'
+import { describe, test, expect } from 'bun:test'
 import { RouletteGame } from './roulette-game'
 import { PayoutCalculator } from './payout-calculator'
 import { GameValidator } from './game-validator'
 import { RouletteResult } from '../../types/database'
 
 describe('Roulette Final Implementation Test', () => {
-  it('should complete a full roulette game workflow', async () => {
+  test('should complete a full roulette game workflow', async () => {
     // 1. Create game instance
     const rouletteGame = new RouletteGame()
     const payoutCalculator = new PayoutCalculator()
@@ -71,7 +71,7 @@ describe('Roulette Final Implementation Test', () => {
     }
   })
 
-  it('should handle edge cases correctly', async () => {
+  test('should handle edge cases correctly', async () => {
     const rouletteGame = new RouletteGame()
 
     // Test minimum bet
@@ -112,7 +112,7 @@ describe('Roulette Final Implementation Test', () => {
     expect(invalidResult.error).toBeDefined()
   })
 
-  it('should provide correct game information', () => {
+  test('should provide correct game information', () => {
     // Test bet types information
     const betTypes = RouletteGame.getBetTypes()
     expect(Object.keys(betTypes)).toHaveLength(9)
@@ -148,7 +148,7 @@ describe('Roulette Final Implementation Test', () => {
     }
   })
 
-  it('should demonstrate statistical fairness over many games', async () => {
+  test('should demonstrate statistical fairness over many games', async () => {
     const rouletteGame = new RouletteGame()
     
     const bet = {
@@ -185,7 +185,7 @@ describe('Roulette Final Implementation Test', () => {
     expect(winRate).toBeLessThan(0.8)    // At most 80%
   })
 
-  it('should integrate with payout calculator correctly', () => {
+  test('should integrate with payout calculator correctly', () => {
     const payoutCalculator = new PayoutCalculator()
 
     // Test all bet types with winning scenarios
@@ -229,7 +229,7 @@ describe('Roulette Final Implementation Test', () => {
     }
   })
 
-  it('should validate all game results correctly', () => {
+  test('should validate all game results correctly', () => {
     const gameValidator = new GameValidator()
 
     // Valid roulette results

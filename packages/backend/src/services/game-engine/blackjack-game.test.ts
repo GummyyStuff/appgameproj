@@ -3,7 +3,7 @@
  * Tests game mechanics, edge cases, and rule compliance
  */
 
-import { describe, it, expect, beforeEach, jest } from 'bun:test'
+import { describe, test, expect, beforeEach, jest } from 'bun:test'
 import { BlackjackGame, BlackjackBet, BlackjackAction } from './blackjack-game'
 import { Card } from '../../types/database'
 
@@ -22,7 +22,7 @@ describe('BlackjackGame', () => {
   })
 
   describe('Game Initialization', () => {
-    it('should create a new blackjack game successfully', async () => {
+    test('should create a new blackjack game successfully', async () => {
       const result = await blackjackGame.play(mockBet)
       
       expect(result.success).toBe(true)
@@ -35,7 +35,7 @@ describe('BlackjackGame', () => {
       expect(blackjackResult.player_value).toBeGreaterThan(0)
     })
 
-    it('should reject invalid bet amounts', async () => {
+    test('should reject invalid bet amounts', async () => {
       const invalidBet = { ...mockBet, amount: -10 }
       const result = await blackjackGame.play(invalidBet)
       
@@ -43,7 +43,7 @@ describe('BlackjackGame', () => {
       expect(result.error).toContain('Invalid')
     })
 
-    it('should reject bets above maximum', async () => {
+    test('should reject bets above maximum', async () => {
       const invalidBet = { ...mockBet, amount: 50000 }
       const result = await blackjackGame.play(invalidBet)
       
@@ -51,7 +51,7 @@ describe('BlackjackGame', () => {
       expect(result.error).toContain('Invalid')
     })
 
-    it('should handle immediate blackjack correctly', async () => {
+    test('should handle immediate blackjack correctly', async () => {
       // Mock the deck to ensure blackjack
       const mockDeck: Card[] = [
         { suit: 'hearts', value: 'A' },
@@ -78,7 +78,7 @@ describe('BlackjackGame', () => {
   })
 
   describe('Hand Value Calculation', () => {
-    it('should calculate hand values correctly', async () => {
+    test('should calculate hand values correctly', async () => {
       const result = await blackjackGame.play(mockBet)
       expect(result.success).toBe(true)
       
@@ -87,7 +87,7 @@ describe('BlackjackGame', () => {
       expect(blackjackResult.player_value).toBeLessThanOrEqual(21)
     })
 
-    it('should handle aces correctly', async () => {
+    test('should handle aces correctly', async () => {
       // Test by playing multiple games and checking ace handling
       for (let i = 0; i < 20; i++) {
         const result = await blackjackGame.play(mockBet)
@@ -103,7 +103,7 @@ describe('BlackjackGame', () => {
       }
     })
 
-    it('should handle face cards correctly', async () => {
+    test('should handle face cards correctly', async () => {
       for (let i = 0; i < 20; i++) {
         const result = await blackjackGame.play(mockBet)
         if (result.success) {
@@ -130,7 +130,7 @@ describe('BlackjackGame', () => {
       gameId = result.gameId!
     })
 
-    it('should process hit action correctly', async () => {
+    test('should process hit action correctly', async () => {
       const action: BlackjackAction = {
         userId: mockBet.userId,
         gameId,
@@ -150,7 +150,7 @@ describe('BlackjackGame', () => {
       }
     })
 
-    it('should process stand action correctly', async () => {
+    test('should process stand action correctly', async () => {
       const action: BlackjackAction = {
         userId: mockBet.userId,
         gameId,
@@ -165,7 +165,7 @@ describe('BlackjackGame', () => {
       expect(gameState).toBeUndefined() // Game should be cleaned up
     })
 
-    it('should handle double down correctly', async () => {
+    test('should handle double down correctly', async () => {
       const action: BlackjackAction = {
         userId: mockBet.userId,
         gameId,
@@ -180,7 +180,7 @@ describe('BlackjackGame', () => {
       expect(gameState).toBeUndefined() // Game should be cleaned up
     })
 
-    it('should reject actions for non-existent games', async () => {
+    test('should reject actions for non-existent games', async () => {
       const action: BlackjackAction = {
         userId: mockBet.userId,
         gameId: 'non-existent-game',
@@ -192,7 +192,7 @@ describe('BlackjackGame', () => {
       expect(result.error).toContain('Game not found')
     })
 
-    it('should reject actions from wrong user', async () => {
+    test('should reject actions from wrong user', async () => {
       const action: BlackjackAction = {
         userId: 'wrong-user',
         gameId,
@@ -206,7 +206,7 @@ describe('BlackjackGame', () => {
   })
 
   describe('Split Functionality', () => {
-    it('should identify splittable hands correctly', async () => {
+    test('should identify splittable hands correctly', async () => {
       // Test multiple games to find a splittable hand
       let splitFound = false
       
@@ -238,7 +238,7 @@ describe('BlackjackGame', () => {
       // but it tests the split logic when applicable
     })
 
-    it('should reject split on non-splittable hands', async () => {
+    test('should reject split on non-splittable hands', async () => {
       // Find a non-splittable hand
       for (let i = 0; i < 50; i++) {
         const result = await blackjackGame.play(mockBet)
@@ -262,7 +262,7 @@ describe('BlackjackGame', () => {
   })
 
   describe('Dealer Logic', () => {
-    it('should complete game when player stands', async () => {
+    test('should complete game when player stands', async () => {
       const result = await blackjackGame.play(mockBet)
       expect(result.success).toBe(true)
 
@@ -281,7 +281,7 @@ describe('BlackjackGame', () => {
       expect(['player_win', 'dealer_win', 'push', 'blackjack']).toContain(blackjackResult.result)
     })
 
-    it('should handle player bust correctly', async () => {
+    test('should handle player bust correctly', async () => {
       // Keep hitting until bust (this might take multiple attempts)
       const result = await blackjackGame.play(mockBet)
       expect(result.success).toBe(true)
@@ -315,7 +315,7 @@ describe('BlackjackGame', () => {
   })
 
   describe('Payout Calculations', () => {
-    it('should calculate correct payouts for different outcomes', async () => {
+    test('should calculate correct payouts for different outcomes', async () => {
       // Test multiple games to get different outcomes
       const outcomes = new Set()
       
@@ -359,7 +359,7 @@ describe('BlackjackGame', () => {
   })
 
   describe('Game State Management', () => {
-    it('should maintain game state correctly', async () => {
+    test('should maintain game state correctly', async () => {
       const result = await blackjackGame.play(mockBet)
       expect(result.success).toBe(true)
 
@@ -370,7 +370,7 @@ describe('BlackjackGame', () => {
       expect(gameState?.gameStatus).toBe('waiting_for_action')
     })
 
-    it('should clean up completed games', async () => {
+    test('should clean up completed games', async () => {
       const result = await blackjackGame.play(mockBet)
       expect(result.success).toBe(true)
 
@@ -389,7 +389,7 @@ describe('BlackjackGame', () => {
   })
 
   describe('Edge Cases', () => {
-    it('should handle multiple aces correctly', async () => {
+    test('should handle multiple aces correctly', async () => {
       // This tests the ace handling logic through multiple games
       for (let i = 0; i < 30; i++) {
         const result = await blackjackGame.play(mockBet)
@@ -405,7 +405,7 @@ describe('BlackjackGame', () => {
       }
     })
 
-    it('should handle empty deck gracefully', async () => {
+    test('should handle empty deck gracefully', async () => {
       // This is more of a theoretical test since we shuffle a full deck
       // but ensures the game doesn't crash with edge cases
       const result = await blackjackGame.play(mockBet)
@@ -417,7 +417,7 @@ describe('BlackjackGame', () => {
   })
 
   describe('Game Information', () => {
-    it('should provide correct game information', () => {
+    test('should provide correct game information', () => {
       const gameInfo = BlackjackGame.getGameInfo()
       
       expect(gameInfo.name).toBe('Blackjack')

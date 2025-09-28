@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react'
-import { describe, it, expect, vi } from 'vitest'
+import { describe, test, expect } from 'bun:test'
 import BettingPanel from '../BettingPanel'
 
 const mockBetTypeOptions = [
@@ -16,18 +16,18 @@ const mockCurrentBet = {
 
 const defaultProps = {
   currentBet: mockCurrentBet,
-  setCurrentBet: vi.fn(),
+  setCurrentBet: mock(),
   betAmount: 100,
-  setBetAmount: vi.fn(),
+  setBetAmount: mock(),
   balance: 1000,
   betTypeOptions: mockBetTypeOptions,
-  onPlaceBet: vi.fn(),
+  onPlaceBet: mock(),
   isSpinning: false,
   error: null
 }
 
 describe('BettingPanel', () => {
-  it('renders betting panel with correct elements', () => {
+  test('renders betting panel with correct elements', () => {
     render(<BettingPanel {...defaultProps} />)
 
     expect(screen.getByText('Place Your Bet')).toBeInTheDocument()
@@ -37,7 +37,7 @@ describe('BettingPanel', () => {
     expect(screen.getByRole('button', { name: 'Place Bet' })).toBeInTheDocument()
   })
 
-  it('displays bet type options', () => {
+  test('displays bet type options', () => {
     render(<BettingPanel {...defaultProps} />)
 
     expect(screen.getByText('Red')).toBeInTheDocument()
@@ -45,7 +45,7 @@ describe('BettingPanel', () => {
     expect(screen.getByText('Odd')).toBeInTheDocument()
   })
 
-  it('shows current bet information', () => {
+  test('shows current bet information', () => {
     render(<BettingPanel {...defaultProps} />)
 
     expect(screen.getByText('red')).toBeInTheDocument()
@@ -54,21 +54,21 @@ describe('BettingPanel', () => {
     expect(betAmountElements.length).toBeGreaterThan(0)
   })
 
-  it('disables place bet button when spinning', () => {
+  test('disables place bet button when spinning', () => {
     render(<BettingPanel {...defaultProps} isSpinning={true} />)
 
     const placeBetButton = screen.getByRole('button', { name: 'Spinning...' })
     expect(placeBetButton).toBeDisabled()
   })
 
-  it('shows error message when provided', () => {
+  test('shows error message when provided', () => {
     render(<BettingPanel {...defaultProps} error="Insufficient balance" />)
 
     expect(screen.getByText('Insufficient balance')).toBeInTheDocument()
   })
 
-  it('calls onPlaceBet when place bet button is clicked', () => {
-    const mockOnPlaceBet = vi.fn()
+  test('calls onPlaceBet when place bet button is clicked', () => {
+    const mockOnPlaceBet = mock()
     render(<BettingPanel {...defaultProps} onPlaceBet={mockOnPlaceBet} />)
 
     const placeBetButton = screen.getByRole('button', { name: 'Place Bet' })
@@ -77,8 +77,8 @@ describe('BettingPanel', () => {
     expect(mockOnPlaceBet).toHaveBeenCalledTimes(1)
   })
 
-  it('updates bet amount when quick bet button is clicked', () => {
-    const mockSetBetAmount = vi.fn()
+  test('updates bet amount when quick bet button is clicked', () => {
+    const mockSetBetAmount = mock()
     render(<BettingPanel {...defaultProps} setBetAmount={mockSetBetAmount} />)
 
     const quickBetButton = screen.getByRole('button', { name: '₽50' })

@@ -288,7 +288,7 @@ export async function executeFallback(
     case 'refresh':
       console.log('Executing refresh fallback for:', context.operation)
       // Trigger page refresh after a delay
-      if (typeof window !== 'undefined') {
+      if (typeof window !== 'undefined' && window.location) {
         setTimeout(() => {
           window.location.reload()
         }, 2000)

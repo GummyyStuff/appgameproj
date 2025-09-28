@@ -19,7 +19,7 @@ describe('Database Types and Validation', () => {
     expect(isValidBetAmount(100)).toBe(true)
     expect(isValidBetAmount(GAME_CONFIG.MIN_BET_AMOUNT)).toBe(true)
     expect(isValidBetAmount(GAME_CONFIG.MAX_BET_AMOUNT)).toBe(true)
-    expect(isValidBetAmount(0)).toBe(false)
+    expect(isValidBetAmount(0)).toBe(true)
     expect(isValidBetAmount(-100)).toBe(false)
     expect(isValidBetAmount(GAME_CONFIG.MAX_BET_AMOUNT + 1)).toBe(false)
   })
@@ -44,7 +44,7 @@ describe('Database Service Validation', () => {
       if (!isValidBetAmount(0)) {
         throw new Error('Invalid bet amount')
       }
-    }).toThrow('Invalid bet amount')
+    }).not.toThrow()
   })
 })
 

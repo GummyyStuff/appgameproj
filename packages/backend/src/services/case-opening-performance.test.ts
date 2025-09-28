@@ -3,7 +3,7 @@
  * Tests concurrent user scenarios, database performance, and system limits
  */
 
-import { describe, it, expect } from 'bun:test'
+import { describe, test, expect } from 'bun:test'
 
 // Set up environment variables
 process.env.NODE_ENV = 'test'
@@ -114,7 +114,7 @@ describe('Case Opening Performance Tests', () => {
   ]
 
   describe('Single Operation Performance', () => {
-    it('should complete single case opening within performance threshold', async () => {
+    test('should complete single case opening within performance threshold', async () => {
       const caseType = createMockCaseType()
       const itemPool = createMockItemPool()
 
@@ -131,7 +131,7 @@ describe('Case Opening Performance Tests', () => {
       console.log(`Single case opening time: ${executionTime.toFixed(2)}ms`)
     })
 
-    it('should maintain consistent performance across multiple operations', async () => {
+    test('should maintain consistent performance across multiple operations', async () => {
       const caseType = createMockCaseType()
       const itemPool = createMockItemPool()
       const iterations = 1000
@@ -172,7 +172,7 @@ describe('Case Opening Performance Tests', () => {
   })
 
   describe('Concurrent User Load Testing', () => {
-    it('should handle moderate concurrent case openings', async () => {
+    test('should handle moderate concurrent case openings', async () => {
       const concurrentUsers = 50
       const caseType = createMockCaseType()
       const itemPool = createMockItemPool()
@@ -219,7 +219,7 @@ describe('Case Opening Performance Tests', () => {
       console.log(`Max execution time: ${maxExecutionTime.toFixed(2)}ms`)
     })
 
-    it('should handle high concurrent load without degradation', async () => {
+    test('should handle high concurrent load without degradation', async () => {
       const concurrentUsers = 200
       const caseType = createMockCaseType()
       const itemPool = createMockItemPool()
@@ -297,7 +297,7 @@ describe('Case Opening Performance Tests', () => {
   })
 
   describe('Memory and Resource Usage', () => {
-    it('should not leak memory during extended operations', async () => {
+    test('should not leak memory during extended operations', async () => {
       const caseType = createMockCaseType()
       const itemPool = createMockItemPool()
       const iterations = 5000
@@ -331,7 +331,7 @@ describe('Case Opening Performance Tests', () => {
       console.log(`Growth: ${memoryGrowthMB.toFixed(2)}MB`)
     }, 20000)
 
-    it('should handle large item pools efficiently', async () => {
+    test('should handle large item pools efficiently', async () => {
       const caseType = createMockCaseType()
       
       // Create a large item pool (100 items per rarity)
@@ -387,7 +387,7 @@ describe('Case Opening Performance Tests', () => {
   })
 
   describe('Value Calculation Performance', () => {
-    it('should calculate item values efficiently at scale', () => {
+    test('should calculate item values efficiently at scale', () => {
       const iterations = 100000
       const testCases = [
         { baseValue: 100, multiplier: 1.5 },
@@ -430,7 +430,7 @@ describe('Case Opening Performance Tests', () => {
   })
 
   describe('Stress Testing', () => {
-    it('should survive extreme load conditions', async () => {
+    test('should survive extreme load conditions', async () => {
       const extremeLoad = 1000
       const caseType = createMockCaseType()
       const itemPool = createMockItemPool()

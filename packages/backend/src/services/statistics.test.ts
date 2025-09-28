@@ -3,7 +3,7 @@
  * Tests all statistics calculation methods with comprehensive test cases
  */
 
-import { describe, it, expect, beforeEach } from '@jest/globals'
+import { describe, test, expect } from 'bun:test'
 import { StatisticsService } from './statistics'
 import { GameHistory } from '../types/database'
 
@@ -37,6 +37,16 @@ describe('StatisticsService', () => {
       },
 
       {
+        id: '3',
+        user_id: 'test-user',
+        game_type: 'roulette',
+        bet_amount: 25,
+        win_amount: 75,
+        result_data: { bet_type: 'dozen', bet_value: 1, winning_number: 5, multiplier: 3 },
+        created_at: '2024-01-15T12:00:00Z'
+      },
+
+      {
         id: '4',
         user_id: 'test-user',
         game_type: 'roulette',
@@ -49,7 +59,7 @@ describe('StatisticsService', () => {
   })
 
   describe('calculateOverviewStatistics', () => {
-    it('should calculate correct overview statistics', () => {
+    test('should calculate correct overview statistics', () => {
       const stats = StatisticsService.calculateOverviewStatistics(mockGameHistory)
 
       expect(stats.totalGames).toBe(4)
@@ -64,7 +74,7 @@ describe('StatisticsService', () => {
       expect(stats.profitMargin).toBeCloseTo(-26.67, 2) // (-100 / 375) * 100
     })
 
-    it('should handle empty game history', () => {
+    test('should handle empty game history', () => {
       const stats = StatisticsService.calculateOverviewStatistics([])
 
       expect(stats.totalGames).toBe(0)
@@ -79,7 +89,7 @@ describe('StatisticsService', () => {
       expect(stats.profitMargin).toBe(0)
     })
 
-    it('should handle single game correctly', () => {
+    test('should handle single game correctly', () => {
       const singleGame = [mockGameHistory[0]]
       const stats = StatisticsService.calculateOverviewStatistics(singleGame)
 
@@ -97,7 +107,7 @@ describe('StatisticsService', () => {
   })
 
   describe('calculateGameTypeBreakdown', () => {
-    it('should calculate breakdown for all game types', () => {
+    test('should calculate breakdown for all game types', () => {
       const breakdown = StatisticsService.calculateGameTypeBreakdown(mockGameHistory)
 
       expect(breakdown).toHaveLength(2)
@@ -122,7 +132,7 @@ describe('StatisticsService', () => {
 
     })
 
-    it('should assign popularity ranks correctly', () => {
+    test('should assign popularity ranks correctly', () => {
       const breakdown = StatisticsService.calculateGameTypeBreakdown(mockGameHistory)
 
       // Roulette should be most popular (2 games)
@@ -134,7 +144,7 @@ describe('StatisticsService', () => {
       expect(blackjackBreakdown!.popularityRank).toBe(2)
     })
 
-    it('should handle empty game history', () => {
+    test('should handle empty game history', () => {
       const breakdown = StatisticsService.calculateGameTypeBreakdown([])
 
       expect(breakdown).toHaveLength(3)
@@ -148,7 +158,7 @@ describe('StatisticsService', () => {
   })
 
   describe('calculateTimeSeriesData', () => {
-    it('should group games by date correctly', () => {
+    test('should group games by date correctly', () => {
       const timeSeries = StatisticsService.calculateTimeSeriesData(mockGameHistory)
 
       expect(timeSeries).toHaveLength(2) // 2 different dates
@@ -170,7 +180,7 @@ describe('StatisticsService', () => {
       expect(day2!.profit).toBe(-200)
     })
 
-    it('should sort dates chronologically', () => {
+    test('should sort dates chronologically', () => {
       const timeSeries = StatisticsService.calculateTimeSeriesData(mockGameHistory)
 
       for (let i = 1; i < timeSeries.length; i++) {
@@ -180,14 +190,14 @@ describe('StatisticsService', () => {
       }
     })
 
-    it('should handle empty game history', () => {
+    test('should handle empty game history', () => {
       const timeSeries = StatisticsService.calculateTimeSeriesData([])
       expect(timeSeries).toHaveLength(0)
     })
   })
 
   describe('calculateWinStreaks', () => {
-    it('should calculate win streaks correctly', () => {
+    test('should calculate win streaks correctly', () => {
       // Create a specific sequence for streak testing
       // Array is in DESC order (most recent first) - this is how games come from the database
       const streakTestGames: GameHistory[] = [
@@ -204,7 +214,7 @@ describe('StatisticsService', () => {
       expect(streaks.current).toBe(2) // Currently on a 2-game winning streak (first two games in DESC array)
     })
 
-    it('should handle all wins correctly', () => {
+    test('should handle all wins correctly', () => {
       const allWins = mockGameHistory.map(game => ({
         ...game,
         win_amount: game.bet_amount * 2 // All games are wins
@@ -217,7 +227,7 @@ describe('StatisticsService', () => {
       expect(streaks.current).toBe(4)
     })
 
-    it('should handle all losses correctly', () => {
+    test('should handle all losses correctly', () => {
       const allLosses = mockGameHistory.map(game => ({
         ...game,
         win_amount: 0 // All games are losses
@@ -230,7 +240,7 @@ describe('StatisticsService', () => {
       expect(streaks.current).toBe(-4)
     })
 
-    it('should handle empty game history', () => {
+    test('should handle empty game history', () => {
       const streaks = StatisticsService.calculateWinStreaks([])
 
       expect(streaks.current).toBe(0)
@@ -240,7 +250,7 @@ describe('StatisticsService', () => {
   })
 
   describe('calculateBetPatterns', () => {
-    it('should identify most common bet amount', () => {
+    test('should identify most common bet amount', () => {
       // Add more games with repeated bet amounts
       const extendedHistory = [
         ...mockGameHistory,
@@ -253,7 +263,7 @@ describe('StatisticsService', () => {
       expect(patterns.mostCommonBet).toBe(100) // 100 appears 3 times
     })
 
-    it('should create correct bet distribution', () => {
+    test('should create correct bet distribution', () => {
       const patterns = StatisticsService.calculateBetPatterns(mockGameHistory)
 
       expect(patterns.betDistribution).toEqual(expect.arrayContaining([
@@ -263,7 +273,7 @@ describe('StatisticsService', () => {
       ]))
     })
 
-    it('should handle empty game history', () => {
+    test('should handle empty game history', () => {
       const patterns = StatisticsService.calculateBetPatterns([])
 
       expect(patterns.mostCommonBet).toBe(0)
@@ -272,7 +282,7 @@ describe('StatisticsService', () => {
   })
 
   describe('calculatePlayingHabits', () => {
-    it('should identify most active hour and day', () => {
+    test('should identify most active hour and day', () => {
       const habits = StatisticsService.calculatePlayingHabits(mockGameHistory)
 
       expect(typeof habits.mostActiveHour).toBe('number')
@@ -290,7 +300,7 @@ describe('StatisticsService', () => {
       expect(habits.totalPlayTime).toBeGreaterThanOrEqual(0)
     })
 
-    it('should handle empty game history', () => {
+    test('should handle empty game history', () => {
       const habits = StatisticsService.calculatePlayingHabits([])
 
       expect(habits.mostActiveHour).toBe(0)
@@ -301,7 +311,7 @@ describe('StatisticsService', () => {
   })
 
   describe('calculateSessions', () => {
-    it('should group games into sessions correctly', () => {
+    test('should group games into sessions correctly', () => {
       // Create games with specific timing for session testing
       const sessionTestGames: GameHistory[] = [
         { ...mockGameHistory[0], created_at: '2024-01-15T10:00:00Z' },
@@ -323,7 +333,7 @@ describe('StatisticsService', () => {
       expect(sessions[1].duration).toBe(15)
     })
 
-    it('should handle single game as single session', () => {
+    test('should handle single game as single session', () => {
       const singleGame = [mockGameHistory[0]]
       const sessions = StatisticsService.calculateSessions(singleGame)
 
@@ -332,14 +342,14 @@ describe('StatisticsService', () => {
       expect(sessions[0].duration).toBe(0) // Single game has 0 duration
     })
 
-    it('should handle empty game history', () => {
+    test('should handle empty game history', () => {
       const sessions = StatisticsService.calculateSessions([])
       expect(sessions).toHaveLength(0)
     })
   })
 
   describe('getEmptyStatistics', () => {
-    it('should return properly structured empty statistics', () => {
+    test('should return properly structured empty statistics', () => {
       const emptyStats = StatisticsService.getEmptyStatistics()
 
       expect(emptyStats).toHaveProperty('overview')
@@ -359,7 +369,7 @@ describe('StatisticsService', () => {
   })
 
   describe('getEmptyGameStatistics', () => {
-    it('should return properly structured empty game statistics', () => {
+    test('should return properly structured empty game statistics', () => {
       const emptyGameStats = StatisticsService.getEmptyGameStatistics()
 
       expect(emptyGameStats.totalGames).toBe(0)
@@ -376,7 +386,7 @@ describe('StatisticsService', () => {
   })
 
   describe('Edge Cases and Error Handling', () => {
-    it('should handle games with zero bet amounts', () => {
+    test('should handle games with zero bet amounts', () => {
       const zeroBetGames = [
         { ...mockGameHistory[0], bet_amount: 0, win_amount: 0 }
       ]
@@ -387,7 +397,7 @@ describe('StatisticsService', () => {
       expect(stats.profitMargin).toBe(0) // Should handle division by zero
     })
 
-    it('should handle games with negative win amounts', () => {
+    test('should handle games with negative win amounts', () => {
       const negativeWinGames = [
         { ...mockGameHistory[0], bet_amount: 100, win_amount: -50 }
       ]
@@ -397,7 +407,7 @@ describe('StatisticsService', () => {
       expect(stats.netProfit).toBe(-150) // -50 - 100
     })
 
-    it('should handle very large numbers correctly', () => {
+    test('should handle very large numbers correctly', () => {
       const largeNumberGames = [
         { ...mockGameHistory[0], bet_amount: 1000000, win_amount: 2000000 }
       ]
@@ -409,7 +419,7 @@ describe('StatisticsService', () => {
       expect(stats.profitMargin).toBe(100)
     })
 
-    it('should handle games with same timestamps', () => {
+    test('should handle games with same timestamps', () => {
       const sameTimeGames = mockGameHistory.map(game => ({
         ...game,
         created_at: '2024-01-15T10:00:00Z'

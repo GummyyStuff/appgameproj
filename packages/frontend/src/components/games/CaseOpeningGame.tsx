@@ -303,6 +303,23 @@ const CaseOpeningGame: React.FC = () => {
                     soundEnabled={soundEnabled}
                   />
                 </>
+              ) : gameState.phase === 'revealing' && gameState.result ? (
+                <>
+                  <motion.h3
+                    className="text-xl md:text-2xl font-tarkov font-bold text-tarkov-accent mb-6 text-center"
+                    animate={{ opacity: [0.7, 1, 0.7] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  >
+                    ✨ Revealing your prize...
+                  </motion.h3>
+
+                  <CaseOpeningAnimation
+                    config={{ type: 'reveal', duration: 1500, easing: 'easeOut' }}
+                    result={gameState.result}
+                    onComplete={handleRevealComplete}
+                    soundEnabled={soundEnabled}
+                  />
+                </>
               ) : gameState.phase === 'complete' && gameState.result ? (
                 <CaseResult result={gameState.result} />
               ) : gameState.phase === 'error' ? (

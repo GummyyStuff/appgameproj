@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test'
+import { describe, test, expect } from 'bun:test'
 import React from 'react'
 import CaseOpeningCarousel, { CarouselItemData } from '../CaseOpeningCarousel'
 import { TarkovItem } from '../ItemReveal'
@@ -88,7 +88,7 @@ describe('CaseOpeningCarousel', () => {
   })
 
   describe('Component Structure', () => {
-    it('should create carousel component without errors', () => {
+    test('should create carousel component without errors', () => {
       // Test that the component can be instantiated
       expect(() => {
         const component = React.createElement(CaseOpeningCarousel, defaultProps)
@@ -96,7 +96,7 @@ describe('CaseOpeningCarousel', () => {
       }).not.toThrow()
     })
 
-    it('should handle props correctly', () => {
+    test('should handle props correctly', () => {
       const props = {
         items: mockCarouselItems,
         winningIndex: 30,
@@ -112,7 +112,7 @@ describe('CaseOpeningCarousel', () => {
       }).not.toThrow()
     })
 
-    it('should handle empty items array', () => {
+    test('should handle empty items array', () => {
       const props = {
         ...defaultProps,
         items: [],
@@ -126,7 +126,7 @@ describe('CaseOpeningCarousel', () => {
   })
 
   describe('Animation Logic', () => {
-    it('should handle spinning state changes', () => {
+    test('should handle spinning state changes', () => {
       const onSpinComplete = mock()
       const spinningProps = {
         ...defaultProps,
@@ -139,7 +139,7 @@ describe('CaseOpeningCarousel', () => {
       }).not.toThrow()
     })
 
-    it('should validate winning index bounds', () => {
+    test('should validate winning index bounds', () => {
       const invalidProps = {
         ...defaultProps,
         winningIndex: -1
@@ -151,7 +151,7 @@ describe('CaseOpeningCarousel', () => {
       }).not.toThrow()
     })
 
-    it('should handle callback functions', () => {
+    test('should handle callback functions', () => {
       const mockCallback = mock()
       const props = {
         ...defaultProps,
@@ -163,7 +163,7 @@ describe('CaseOpeningCarousel', () => {
   })
 
   describe('Data Validation', () => {
-    it('should handle different item rarities', () => {
+    test('should handle different item rarities', () => {
       const mixedRarityItems = mockCarouselItems.map((item, i) => ({
         ...item,
         item: {
@@ -182,7 +182,7 @@ describe('CaseOpeningCarousel', () => {
       }).not.toThrow()
     })
 
-    it('should handle different case types', () => {
+    test('should handle different case types', () => {
       const differentCaseType = {
         ...mockCaseType,
         name: 'Premium Case',
@@ -199,7 +199,7 @@ describe('CaseOpeningCarousel', () => {
       }).not.toThrow()
     })
 
-    it('should validate winning item exists in sequence', () => {
+    test('should validate winning item exists in sequence', () => {
       const winningIndex = 30
       const items = mockCarouselItems
       
@@ -209,7 +209,7 @@ describe('CaseOpeningCarousel', () => {
   })
 
   describe('Performance Considerations', () => {
-    it('should handle large item arrays', () => {
+    test('should handle large item arrays', () => {
       const largeItemArray = Array.from({ length: 1000 }, (_, i) => ({
         item: {
           ...mockTarkovItem,
@@ -232,7 +232,7 @@ describe('CaseOpeningCarousel', () => {
       expect(endTime - startTime).toBeLessThan(100) // Should create quickly
     })
 
-    it('should handle rapid prop changes', () => {
+    test('should handle rapid prop changes', () => {
       const props1 = { ...defaultProps, isSpinning: false }
       const props2 = { ...defaultProps, isSpinning: true }
       

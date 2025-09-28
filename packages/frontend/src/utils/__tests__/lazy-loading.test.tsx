@@ -1,11 +1,11 @@
-import { describe, it, expect, vi } from 'bun:test';
+import { describe, test, expect } from 'bun:test';
 
 describe('Lazy Loading Utilities', () => {
   describe('withLazyLoading', () => {
-    it('should create a lazy wrapper component', async () => {
+    test('should create a lazy wrapper component', async () => {
       const { withLazyLoading } = await import('../lazy-loading');
       
-      const mockImportFn = vi.fn().mockResolvedValue({ 
+      const mockImportFn = mock().mockResolvedValue({ 
         default: () => 'MockComponent' 
       });
       
@@ -16,7 +16,7 @@ describe('Lazy Loading Utilities', () => {
   });
 
   describe('Preloading Functions', () => {
-    it('should support preloading critical components', async () => {
+    test('should support preloading critical components', async () => {
       const { preloadCriticalComponents } = await import('../lazy-loading');
       
       expect(typeof preloadCriticalComponents).toBe('function');
@@ -26,9 +26,9 @@ describe('Lazy Loading Utilities', () => {
       expect(result).toBeInstanceOf(Promise);
     });
 
-    it('should support preload on hover', async () => {
+    test('should support preload on hover', async () => {
       const { preloadOnHover } = await import('../lazy-loading');
-      const mockImport = vi.fn().mockResolvedValue({});
+      const mockImport = mock().mockResolvedValue({});
       
       const handlers = preloadOnHover(mockImport);
       
@@ -40,7 +40,7 @@ describe('Lazy Loading Utilities', () => {
   });
 
   describe('Progressive Loading Hook', () => {
-    it('should provide preload functions', async () => {
+    test('should provide preload functions', async () => {
       const { useProgressiveLoading } = await import('../lazy-loading');
       
       expect(typeof useProgressiveLoading).toBe('function');
@@ -48,7 +48,7 @@ describe('Lazy Loading Utilities', () => {
   });
 
   describe('Lazy Component Exports', () => {
-    it('should export lazy game components', async () => {
+    test('should export lazy game components', async () => {
       const lazyModule = await import('../lazy-loading');
       
       expect(lazyModule.LazyRouletteGame).toBeDefined();
@@ -56,7 +56,7 @@ describe('Lazy Loading Utilities', () => {
 
     });
 
-    it('should export lazy page components', async () => {
+    test('should export lazy page components', async () => {
       const lazyModule = await import('../lazy-loading');
       
       expect(lazyModule.LazyRoulettePage).toBeDefined();
@@ -66,7 +66,7 @@ describe('Lazy Loading Utilities', () => {
       expect(lazyModule.LazyProfilePage).toBeDefined();
     });
 
-    it('should export lazy UI components', async () => {
+    test('should export lazy UI components', async () => {
       const lazyModule = await import('../lazy-loading');
       
       expect(lazyModule.LazyStatisticsDashboard).toBeDefined();

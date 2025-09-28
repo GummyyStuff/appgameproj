@@ -3,7 +3,7 @@
  * Tests atomic operations, balance consistency, and transaction integrity
  */
 
-import { describe, it, expect } from 'bun:test'
+import { describe, test, expect } from 'bun:test'
 
 // Set up environment variables
 process.env.NODE_ENV = 'test'
@@ -19,7 +19,7 @@ import { CaseOpeningService, type CaseType, type CaseOpeningResult } from './cas
 describe('Case Opening Currency Transaction Tests', () => {
   
   describe('Balance Validation Logic', () => {
-    it('should correctly validate sufficient balance', async () => {
+    test('should correctly validate sufficient balance', async () => {
       const mockCaseType: CaseType = {
         id: 'balance-test-case',
         name: 'Balance Test Case',
@@ -63,7 +63,7 @@ describe('Case Opening Currency Transaction Tests', () => {
       })
     })
 
-    it('should handle edge cases in balance validation', () => {
+    test('should handle edge cases in balance validation', () => {
       const validateBalance = (userBalance: number, casePrice: number) => {
         // Handle negative values and edge cases
         if (userBalance < 0) userBalance = 0
@@ -94,7 +94,7 @@ describe('Case Opening Currency Transaction Tests', () => {
   })
 
   describe('Transaction Atomicity Simulation', () => {
-    it('should simulate atomic transaction behavior', () => {
+    test('should simulate atomic transaction behavior', () => {
       // Simulate the transaction steps that would happen in a real case opening
       const simulateTransaction = (
         userId: string,
@@ -160,7 +160,7 @@ describe('Case Opening Currency Transaction Tests', () => {
       expect(failResult.error).toBe('Insufficient balance')
     })
 
-    it('should handle concurrent transaction simulation', () => {
+    test('should handle concurrent transaction simulation', () => {
       // Simulate multiple users trying to spend from the same balance simultaneously
       const simulateConcurrentTransactions = (
         initialBalance: number,
@@ -223,7 +223,7 @@ describe('Case Opening Currency Transaction Tests', () => {
   })
 
   describe('Currency Calculation Validation', () => {
-    it('should validate currency calculations for different scenarios', () => {
+    test('should validate currency calculations for different scenarios', () => {
       const testScenarios = [
         {
           name: 'Profitable case opening',
@@ -289,7 +289,7 @@ describe('Case Opening Currency Transaction Tests', () => {
       })
     })
 
-    it('should handle precision in currency calculations', () => {
+    test('should handle precision in currency calculations', () => {
       const precisionTests = [
         { baseValue: 100, multiplier: 1.333, expected: 133 }, // Math.floor(133.3)
         { baseValue: 999, multiplier: 1.001, expected: 999 }, // Math.floor(999.999)
@@ -317,7 +317,7 @@ describe('Case Opening Currency Transaction Tests', () => {
   })
 
   describe('Transaction History Validation', () => {
-    it('should validate game history entry structure', () => {
+    test('should validate game history entry structure', () => {
       const createGameHistoryEntry = (
         userId: string,
         casePrice: number,
@@ -375,7 +375,7 @@ describe('Case Opening Currency Transaction Tests', () => {
       expect(historyEntry.result_data.opening_id).toBe('case_1234567890_user123')
     })
 
-    it('should calculate statistics from transaction history', () => {
+    test('should calculate statistics from transaction history', () => {
       const mockTransactionHistory = [
         {
           id: '1',
@@ -464,7 +464,7 @@ describe('Case Opening Currency Transaction Tests', () => {
   })
 
   describe('Balance Consistency Validation', () => {
-    it('should maintain balance consistency across multiple operations', () => {
+    test('should maintain balance consistency across multiple operations', () => {
       const simulateMultipleOperations = (initialBalance: number, operations: Array<{
         type: 'case_opening',
         casePrice: number,

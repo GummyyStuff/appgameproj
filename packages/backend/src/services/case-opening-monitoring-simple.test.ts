@@ -3,7 +3,7 @@
  * Tests monitoring functionality without complex database mocking
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
+import { describe, test, expect } from 'bun:test'
 
 // Set up environment variables
 process.env.NODE_ENV = 'test'
@@ -32,7 +32,7 @@ describe('Case Opening Monitoring Service - Core Functions', () => {
   })
 
   describe('Logging Functions', () => {
-    it('should format critical error logs correctly', () => {
+    test('should format critical error logs correctly', () => {
       const mockConsoleError = (message: string, data: any) => {
         expect(message).toBe('🚨 CRITICAL ERROR:')
         expect(data.level).toBe('CRITICAL')
@@ -55,7 +55,7 @@ describe('Case Opening Monitoring Service - Core Functions', () => {
       )
     })
 
-    it('should format warning logs correctly', () => {
+    test('should format warning logs correctly', () => {
       const mockConsoleWarn = (message: string, data: any) => {
         expect(message).toBe('⚠️ WARNING:')
         expect(data.level).toBe('WARNING')
@@ -76,7 +76,7 @@ describe('Case Opening Monitoring Service - Core Functions', () => {
       )
     })
 
-    it('should format info logs correctly', () => {
+    test('should format info logs correctly', () => {
       const mockConsoleInfo = (message: string, data: any) => {
         expect(message).toBe('ℹ️ INFO:')
         expect(data.level).toBe('INFO')
@@ -99,7 +99,7 @@ describe('Case Opening Monitoring Service - Core Functions', () => {
   })
 
   describe('Operation Recording', () => {
-    it('should record successful operations with correct format', () => {
+    test('should record successful operations with correct format', () => {
       const mockConsoleLog = (message: string, data: any) => {
         expect(message).toContain('✅')
         expect(message).toContain('test_operation completed')
@@ -134,7 +134,7 @@ describe('Case Opening Monitoring Service - Core Functions', () => {
       performance.now = originalPerformanceNow
     })
 
-    it('should record failed operations with correct format', () => {
+    test('should record failed operations with correct format', () => {
       const mockConsoleError = (message: string, data: any) => {
         expect(message).toContain('❌')
         expect(message).toContain('test_operation failed')
@@ -171,7 +171,7 @@ describe('Case Opening Monitoring Service - Core Functions', () => {
   })
 
   describe('Case Opening Specific Recording', () => {
-    it('should record case opening start correctly', () => {
+    test('should record case opening start correctly', () => {
       const mockConsoleLog = (message: string, data: any) => {
         expect(message).toBe('🎲 Case opening started')
         expect(data.user_id).toBe('user-123')
@@ -188,7 +188,7 @@ describe('Case Opening Monitoring Service - Core Functions', () => {
       expect(startTime).toBeGreaterThan(0)
     })
 
-    it('should record successful case opening', () => {
+    test('should record successful case opening', () => {
       let logCallCount = 0
       const mockConsoleLog = (message: string, data: any) => {
         logCallCount++
@@ -225,7 +225,7 @@ describe('Case Opening Monitoring Service - Core Functions', () => {
       performance.now = originalPerformanceNow
     })
 
-    it('should record failed case opening', () => {
+    test('should record failed case opening', () => {
       const mockConsoleError = (message: string, data: any) => {
         expect(message).toContain('❌ case_opening failed')
         expect(data.error).toBe('Insufficient balance')
@@ -258,7 +258,7 @@ describe('Case Opening Monitoring Service - Core Functions', () => {
   })
 
   describe('Duration Calculation', () => {
-    it('should calculate duration correctly', () => {
+    test('should calculate duration correctly', () => {
       const mockConsoleLog = (message: string) => {
         expect(message).toContain('123.46ms') // Should round to 2 decimal places
       }
@@ -281,7 +281,7 @@ describe('Case Opening Monitoring Service - Core Functions', () => {
       performance.now = originalPerformanceNow
     })
 
-    it('should handle zero duration', () => {
+    test('should handle zero duration', () => {
       const mockConsoleLog = (message: string) => {
         expect(message).toContain('0ms')
       }
@@ -302,7 +302,7 @@ describe('Case Opening Monitoring Service - Core Functions', () => {
   })
 
   describe('Currency Transaction Recording', () => {
-    it('should record successful currency transactions', () => {
+    test('should record successful currency transactions', () => {
       const mockConsoleLog = (message: string, data: any) => {
         expect(message).toContain('✅ currency_transaction completed')
         expect(data.user_id).toBe('user-123')
@@ -334,7 +334,7 @@ describe('Case Opening Monitoring Service - Core Functions', () => {
       performance.now = originalPerformanceNow
     })
 
-    it('should record failed currency transactions', () => {
+    test('should record failed currency transactions', () => {
       const mockConsoleError = (message: string, data: any) => {
         expect(message).toContain('❌ currency_transaction failed')
         expect(data.error).toBe('Insufficient balance')
@@ -370,7 +370,7 @@ describe('Case Opening Monitoring Service - Core Functions', () => {
   })
 
   describe('Database Operation Recording', () => {
-    it('should record successful database operations', () => {
+    test('should record successful database operations', () => {
       const mockConsoleLog = (message: string, data: any) => {
         expect(message).toContain('✅ db_select_case_types completed')
         expect(data.record_count).toBe(5)
@@ -399,7 +399,7 @@ describe('Case Opening Monitoring Service - Core Functions', () => {
       performance.now = originalPerformanceNow
     })
 
-    it('should record failed database operations', () => {
+    test('should record failed database operations', () => {
       const mockConsoleError = (message: string, data: any) => {
         expect(message).toContain('❌ db_insert_metrics failed')
         expect(data.error).toBe('Connection timeout')

@@ -3,7 +3,7 @@
  * Tests for concurrent users, load handling, and performance benchmarks
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
+import { describe, test, expect } from 'bun:test'
 import { CoreGameEngine } from '../services/game-engine/core-engine'
 import { CurrencyService } from '../services/currency'
 import { DatabaseService } from '../services/database'
@@ -17,7 +17,7 @@ describe('Performance Testing', () => {
   })
 
   describe('Concurrent Game Processing', () => {
-    it('should handle multiple concurrent roulette games', async () => {
+    test('should handle multiple concurrent roulette games', async () => {
       const concurrentUsers = 50
       const promises: Promise<any>[] = []
 
@@ -54,7 +54,7 @@ describe('Performance Testing', () => {
       expect(avgTimePerGame).toBeLessThan(100) // Less than 100ms per game on average
     })
 
-    it('should handle mixed game types concurrently', async () => {
+    test('should handle mixed game types concurrently', async () => {
       const gamesPerType = 20
       const promises: Promise<any>[] = []
       const gameTypes = ['roulette', 'blackjack'] as const
@@ -88,7 +88,7 @@ describe('Performance Testing', () => {
       expect(totalTime).toBeLessThan(10000) // 10 seconds for 60 games
     })
 
-    it('should maintain performance under rapid sequential requests', async () => {
+    test('should maintain performance under rapid sequential requests', async () => {
       const sequentialGames = 100
       const userId = 'performance_test_user'
       const times: number[] = []
@@ -131,7 +131,7 @@ describe('Performance Testing', () => {
   })
 
   describe('Memory Usage Testing', () => {
-    it('should not leak memory during extended game sessions', async () => {
+    test('should not leak memory during extended game sessions', async () => {
       const initialMemory = process.memoryUsage()
       const gameCount = 1000
 
@@ -163,7 +163,7 @@ describe('Performance Testing', () => {
       expect(memoryIncrease).toBeLessThan(50 * 1024 * 1024)
     })
 
-    it('should clean up game states efficiently', async () => {
+    test('should clean up game states efficiently', async () => {
       const gameCount = 100
       const userIds: string[] = []
 
@@ -197,7 +197,7 @@ describe('Performance Testing', () => {
   })
 
   describe('Database Performance', () => {
-    it('should handle concurrent balance updates efficiently', async () => {
+    test('should handle concurrent balance updates efficiently', async () => {
       const concurrentUpdates = 50
       const promises: Promise<any>[] = []
 
@@ -236,7 +236,7 @@ describe('Performance Testing', () => {
       expect(totalTime).toBeLessThan(1000) // Should complete within 1 second
     })
 
-    it('should efficiently query game history with pagination', async () => {
+    test('should efficiently query game history with pagination', async () => {
       const pageSize = 50
       const totalPages = 10
       const queryTimes: number[] = []
@@ -284,7 +284,7 @@ describe('Performance Testing', () => {
   })
 
   describe('Currency Operations Performance', () => {
-    it('should format currency efficiently for large datasets', () => {
+    test('should format currency efficiently for large datasets', () => {
       const amounts = Array.from({ length: 10000 }, () => Math.random() * 1000000)
       const currencies = ['roubles', 'dollars', 'euros'] as const
 
@@ -305,7 +305,7 @@ describe('Performance Testing', () => {
       expect(totalTime).toBeLessThan(1000) // Less than 1 second
     })
 
-    it('should validate transaction parameters efficiently', () => {
+    test('should validate transaction parameters efficiently', () => {
       const transactionCount = 10000
       const validTransactions = []
       const invalidTransactions = []
@@ -344,7 +344,7 @@ describe('Performance Testing', () => {
   })
 
   describe('Random Number Generation Performance', () => {
-    it('should generate random numbers efficiently', async () => {
+    test('should generate random numbers efficiently', async () => {
       const { SecureRandomGenerator } = await import('../services/game-engine/random-generator')
       const generator = new SecureRandomGenerator()
       const count = 10000
@@ -373,7 +373,7 @@ describe('Performance Testing', () => {
       expect(avgTimePerNumber).toBeLessThan(1) // Less than 1ms per number on average
     })
 
-    it('should generate provably fair results efficiently', async () => {
+    test('should generate provably fair results efficiently', async () => {
       const { SecureRandomGenerator } = await import('../services/game-engine/random-generator')
       const generator = new SecureRandomGenerator()
       const count = 1000
@@ -405,7 +405,7 @@ describe('Performance Testing', () => {
   })
 
   describe('Stress Testing', () => {
-    it('should handle burst traffic patterns', async () => {
+    test('should handle burst traffic patterns', async () => {
       const burstSize = 100
       const burstCount = 5
       const burstInterval = 100 // ms between bursts
@@ -441,7 +441,7 @@ describe('Performance Testing', () => {
       }
     })
 
-    it('should maintain stability under sustained load', async () => {
+    test('should maintain stability under sustained load', async () => {
       const duration = 5000 // 5 seconds
       const requestInterval = 10 // ms between requests
       const startTime = Date.now()
@@ -478,7 +478,7 @@ describe('Performance Testing', () => {
   })
 
   describe('Resource Utilization', () => {
-    it('should monitor CPU usage during intensive operations', async () => {
+    test('should monitor CPU usage during intensive operations', async () => {
       const startUsage = process.cpuUsage()
       const gameCount = 500
 
@@ -502,7 +502,7 @@ describe('Performance Testing', () => {
       expect(cpuTimePerGame).toBeLessThan(10000) // Less than 10ms CPU time per game
     })
 
-    it('should handle memory pressure gracefully', async () => {
+    test('should handle memory pressure gracefully', async () => {
       const initialMemory = process.memoryUsage()
       const largeDataSets: any[] = []
 

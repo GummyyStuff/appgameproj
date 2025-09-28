@@ -3,7 +3,7 @@
  * Tests the complete case opening workflow with monitoring, performance, and fairness validation
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
+import { describe, test, expect } from 'bun:test'
 
 // Set up environment variables
 process.env.NODE_ENV = 'test'
@@ -128,7 +128,7 @@ describe('Comprehensive Case Opening System Test', () => {
   ]
 
   describe('End-to-End Case Opening Workflow', () => {
-    it('should complete full case opening workflow with monitoring', async () => {
+    test('should complete full case opening workflow with monitoring', async () => {
       const caseType = createTestCaseType()
       const itemPool = createTestItemPool()
       const userId = 'comprehensive-test-user'
@@ -187,7 +187,7 @@ describe('Comprehensive Case Opening System Test', () => {
       expect(true).toBe(true) // Test passed if we reach here without errors
     })
 
-    it('should handle failures gracefully with monitoring', async () => {
+    test('should handle failures gracefully with monitoring', async () => {
       const caseType = createTestCaseType()
       const userId = 'test-user-failure'
 
@@ -209,7 +209,7 @@ describe('Comprehensive Case Opening System Test', () => {
   })
 
   describe('Performance Under Load', () => {
-    it('should maintain performance under concurrent load with monitoring', async () => {
+    test('should maintain performance under concurrent load with monitoring', async () => {
       const caseType = createTestCaseType()
       const itemPool = createTestItemPool()
       const concurrentUsers = 100
@@ -291,7 +291,7 @@ describe('Comprehensive Case Opening System Test', () => {
   })
 
   describe('Statistical Validation with Monitoring', () => {
-    it('should maintain statistical fairness over large sample with monitoring', async () => {
+    test('should maintain statistical fairness over large sample with monitoring', async () => {
       const caseType = createTestCaseType()
       const itemPool = createTestItemPool()
       const sampleSize = 1000
@@ -371,7 +371,7 @@ describe('Comprehensive Case Opening System Test', () => {
   })
 
   describe('Currency Transaction Integration', () => {
-    it('should handle currency transactions with monitoring', () => {
+    test('should handle currency transactions with monitoring', () => {
       const userId = 'currency-test-user'
       const casePrice = 500
       const currencyAwarded = 750
@@ -402,7 +402,7 @@ describe('Comprehensive Case Opening System Test', () => {
       expect(true).toBe(true) // Test passed if we reach here without errors
     })
 
-    it('should handle failed currency transactions', () => {
+    test('should handle failed currency transactions', () => {
       const userId = 'currency-fail-user'
       const casePrice = 500
 
@@ -423,7 +423,7 @@ describe('Comprehensive Case Opening System Test', () => {
   })
 
   describe('Error Handling and Recovery', () => {
-    it('should handle and monitor various error scenarios', async () => {
+    test('should handle and monitor various error scenarios', async () => {
       const caseType = createTestCaseType()
       const userId = 'error-test-user'
 
@@ -479,7 +479,7 @@ describe('Comprehensive Case Opening System Test', () => {
   })
 
   describe('System Health Integration', () => {
-    it('should provide comprehensive system health data', async () => {
+    test('should provide comprehensive system health data', async () => {
       // Force flush any pending metrics
       await CaseOpeningMonitoringService.forceFlushMetrics()
 
@@ -500,7 +500,7 @@ describe('Comprehensive Case Opening System Test', () => {
       console.log('System health check:', health)
     })
 
-    it('should compile dashboard data successfully', async () => {
+    test('should compile dashboard data successfully', async () => {
       const dashboardData = await CaseOpeningMonitoringService.getDashboardData()
 
       expect(dashboardData).toBeDefined()

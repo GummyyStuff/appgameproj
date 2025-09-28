@@ -8,58 +8,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactNode } from 'react'
 import React from 'react'
 
-// Mock DOM environment
-global.document = {
-  body: {},
-  createElement: () => ({}),
-  querySelector: () => null,
-  querySelectorAll: () => [],
-  addEventListener: () => {},
-  removeEventListener: () => {},
-} as any
-
-global.window = {
-  location: { href: 'http://localhost:3000' },
-  addEventListener: () => {},
-  removeEventListener: () => {},
-  localStorage: {
-    getItem: () => null,
-    setItem: () => {},
-    removeItem: () => {},
-    clear: () => {},
-  },
-  sessionStorage: {
-    getItem: () => null,
-    setItem: () => {},
-    removeItem: () => {},
-    clear: () => {},
-  },
-} as any
-
-// Mock fetch
-global.fetch = () => Promise.resolve({
-  ok: true,
-  json: () => Promise.resolve({}),
-  text: () => Promise.resolve(''),
-} as Response)
-
-// Mock performance API
-global.performance = {
-  now: () => Date.now(),
-  mark: () => {},
-  measure: () => {},
-  getEntriesByType: () => [],
-  getEntriesByName: () => [],
-} as any
-
-// Mock requestAnimationFrame
-global.requestAnimationFrame = (callback: FrameRequestCallback) => {
-  return setTimeout(callback, 16) as any
-}
-
-global.cancelAnimationFrame = (id: number) => {
-  clearTimeout(id)
-}
+// DOM environment is handled by Happy DOM preload
 
 // Create a test wrapper with providers
 export const createTestWrapper = () => {

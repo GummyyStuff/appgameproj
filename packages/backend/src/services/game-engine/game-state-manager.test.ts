@@ -3,7 +3,7 @@
  * Validates game state lifecycle management
  */
 
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, test, expect, beforeEach } from 'bun:test'
 import { GameStateManager } from './game-state-manager'
 import { GameBet, GameResult } from './types'
 
@@ -15,7 +15,7 @@ describe('GameStateManager', () => {
   })
 
   describe('createGameState', () => {
-    it('should create a new game state', async () => {
+    test('should create a new game state', async () => {
       const bet: GameBet = {
         userId: 'user1',
         amount: 100,
@@ -33,7 +33,7 @@ describe('GameStateManager', () => {
       expect(gameState.completedAt).toBeUndefined()
     })
 
-    it('should generate unique game IDs', async () => {
+    test('should generate unique game IDs', async () => {
       const bet: GameBet = {
         userId: 'user1',
         amount: 100,
@@ -48,7 +48,7 @@ describe('GameStateManager', () => {
   })
 
   describe('updateGameState', () => {
-    it('should update existing game state', async () => {
+    test('should update existing game state', async () => {
       const bet: GameBet = {
         userId: 'user1',
         amount: 100,
@@ -65,13 +65,13 @@ describe('GameStateManager', () => {
       expect(updatedState.userId).toBe(gameState.userId)
     })
 
-    it('should throw error for non-existent game', async () => {
+    test('should throw error for non-existent game', async () => {
       await expect(
         manager.updateGameState('non-existent', { status: 'active' })
       ).rejects.toThrow('Game state not found: non-existent')
     })
 
-    it('should preserve unchanged fields', async () => {
+    test('should preserve unchanged fields', async () => {
       const bet: GameBet = {
         userId: 'user1',
         amount: 100,
@@ -91,7 +91,7 @@ describe('GameStateManager', () => {
   })
 
   describe('getGameState', () => {
-    it('should retrieve existing game state', async () => {
+    test('should retrieve existing game state', async () => {
       const bet: GameBet = {
         userId: 'user1',
         amount: 100,
@@ -104,14 +104,14 @@ describe('GameStateManager', () => {
       expect(retrieved).toEqual(gameState)
     })
 
-    it('should return null for non-existent game', async () => {
+    test('should return null for non-existent game', async () => {
       const retrieved = await manager.getGameState('non-existent')
       expect(retrieved).toBeNull()
     })
   })
 
   describe('completeGame', () => {
-    it('should complete a game successfully', async () => {
+    test('should complete a game successfully', async () => {
       const bet: GameBet = {
         userId: 'user1',
         amount: 100,
@@ -131,7 +131,7 @@ describe('GameStateManager', () => {
       expect(completedState.completedAt).toBeInstanceOf(Date)
     })
 
-    it('should handle failed games', async () => {
+    test('should handle failed games', async () => {
       const bet: GameBet = {
         userId: 'user1',
         amount: 100,
@@ -152,7 +152,7 @@ describe('GameStateManager', () => {
       expect(completedState.completedAt).toBeInstanceOf(Date)
     })
 
-    it('should throw error for non-existent game', async () => {
+    test('should throw error for non-existent game', async () => {
       const result: GameResult = {
         success: true,
         winAmount: 200,
@@ -166,15 +166,18 @@ describe('GameStateManager', () => {
   })
 
   describe('getActiveGamesForUser', () => {
-    it('should return active games for user', async () => {
+    test('should return active games for user', async () => {
       const bet1: GameBet = { userId: 'user1', amount: 100, gameType: 'roulette' }
       const bet2: GameBet = { userId: 'user1', amount: 50, gameType: 'blackjack' }
+      const bet3: GameBet = { userId: 'user2', amount: 75, gameType: 'roulette' }
 
       const state1 = await manager.createGameState(bet1)
       const state2 = await manager.createGameState(bet2)
+      const state3 = await manager.createGameState(bet3)
 
       await manager.updateGameState(state1.gameId, { status: 'active' })
       await manager.updateGameState(state2.gameId, { status: 'active' })
+      await manager.updateGameState(state3.gameId, { status: 'active' })
 
       const activeGames = await manager.getActiveGamesForUser('user1')
 
@@ -184,14 +187,14 @@ describe('GameStateManager', () => {
       expect(activeGames.map(g => g.gameId)).not.toContain(state3.gameId)
     })
 
-    it('should return empty array for user with no active games', async () => {
+    test('should return empty array for user with no active games', async () => {
       const activeGames = await manager.getActiveGamesForUser('user1')
       expect(activeGames).toHaveLength(0)
     })
   })
 
   describe('getGameHistoryForUser', () => {
-    it('should return completed games for user', async () => {
+    test('should return completed games for user', async () => {
       const bet: GameBet = { userId: 'user1', amount: 100, gameType: 'roulette' }
       const gameState = await manager.createGameState(bet)
       
@@ -209,7 +212,7 @@ describe('GameStateManager', () => {
       expect(history[0].status).toBe('completed')
     })
 
-    it('should respect limit parameter', async () => {
+    test('should respect limit parameter', async () => {
       const bet: GameBet = { userId: 'user1', amount: 100, gameType: 'roulette' }
       const result: GameResult = {
         success: true,
@@ -227,7 +230,7 @@ describe('GameStateManager', () => {
       expect(history).toHaveLength(3)
     })
 
-    it('should sort by completion date (most recent first)', async () => {
+    test('should sort by completion date (most recent first)', async () => {
       const bet: GameBet = { userId: 'user1', amount: 100, gameType: 'roulette' }
       const result: GameResult = {
         success: true,
@@ -250,7 +253,7 @@ describe('GameStateManager', () => {
   })
 
   describe('cleanupOldStates', () => {
-    it('should clean up old completed games', async () => {
+    test('should clean up old completed games', async () => {
       const bet: GameBet = { userId: 'user1', amount: 100, gameType: 'roulette' }
       const gameState = await manager.createGameState(bet)
       
@@ -270,7 +273,7 @@ describe('GameStateManager', () => {
       expect(retrieved).toBeNull()
     })
 
-    it('should not clean up recent games', async () => {
+    test('should not clean up recent games', async () => {
       const bet: GameBet = { userId: 'user1', amount: 100, gameType: 'roulette' }
       const gameState = await manager.createGameState(bet)
       
@@ -290,7 +293,7 @@ describe('GameStateManager', () => {
       expect(retrieved).not.toBeNull()
     })
 
-    it('should not clean up active games', async () => {
+    test('should not clean up active games', async () => {
       const bet: GameBet = { userId: 'user1', amount: 100, gameType: 'roulette' }
       const gameState = await manager.createGameState(bet)
       await manager.updateGameState(gameState.gameId, { status: 'active' })
@@ -304,7 +307,7 @@ describe('GameStateManager', () => {
   })
 
   describe('getGameStatistics', () => {
-    it('should return correct statistics', async () => {
+    test('should return correct statistics', async () => {
       const bet1: GameBet = { userId: 'user1', amount: 100, gameType: 'roulette' }
       const bet2: GameBet = { userId: 'user1', amount: 50, gameType: 'blackjack' }
       const bet3: GameBet = { userId: 'user2', amount: 75, gameType: 'roulette' }
@@ -327,7 +330,7 @@ describe('GameStateManager', () => {
   })
 
   describe('hasPendingGames', () => {
-    it('should detect pending games', async () => {
+    test('should detect pending games', async () => {
       const bet: GameBet = { userId: 'user1', amount: 100, gameType: 'roulette' }
       await manager.createGameState(bet)
 
@@ -335,7 +338,7 @@ describe('GameStateManager', () => {
       expect(hasPending).toBe(true)
     })
 
-    it('should detect active games as pending', async () => {
+    test('should detect active games as pending', async () => {
       const bet: GameBet = { userId: 'user1', amount: 100, gameType: 'roulette' }
       const state = await manager.createGameState(bet)
       await manager.updateGameState(state.gameId, { status: 'active' })
@@ -344,7 +347,7 @@ describe('GameStateManager', () => {
       expect(hasPending).toBe(true)
     })
 
-    it('should return false for completed games', async () => {
+    test('should return false for completed games', async () => {
       const bet: GameBet = { userId: 'user1', amount: 100, gameType: 'roulette' }
       const state = await manager.createGameState(bet)
       await manager.completeGame(state.gameId, { success: true, winAmount: 100, resultData: {} as any })
@@ -355,7 +358,7 @@ describe('GameStateManager', () => {
   })
 
   describe('cancelPendingGames', () => {
-    it('should cancel pending and active games', async () => {
+    test('should cancel pending and active games', async () => {
       const bet1: GameBet = { userId: 'user1', amount: 100, gameType: 'roulette' }
       const bet2: GameBet = { userId: 'user1', amount: 50, gameType: 'blackjack' }
 
@@ -373,7 +376,7 @@ describe('GameStateManager', () => {
       expect(updatedState2?.status).toBe('cancelled')
     })
 
-    it('should not cancel completed games', async () => {
+    test('should not cancel completed games', async () => {
       const bet: GameBet = { userId: 'user1', amount: 100, gameType: 'roulette' }
       const state = await manager.createGameState(bet)
       await manager.completeGame(state.gameId, { success: true, winAmount: 100, resultData: {} as any })

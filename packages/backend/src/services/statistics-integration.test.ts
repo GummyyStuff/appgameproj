@@ -3,13 +3,13 @@
  * Tests the complete statistics workflow
  */
 
-import { describe, it, expect } from '@jest/globals'
+import { describe, test, expect } from 'bun:test'
 import { StatisticsService } from './statistics'
 import { DatabaseService } from './database'
 
 describe('Statistics Integration Tests', () => {
   describe('Statistics Service Integration', () => {
-    it('should have all required methods', () => {
+    test('should have all required methods', () => {
       expect(typeof StatisticsService.calculateOverviewStatistics).toBe('function')
       expect(typeof StatisticsService.calculateGameTypeBreakdown).toBe('function')
       expect(typeof StatisticsService.calculateTimeSeriesData).toBe('function')
@@ -21,7 +21,7 @@ describe('Statistics Integration Tests', () => {
       expect(typeof StatisticsService.getEmptyGameStatistics).toBe('function')
     })
 
-    it('should return consistent empty statistics structure', () => {
+    test('should return consistent empty statistics structure', () => {
       const emptyStats = StatisticsService.getEmptyStatistics()
       
       expect(emptyStats).toHaveProperty('overview')
@@ -38,7 +38,7 @@ describe('Statistics Integration Tests', () => {
       expect(Array.isArray(emptyStats.betPatterns.betDistribution)).toBe(true)
     })
 
-    it('should handle edge cases gracefully', () => {
+    test('should handle edge cases gracefully', () => {
       // Test with empty data
       const emptyOverview = StatisticsService.calculateOverviewStatistics([])
       expect(emptyOverview.totalGames).toBe(0)
@@ -71,7 +71,7 @@ describe('Statistics Integration Tests', () => {
   })
 
   describe('Database Service Integration', () => {
-    it('should have all required methods for statistics', () => {
+    test('should have all required methods for statistics', () => {
       expect(typeof DatabaseService.getUserStatistics).toBe('function')
       expect(typeof DatabaseService.getGameHistory).toBe('function')
       expect(typeof DatabaseService.getRecentGames).toBe('function')
@@ -81,7 +81,7 @@ describe('Statistics Integration Tests', () => {
   })
 
   describe('Type Safety', () => {
-    it('should maintain type safety across all statistics methods', () => {
+    test('should maintain type safety across all statistics methods', () => {
       const mockGameHistory = [
         {
           id: '1',
@@ -120,7 +120,7 @@ describe('Statistics Integration Tests', () => {
   })
 
   describe('Data Consistency', () => {
-    it('should maintain data consistency across different calculation methods', () => {
+    test('should maintain data consistency across different calculation methods', () => {
       const mockGameHistory = [
         {
           id: '1',

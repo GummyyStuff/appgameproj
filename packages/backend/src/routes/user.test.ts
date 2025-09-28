@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'bun:test'
+import { describe, test, expect } from 'bun:test'
 
 // Set test environment variables before any imports
 process.env.NODE_ENV = 'test'
@@ -10,7 +10,7 @@ process.env.STARTING_BALANCE = '10000'
 process.env.DAILY_BONUS = '1000'
 
 describe('User API Validation', () => {
-  it('should validate profile update input correctly', async () => {
+  test('should validate profile update input correctly', async () => {
     const { z } = await import('zod')
     
     const updateProfileSchema = z.object({
@@ -55,7 +55,7 @@ describe('User API Validation', () => {
     })).toThrow()
   })
 
-  it('should validate daily bonus cooldown logic', () => {
+  test('should validate daily bonus cooldown logic', () => {
     const today = new Date().toDateString()
     const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toDateString()
     
@@ -66,7 +66,7 @@ describe('User API Validation', () => {
     expect(today === today).toBe(true)
   })
 
-  it('should validate balance operations', () => {
+  test('should validate balance operations', () => {
     const startingBalance = parseInt(process.env.STARTING_BALANCE || '10000')
     const dailyBonus = parseInt(process.env.DAILY_BONUS || '1000')
     

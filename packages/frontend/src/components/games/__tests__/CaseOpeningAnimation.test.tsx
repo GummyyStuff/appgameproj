@@ -3,7 +3,7 @@
  * Tests animations, user experience, and cross-device compatibility
  */
 
-import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test'
+import { describe, test, expect } from 'bun:test'
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import CaseOpeningGame from '../CaseOpeningGame'
@@ -85,8 +85,7 @@ describe('Case Opening Animation and UX Tests', () => {
       }
     })
     
-    // Reset mocks
-    vi.clearAllMocks()
+    // Reset mocks - no need to clear in Bun test
     
     // Mock successful case types fetch
     mockFetch.mockResolvedValueOnce({
@@ -112,7 +111,7 @@ describe('Case Opening Animation and UX Tests', () => {
   })
 
   afterEach(() => {
-    vi.restoreAllMocks()
+    // Cleanup - no need to restore mocks in Bun test
   })
 
   const renderCaseOpeningGame = () => {
@@ -128,7 +127,7 @@ describe('Case Opening Animation and UX Tests', () => {
   }
 
   describe('Initial Loading and Animation States', () => {
-    it('should display loading state while fetching case types', async () => {
+    test('should display loading state while fetching case types', async () => {
       // Mock a delayed response
       mockFetch.mockImplementationOnce(() => 
         new Promise(resolve => 
@@ -150,7 +149,7 @@ describe('Case Opening Animation and UX Tests', () => {
       })
     })
 
-    it('should animate header elements on mount', async () => {
+    test('should animate header elements on mount', async () => {
       renderCaseOpeningGame()
 
       await waitFor(() => {
@@ -163,7 +162,7 @@ describe('Case Opening Animation and UX Tests', () => {
       expect(screen.getByText(/Balance:/)).toBeInTheDocument()
     })
 
-    it('should display balance with proper formatting', async () => {
+    test('should display balance with proper formatting', async () => {
       renderCaseOpeningGame()
 
       await waitFor(() => {
@@ -176,7 +175,7 @@ describe('Case Opening Animation and UX Tests', () => {
   })
 
   describe('Case Selection Animation', () => {
-    it('should animate case selection interface', async () => {
+    test('should animate case selection interface', async () => {
       renderCaseOpeningGame()
 
       await waitFor(() => {
@@ -193,7 +192,7 @@ describe('Case Opening Animation and UX Tests', () => {
       })
     })
 
-    it('should show case details with animation', async () => {
+    test('should show case details with animation', async () => {
       renderCaseOpeningGame()
 
       await waitFor(() => {
@@ -212,7 +211,7 @@ describe('Case Opening Animation and UX Tests', () => {
   })
 
   describe('Case Opening Animation Sequence', () => {
-    it('should show opening animation when case is opened', async () => {
+    test('should show opening animation when case is opened', async () => {
       // Mock successful case opening
       mockFetch
         .mockResolvedValueOnce({
@@ -270,8 +269,9 @@ describe('Case Opening Animation and UX Tests', () => {
       })
     })
 
-    it('should handle animation timing correctly', async () => {
-      vi.useFakeTimers()
+    test('should handle animation timing correctly', async () => {
+      // Use fake timers for animation testing
+      jest.useFakeTimers()
 
       // Mock successful case opening
       mockFetch
@@ -331,20 +331,20 @@ describe('Case Opening Animation and UX Tests', () => {
 
       // Fast forward through the animation timing
       act(() => {
-        vi.advanceTimersByTime(2000) // Opening animation
+        jest.advanceTimersByTime(2000) // Opening animation
       })
 
       // Should transition to revealing state
       act(() => {
-        vi.advanceTimersByTime(1500) // Reveal animation
+        jest.advanceTimersByTime(1500) // Reveal animation
       })
 
-      vi.useRealTimers()
+      jest.useRealTimers()
     })
   })
 
   describe('Responsive Design Tests', () => {
-    it('should adapt to mobile viewport', async () => {
+    test('should adapt to mobile viewport', async () => {
       // Mock mobile viewport
       Object.defineProperty(window, 'innerWidth', {
         writable: true,
@@ -369,7 +369,7 @@ describe('Case Opening Animation and UX Tests', () => {
       expect(container).toBeInTheDocument()
     })
 
-    it('should adapt to tablet viewport', async () => {
+    test('should adapt to tablet viewport', async () => {
       // Mock tablet viewport
       Object.defineProperty(window, 'innerWidth', {
         writable: true,
@@ -394,7 +394,7 @@ describe('Case Opening Animation and UX Tests', () => {
       expect(container).toBeInTheDocument()
     })
 
-    it('should adapt to desktop viewport', async () => {
+    test('should adapt to desktop viewport', async () => {
       // Mock desktop viewport
       Object.defineProperty(window, 'innerWidth', {
         writable: true,
@@ -421,7 +421,7 @@ describe('Case Opening Animation and UX Tests', () => {
   })
 
   describe('Touch Interaction Tests', () => {
-    it('should handle touch events on mobile', async () => {
+    test('should handle touch events on mobile', async () => {
       renderCaseOpeningGame()
 
       await waitFor(() => {
@@ -439,7 +439,7 @@ describe('Case Opening Animation and UX Tests', () => {
       })
     })
 
-    it('should handle sound toggle touch interaction', async () => {
+    test('should handle sound toggle touch interaction', async () => {
       renderCaseOpeningGame()
 
       await waitFor(() => {
@@ -458,7 +458,7 @@ describe('Case Opening Animation and UX Tests', () => {
   })
 
   describe('Error State Animations', () => {
-    it('should animate error messages', async () => {
+    test('should animate error messages', async () => {
       // Mock error response
       mockFetch
         .mockResolvedValueOnce({
@@ -500,7 +500,7 @@ describe('Case Opening Animation and UX Tests', () => {
       })
     })
 
-    it('should handle network error gracefully', async () => {
+    test('should handle network error gracefully', async () => {
       // Mock network error
       mockFetch.mockRejectedValueOnce(new Error('Network error'))
 
@@ -514,7 +514,7 @@ describe('Case Opening Animation and UX Tests', () => {
   })
 
   describe('Performance and Animation Optimization', () => {
-    it('should not cause memory leaks during animations', async () => {
+    test('should not cause memory leaks during animations', async () => {
       const { unmount } = renderCaseOpeningGame()
 
       await waitFor(() => {
@@ -528,7 +528,7 @@ describe('Case Opening Animation and UX Tests', () => {
       expect(true).toBe(true)
     })
 
-    it('should handle rapid user interactions', async () => {
+    test('should handle rapid user interactions', async () => {
       renderCaseOpeningGame()
 
       await waitFor(() => {
@@ -550,7 +550,7 @@ describe('Case Opening Animation and UX Tests', () => {
   })
 
   describe('Accessibility Tests', () => {
-    it('should be keyboard navigable', async () => {
+    test('should be keyboard navigable', async () => {
       renderCaseOpeningGame()
 
       await waitFor(() => {
@@ -567,7 +567,7 @@ describe('Case Opening Animation and UX Tests', () => {
       })
     })
 
-    it('should have proper ARIA labels', async () => {
+    test('should have proper ARIA labels', async () => {
       renderCaseOpeningGame()
 
       await waitFor(() => {
@@ -579,7 +579,7 @@ describe('Case Opening Animation and UX Tests', () => {
       expect(soundButton).toHaveAttribute('title')
     })
 
-    it('should support screen readers', async () => {
+    test('should support screen readers', async () => {
       renderCaseOpeningGame()
 
       await waitFor(() => {
@@ -593,12 +593,12 @@ describe('Case Opening Animation and UX Tests', () => {
   })
 
   describe('Animation Performance Tests', () => {
-    it('should maintain 60fps during animations', async () => {
+    test('should maintain 60fps during animations', async () => {
       // Mock performance API
       const mockPerformance = {
-        now: vi.fn().mockReturnValue(0),
-        mark: vi.fn(),
-        measure: vi.fn()
+        now: mock().mockReturnValue(0),
+        mark: mock(),
+        measure: mock()
       }
       
       Object.defineProperty(window, 'performance', {
@@ -617,8 +617,8 @@ describe('Case Opening Animation and UX Tests', () => {
       expect(screen.getByText('📦 Case Opening')).toBeInTheDocument()
     })
 
-    it('should optimize re-renders during animations', async () => {
-      const renderSpy = vi.fn()
+    test('should optimize re-renders during animations', async () => {
+      const renderSpy = mock()
       
       const TestWrapper = ({ children }: { children: React.ReactNode }) => {
         renderSpy()

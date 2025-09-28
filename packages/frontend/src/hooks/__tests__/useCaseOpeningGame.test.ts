@@ -111,7 +111,7 @@ describe('useCaseOpeningGame', () => {
     mockToast = useToastContext()
   })
 
-  it('should initialize with idle state', () => {
+  test('should initialize with idle state', () => {
     const { result } = renderHook(() => useCaseOpeningGame())
 
     expect(result.current.gameState.phase).toBe('idle')
@@ -121,14 +121,14 @@ describe('useCaseOpeningGame', () => {
     expect(result.current.error).toBeNull()
   })
 
-  it('should return case data from useCaseData hook', () => {
+  test('should return case data from useCaseData hook', () => {
     const { result } = renderHook(() => useCaseOpeningGame())
 
     expect(result.current.caseTypes).toEqual(mockCaseData.caseTypes)
     expect(result.current.isLoadingCases).toBe(false)
   })
 
-  it('should prevent opening case when another is in progress', async () => {
+  test('should prevent opening case when another is in progress', async () => {
     const { result } = renderHook(() => useCaseOpeningGame())
 
     // Set game state to opening
@@ -145,12 +145,12 @@ describe('useCaseOpeningGame', () => {
     expect(mockCaseOpening.openCase).not.toHaveBeenCalled()
   })
 
-  it('should prevent opening case when user balance is insufficient', async () => {
+  test('should prevent opening case when user balance is insufficient', async () => {
     // Mock insufficient balance
     const { useBalance } = require('../useBalance')
     useBalance.mockReturnValue({
       balance: 50, // Less than case price of 100
-      refetch: jest.fn()
+      refetch: mock()
     })
 
     const { result } = renderHook(() => useCaseOpeningGame())
@@ -168,7 +168,7 @@ describe('useCaseOpeningGame', () => {
     expect(mockCaseOpening.openCase).not.toHaveBeenCalled()
   })
 
-  it('should prevent opening case when no user', async () => {
+  test('should prevent opening case when no user', async () => {
     const { useAuth } = require('../useAuth')
     useAuth.mockReturnValue({ user: null })
 
@@ -183,7 +183,7 @@ describe('useCaseOpeningGame', () => {
     expect(mockCaseOpening.openCase).not.toHaveBeenCalled()
   })
 
-  it('should open case successfully', async () => {
+  test('should open case successfully', async () => {
     mockCaseOpening.openCase.mockResolvedValue({
       caseTypeId: 'test-case',
       openingId: 'test-opening',
@@ -203,7 +203,7 @@ describe('useCaseOpeningGame', () => {
     expect(result.current.gameState.phase).toBe('loading')
   })
 
-  it('should handle case opening error', async () => {
+  test('should handle case opening error', async () => {
     mockCaseOpening.openCase.mockResolvedValue(null)
     mockCaseOpening.openingError = 'Test error'
 
@@ -219,7 +219,7 @@ describe('useCaseOpeningGame', () => {
     expect(result.current.gameState.error).toBe('Test error')
   })
 
-  it('should complete animation successfully', async () => {
+  test('should complete animation successfully', async () => {
     const mockResult = {
       item_won: { id: 'item-1', name: 'Test Item', rarity: 'rare' },
       currency_awarded: 500
@@ -247,7 +247,7 @@ describe('useCaseOpeningGame', () => {
     expect(result.current.gameState.phase).toBe('complete')
   })
 
-  it('should reset game state', () => {
+  test('should reset game state', () => {
     const { result } = renderHook(() => useCaseOpeningGame())
 
     // Set some state
@@ -269,7 +269,7 @@ describe('useCaseOpeningGame', () => {
     expect(mockErrorHandling.clearError).toHaveBeenCalled()
   })
 
-  it('should combine errors from all hooks', () => {
+  test('should combine errors from all hooks', () => {
     // Mock error in case data
     const { useCaseData } = require('../useCaseData')
     useCaseData.mockReturnValue({
@@ -282,7 +282,7 @@ describe('useCaseOpeningGame', () => {
     expect(result.current.error).toBe('Case data error')
   })
 
-  it('should call loadCaseTypes from case data hook', () => {
+  test('should call loadCaseTypes from case data hook', () => {
     const { result } = renderHook(() => useCaseOpeningGame())
 
     act(() => {
@@ -292,7 +292,7 @@ describe('useCaseOpeningGame', () => {
     expect(mockCaseData.loadCaseTypes).toHaveBeenCalled()
   })
 
-  it('should handle animation setup errors with fallback', async () => {
+  test('should handle animation setup errors with fallback', async () => {
     mockCaseOpening.openCase.mockResolvedValue({
       caseTypeId: 'test-case',
       openingId: 'test-opening',
@@ -316,7 +316,7 @@ describe('useCaseOpeningGame', () => {
     )
   })
 
-  it('should transition through phases correctly', async () => {
+  test('should transition through phases correctly', async () => {
     mockCaseOpening.openCase.mockResolvedValue({
       caseTypeId: 'test-case',
       openingId: 'test-opening',

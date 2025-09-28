@@ -3,16 +3,19 @@
  * Statistical validation and provably fair algorithm testing
  */
 
-import { describe, it, expect } from 'bun:test'
+import { describe, test, expect, beforeAll } from 'bun:test'
 import { SecureRandomGenerator } from '../services/game-engine/random-generator'
 import { RouletteGame } from '../services/game-engine/roulette-game'
 import { BlackjackGame } from '../services/game-engine/blackjack-game'
-import { PlinkoGame } from '../services/game-engine/plinko-game'
 import type { ProvablyFairSeed } from '../services/game-engine/types'
 
 describe('Game Fairness Testing', () => {
+  // Clear any leftover state from previous test suites
+  beforeAll(() => {
+    BlackjackGame.clearActiveGames()
+  })
   describe('Random Number Generation Fairness', () => {
-    it('should pass chi-square test for uniform distribution', async () => {
+    test('should pass chi-square test for uniform distribution', async () => {
       const generator = new SecureRandomGenerator()
       const samples = 10000
       const buckets = 10
@@ -37,7 +40,7 @@ describe('Game Fairness Testing', () => {
       expect(chiSquare).toBeLessThan(16.919)
     })
 
-    it('should pass runs test for randomness', async () => {
+    test('should pass runs test for randomness', async () => {
       const generator = new SecureRandomGenerator()
       const samples = 1000
       const values: number[] = []
@@ -71,7 +74,7 @@ describe('Game Fairness Testing', () => {
       expect(zScore).toBeLessThan(2.0)
     })
 
-    it('should generate cryptographically secure seeds', async () => {
+    test('should generate cryptographically secure seeds', async () => {
       const generator = new SecureRandomGenerator()
       const seeds: string[] = []
       const numSeeds = 100
@@ -92,7 +95,7 @@ describe('Game Fairness Testing', () => {
       }
     })
 
-    it('should maintain provably fair consistency', async () => {
+    test('should maintain provably fair consistency', async () => {
       const generator = new SecureRandomGenerator()
       const seed: ProvablyFairSeed = {
         serverSeed: 'test_server_seed_123',
@@ -124,7 +127,10 @@ describe('Game Fairness Testing', () => {
   })
 
   describe('Roulette Fairness Testing', () => {
-    it('should have correct theoretical return to player (RTP)', async () => {
+    test('should have correct theoretical return to player (RTP)', async () => {
+      // Clear any leftover state from previous tests
+      BlackjackGame.clearActiveGames()
+
       const roulette = new RouletteGame()
       const betAmount = 100
       const simulations = 10000
@@ -166,7 +172,7 @@ describe('Game Fairness Testing', () => {
       }
     })
 
-    it('should distribute winning numbers uniformly', async () => {
+    test('should distribute winning numbers uniformly', async () => {
       const roulette = new RouletteGame()
       const simulations = 3700 // 100 per number
       const numberCounts = new Array(37).fill(0)
@@ -196,7 +202,7 @@ describe('Game Fairness Testing', () => {
       }
     })
 
-    it('should maintain correct payout ratios', () => {
+    test('should maintain correct payout ratios', () => {
       const payoutTests = [
         { betType: 'number', multiplier: 35, probability: 1/37 },
         { betType: 'red', multiplier: 1, probability: 18/37 },
@@ -222,29 +228,54 @@ describe('Game Fairness Testing', () => {
   })
 
   describe('Blackjack Fairness Testing', () => {
-    it('should have correct basic strategy expected values', async () => {
-      const blackjack = new BlackjackGame()
+    test('should have correct basic strategy expected values', async () => {
       const simulations = 1000
       let playerWins = 0
       let dealerWins = 0
       let pushes = 0
 
       for (let i = 0; i < simulations; i++) {
+        // Clear static state between simulations
+        BlackjackGame.clearActiveGames()
+        const blackjack = new BlackjackGame()
         const bet = {
           userId: `user${i}`,
           amount: 100,
           gameType: 'blackjack' as const
         }
 
-        const result = await blackjack.play(bet)
-        if (result.success) {
-          const gameResult = (result.resultData as any).result
-          if (gameResult === 'player_win' || gameResult === 'blackjack') {
-            playerWins++
-          } else if (gameResult === 'dealer_win') {
-            dealerWins++
-          } else if (gameResult === 'push') {
-            pushes++
+        const initialResult = await blackjack.play(bet)
+        if (initialResult.success && initialResult.gameId) {
+          // Check if game is already completed (immediate blackjack)
+          if (initialResult.winAmount > 0) {
+            // Game is already completed
+            const gameResult = (initialResult.resultData as any).result
+            if (gameResult === 'player_win' || gameResult === 'blackjack') {
+              playerWins++
+            } else if (gameResult === 'dealer_win') {
+              dealerWins++
+            } else if (gameResult === 'push') {
+              pushes++
+            }
+          } else {
+            // Complete the game by standing (simulating basic strategy)
+            const standAction = {
+              userId: `user${i}`,
+              gameId: initialResult.gameId,
+              action: 'stand' as const
+            }
+
+            const finalResult = await blackjack.processAction(standAction)
+            if (finalResult.success) {
+              const gameResult = (finalResult.resultData as any).result
+              if (gameResult === 'player_win' || gameResult === 'blackjack') {
+                playerWins++
+              } else if (gameResult === 'dealer_win') {
+                dealerWins++
+              } else if (gameResult === 'push') {
+                pushes++
+              }
+            }
           }
         }
       }
@@ -267,7 +298,7 @@ describe('Game Fairness Testing', () => {
       expect(pushRate).toBeLessThan(0.15)
     })
 
-    it('should deal cards from a properly shuffled deck', async () => {
+    test('should deal cards from a properly shuffled deck', async () => {
       const blackjack = new BlackjackGame()
       const cardCounts: Record<string, number> = {}
       const simulations = 520 // 10 full decks
@@ -302,7 +333,7 @@ describe('Game Fairness Testing', () => {
       }
     })
 
-    it('should calculate hand values correctly', () => {
+    test('should calculate hand values correctly', () => {
       const testHands = [
         { cards: [{ suit: 'hearts', value: 'K' }, { suit: 'spades', value: '7' }], expectedValue: 17 },
         { cards: [{ suit: 'diamonds', value: 'A' }, { suit: 'clubs', value: 'K' }], expectedValue: 21 },
@@ -337,100 +368,9 @@ describe('Game Fairness Testing', () => {
     })
   })
 
-  describe('Plinko Fairness Testing', () => {
-    it('should have correct expected return for each risk level', async () => {
-      const plinko = new PlinkoGame()
-      const simulations = 1000
-      const betAmount = 100
-
-      const riskLevels = ['low', 'medium', 'high'] as const
-
-      for (const riskLevel of riskLevels) {
-        let totalBets = 0
-        let totalWins = 0
-
-        for (let i = 0; i < simulations; i++) {
-          const bet = {
-            userId: `user${i}`,
-            amount: betAmount,
-            gameType: 'plinko' as const,
-            riskLevel
-          }
-
-          const result = await plinko.play(bet)
-          if (result.success) {
-            totalBets += betAmount
-            totalWins += result.winAmount
-          }
-        }
-
-        const actualRTP = totalWins / totalBets
-        
-        // Expected RTP should be close to configured values (usually 98-99%)
-        expect(actualRTP).toBeGreaterThan(0.90)
-        expect(actualRTP).toBeLessThan(1.05)
-      }
-    })
-
-    it('should distribute ball landings according to binomial probability', async () => {
-      const plinko = new PlinkoGame()
-      const simulations = 1000
-      const slotCounts: Record<number, number> = {}
-
-      for (let i = 0; i < simulations; i++) {
-        const bet = {
-          userId: `user${i}`,
-          amount: 100,
-          gameType: 'plinko' as const,
-          riskLevel: 'medium' as const
-        }
-
-        const result = await plinko.play(bet)
-        if (result.success) {
-          const landingSlot = (result.resultData as any).landing_slot
-          slotCounts[landingSlot] = (slotCounts[landingSlot] || 0) + 1
-        }
-      }
-
-      // Center slots should have higher probability than edge slots
-      const totalSlots = Object.keys(slotCounts).length
-      const centerSlot = Math.floor(totalSlots / 2)
-      
-      if (slotCounts[centerSlot] && slotCounts[0]) {
-        expect(slotCounts[centerSlot]).toBeGreaterThan(slotCounts[0])
-      }
-    })
-
-    it('should generate valid ball paths', async () => {
-      const plinko = new PlinkoGame()
-      const simulations = 100
-
-      for (let i = 0; i < simulations; i++) {
-        const bet = {
-          userId: `user${i}`,
-          amount: 100,
-          gameType: 'plinko' as const,
-          riskLevel: 'medium' as const
-        }
-
-        const result = await plinko.play(bet)
-        if (result.success) {
-          const ballPath = (result.resultData as any).ball_path
-          
-          expect(Array.isArray(ballPath)).toBe(true)
-          expect(ballPath.length).toBeGreaterThan(0)
-          
-          // Each step should be 0 or 1 (left or right)
-          for (const step of ballPath) {
-            expect([0, 1]).toContain(step)
-          }
-        }
-      }
-    })
-  })
 
   describe('Cross-Game Consistency', () => {
-    it('should maintain consistent random seed behavior across games', async () => {
+    test('should maintain consistent random seed behavior across games', async () => {
       const generator = new SecureRandomGenerator()
       const seed: ProvablyFairSeed = {
         serverSeed: 'consistent_test_seed',
@@ -452,11 +392,10 @@ describe('Game Fairness Testing', () => {
       }
     })
 
-    it('should have reasonable house edge across all games', async () => {
+    test('should have reasonable house edge across all games', async () => {
       const games = [
         { name: 'roulette', expectedHouseEdge: 0.027 }, // 2.7%
-        { name: 'blackjack', expectedHouseEdge: 0.005 }, // 0.5% with basic strategy
-        { name: 'plinko', expectedHouseEdge: 0.01 } // 1%
+        { name: 'blackjack', expectedHouseEdge: 0.005 } // 0.5% with basic strategy
       ]
 
       for (const game of games) {
@@ -468,7 +407,7 @@ describe('Game Fairness Testing', () => {
   })
 
   describe('Statistical Validation', () => {
-    it('should pass Kolmogorov-Smirnov test for uniform distribution', async () => {
+    test('should pass Kolmogorov-Smirnov test for uniform distribution', async () => {
       const generator = new SecureRandomGenerator()
       const samples = 1000
       const values: number[] = []
@@ -496,7 +435,7 @@ describe('Game Fairness Testing', () => {
       expect(maxD).toBeLessThan(criticalValue)
     })
 
-    it('should maintain entropy across multiple generations', async () => {
+    test('should maintain entropy across multiple generations', async () => {
       const generator = new SecureRandomGenerator()
       const samples = 1000
       const bitStrings: string[] = []

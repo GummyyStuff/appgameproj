@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'bun:test'
+import { describe, test, expect } from 'bun:test'
 import { 
   generateCarouselSequence, 
   calculateWinningPosition, 
@@ -54,12 +54,12 @@ const mockItems: TarkovItem[] = [
 
 describe('Carousel Utilities', () => {
   describe('generateCarouselSequence', () => {
-    it('should generate a sequence with the correct length', () => {
+    test('should generate a sequence with the correct length', () => {
       const sequence = generateCarouselSequence(mockItems, mockItems[1], 50, 30)
       expect(sequence).toHaveLength(50)
     })
 
-    it('should place the winning item at the specified position', () => {
+    test('should place the winning item at the specified position', () => {
       const winningItem = mockItems[1] // GPU
       const winningPosition = 30
       const sequence = generateCarouselSequence(mockItems, winningItem, 50, winningPosition)
@@ -68,26 +68,26 @@ describe('Carousel Utilities', () => {
       expect(sequence[winningPosition].isWinning).toBe(true)
     })
 
-    it('should only have one winning item in the sequence', () => {
+    test('should only have one winning item in the sequence', () => {
       const sequence = generateCarouselSequence(mockItems, mockItems[1], 50, 30)
       const winningItems = sequence.filter(item => item.isWinning)
       expect(winningItems).toHaveLength(1)
     })
 
-    it('should generate unique IDs for each carousel item', () => {
+    test('should generate unique IDs for each carousel item', () => {
       const sequence = generateCarouselSequence(mockItems, mockItems[1], 50, 30)
       const ids = sequence.map(item => item.id)
       const uniqueIds = new Set(ids)
       expect(uniqueIds.size).toBe(sequence.length)
     })
 
-    it('should throw error for empty items array', () => {
+    test('should throw error for empty items array', () => {
       expect(() => {
         generateCarouselSequence([], mockItems[0], 50, 30)
       }).toThrow('Case items array cannot be empty')
     })
 
-    it('should throw error for invalid winning position', () => {
+    test('should throw error for invalid winning position', () => {
       expect(() => {
         generateCarouselSequence(mockItems, mockItems[0], 50, 60)
       }).toThrow('Winning position must be less than sequence length')
@@ -95,19 +95,19 @@ describe('Carousel Utilities', () => {
   })
 
   describe('calculateWinningPosition', () => {
-    it('should return a position within the specified range', () => {
+    test('should return a position within the specified range', () => {
       const position = calculateWinningPosition(75, 50, 65)
       expect(position).toBeGreaterThanOrEqual(50)
       expect(position).toBeLessThanOrEqual(65)
     })
 
-    it('should not exceed sequence length minus buffer', () => {
+    test('should not exceed sequence length minus buffer', () => {
       const sequenceLength = 75
       const position = calculateWinningPosition(sequenceLength)
       expect(position).toBeLessThan(sequenceLength - 5)
     })
 
-    it('should handle edge cases', () => {
+    test('should handle edge cases', () => {
       const position = calculateWinningPosition(10, 5, 8)
       expect(position).toBeGreaterThanOrEqual(5)
       expect(position).toBeLessThanOrEqual(8)
@@ -115,30 +115,30 @@ describe('Carousel Utilities', () => {
   })
 
   describe('validateCarouselSequence', () => {
-    it('should validate a correct sequence', () => {
+    test('should validate a correct sequence', () => {
       const sequence = generateCarouselSequence(mockItems, mockItems[1], 50, 30)
       expect(validateCarouselSequence(sequence)).toBe(true)
     })
 
-    it('should reject empty sequence', () => {
+    test('should reject empty sequence', () => {
       expect(validateCarouselSequence([])).toBe(false)
     })
 
-    it('should reject sequence with no winning items', () => {
+    test('should reject sequence with no winning items', () => {
       const sequence = generateCarouselSequence(mockItems, mockItems[1], 50, 30)
       // Remove winning flag from all items
       sequence.forEach(item => item.isWinning = false)
       expect(validateCarouselSequence(sequence)).toBe(false)
     })
 
-    it('should reject sequence with multiple winning items', () => {
+    test('should reject sequence with multiple winning items', () => {
       const sequence = generateCarouselSequence(mockItems, mockItems[1], 50, 30)
       // Add another winning item
       sequence[10].isWinning = true
       expect(validateCarouselSequence(sequence)).toBe(false)
     })
 
-    it('should reject sequence with invalid item data', () => {
+    test('should reject sequence with invalid item data', () => {
       const sequence = generateCarouselSequence(mockItems, mockItems[1], 50, 30)
       // Corrupt an item
       sequence[5].item = null as any
@@ -147,12 +147,12 @@ describe('Carousel Utilities', () => {
   })
 
   describe('getWeightedRandomItem', () => {
-    it('should return an item from the provided array', () => {
+    test('should return an item from the provided array', () => {
       const item = getWeightedRandomItem(mockItems)
       expect(mockItems).toContain(item)
     })
 
-    it('should respect rarity weights over multiple calls', () => {
+    test('should respect rarity weights over multiple calls', () => {
       const results: { [key: string]: number } = {}
       const iterations = 1000
       
@@ -166,7 +166,7 @@ describe('Carousel Utilities', () => {
       expect(results.common || 0).toBeGreaterThan(results.legendary || 0)
     })
 
-    it('should handle custom weights', () => {
+    test('should handle custom weights', () => {
       const customWeights = {
         common: 10,
         uncommon: 10,
@@ -187,7 +187,7 @@ describe('Carousel Utilities', () => {
       expect(results.legendary || 0).toBeGreaterThan(10)
     })
 
-    it('should fallback gracefully with empty rarity groups', () => {
+    test('should fallback gracefully with empty rarity groups', () => {
       const limitedItems = [mockItems[0]] // Only common items
       const item = getWeightedRandomItem(limitedItems)
       expect(item).toBe(mockItems[0])
@@ -195,18 +195,18 @@ describe('Carousel Utilities', () => {
   })
 
   describe('CAROUSEL_TIMING constants', () => {
-    it('should have reasonable timing values', () => {
+    test('should have reasonable timing values', () => {
       expect(CAROUSEL_TIMING.FAST_SPIN_DURATION).toBeGreaterThan(1000)
       expect(CAROUSEL_TIMING.DECELERATION_DURATION).toBeGreaterThan(2000)
       expect(CAROUSEL_TIMING.TOTAL_DURATION).toBeGreaterThan(5000)
     })
 
-    it('should have consistent item dimensions', () => {
+    test('should have consistent item dimensions', () => {
       expect(CAROUSEL_TIMING.ITEM_WIDTH).toBeGreaterThan(100)
       expect(CAROUSEL_TIMING.VISIBLE_ITEMS).toBeGreaterThan(3)
     })
 
-    it('should have reasonable sequence parameters', () => {
+    test('should have reasonable sequence parameters', () => {
       expect(CAROUSEL_TIMING.SEQUENCE_LENGTH).toBeGreaterThan(50)
       expect(CAROUSEL_TIMING.WINNING_POSITION_MIN).toBeLessThan(CAROUSEL_TIMING.WINNING_POSITION_MAX)
       expect(CAROUSEL_TIMING.WINNING_POSITION_MAX).toBeLessThan(CAROUSEL_TIMING.SEQUENCE_LENGTH)
@@ -214,7 +214,7 @@ describe('Carousel Utilities', () => {
   })
 
   describe('Mathematical accuracy tests', () => {
-    it('should calculate precise final positions', () => {
+    test('should calculate precise final positions', () => {
       const itemWidth = CAROUSEL_TIMING.ITEM_WIDTH
       const visibleItems = CAROUSEL_TIMING.VISIBLE_ITEMS
       const viewportCenter = (visibleItems * itemWidth) / 2 - itemWidth / 2
@@ -228,7 +228,7 @@ describe('Carousel Utilities', () => {
       expect(Math.abs(expectedFinalPosition)).toBeGreaterThan(itemWidth * 50) // Should move significant distance
     })
 
-    it('should handle edge case positions', () => {
+    test('should handle edge case positions', () => {
       const sequence = generateCarouselSequence(mockItems, mockItems[0], 10, 0)
       expect(sequence[0].isWinning).toBe(true)
       
@@ -238,7 +238,7 @@ describe('Carousel Utilities', () => {
   })
 
   describe('Performance tests', () => {
-    it('should generate large sequences efficiently', () => {
+    test('should generate large sequences efficiently', () => {
       const startTime = performance.now()
       const sequence = generateCarouselSequence(mockItems, mockItems[1], 1000, 500)
       const endTime = performance.now()
@@ -247,7 +247,7 @@ describe('Carousel Utilities', () => {
       expect(endTime - startTime).toBeLessThan(100) // Should complete in under 100ms
     })
 
-    it('should validate large sequences efficiently', () => {
+    test('should validate large sequences efficiently', () => {
       const sequence = generateCarouselSequence(mockItems, mockItems[1], 1000, 500)
       
       const startTime = performance.now()

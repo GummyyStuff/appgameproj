@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'bun:test'
+import { describe, test, expect } from 'bun:test'
 import { z } from 'zod'
 
 // Replicate the exact validation schema used in the games route
@@ -14,7 +14,7 @@ const blackjackActionSchema = z.object({
 })
 
 describe('Blackjack Request Validation', () => {
-  it('should validate the exact request from frontend', () => {
+  test('should validate the exact request from frontend', () => {
     // This is the exact request format from the frontend logs
     const frontendRequest = {
       gameId: "blackjack-1758476684395-c6e8eac9-9398-40f0-a366-07b521d8d433",
@@ -31,7 +31,7 @@ describe('Blackjack Request Validation', () => {
     expect(result.handIndex).toBe(0)
   })
 
-  it('should handle optional handIndex', () => {
+  test('should handle optional handIndex', () => {
     const requestWithoutHandIndex = {
       gameId: "blackjack-1758476684395-c6e8eac9-9398-40f0-a366-07b521d8d433",
       action: "stand"
@@ -43,7 +43,7 @@ describe('Blackjack Request Validation', () => {
     expect(result.handIndex).toBeUndefined()
   })
 
-  it('should validate all blackjack actions', () => {
+  test('should validate all blackjack actions', () => {
     const actions = ['hit', 'stand', 'double', 'split'] as const
     
     actions.forEach(action => {
@@ -57,7 +57,7 @@ describe('Blackjack Request Validation', () => {
     })
   })
 
-  it('should reject invalid actions', () => {
+  test('should reject invalid actions', () => {
     const invalidRequest = {
       gameId: "blackjack-1758476684395-c6e8eac9-9398-40f0-a366-07b521d8d433",
       action: "invalid_action",
@@ -67,7 +67,7 @@ describe('Blackjack Request Validation', () => {
     expect(() => blackjackActionSchema.parse(invalidRequest)).toThrow()
   })
 
-  it('should reject invalid handIndex', () => {
+  test('should reject invalid handIndex', () => {
     const invalidRequest = {
       gameId: "blackjack-1758476684395-c6e8eac9-9398-40f0-a366-07b521d8d433",
       action: "hit",

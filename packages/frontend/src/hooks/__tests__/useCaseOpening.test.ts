@@ -1,18 +1,38 @@
-import { renderHook, act, waitFor } from '@testing-library/react'
+import { renderHook, act, waitFor, cleanup } from '@testing-library/react'
+import { describe, test, expect, mock, beforeEach, afterEach } from 'bun:test';
 import { useCaseOpening } from '../useCaseOpening'
 import { supabase } from '../../lib/supabase'
 
+// Ensure DOM is properly set up before each test
+beforeEach(() => {
+  // Ensure document.body exists and is a proper DOM element
+  if (!document.body || typeof document.body.appendChild !== 'function') {
+    // Reinitialize document.body if it's not properly set up
+    document.body = document.createElement('body')
+    document.documentElement.appendChild(document.body)
+  }
+  // Clear any existing content
+  document.body.innerHTML = ''
+})
+
+// Clean up after each test
+afterEach(() => {
+  cleanup()
+  // Additional cleanup to ensure clean slate
+  document.body.innerHTML = ''
+})
+
 // Mock supabase
-jest.mock('../../lib/supabase', () => ({
+mock.module('../../lib/supabase', () => ({
   supabase: {
     auth: {
-      getSession: jest.fn()
+      getSession: mock()
     }
   }
 }))
 
 // Mock fetch
-const mockFetch = jest.fn()
+const mockFetch = mock()
 global.fetch = mockFetch
 
 describe('useCaseOpening', () => {
@@ -45,14 +65,14 @@ describe('useCaseOpening', () => {
     })
   })
 
-  it('should initialize with correct state', () => {
+  test('should initialize with correct state', () => {
     const { result } = renderHook(() => useCaseOpening())
 
     expect(result.current.isOpening).toBe(false)
     expect(result.current.openingError).toBeNull()
   })
 
-  it('should open case successfully', async () => {
+  test('should open case successfully', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
@@ -85,7 +105,7 @@ describe('useCaseOpening', () => {
     })
   })
 
-  it('should handle authentication failure', async () => {
+  test('should handle authentication failure', async () => {
     ;(supabase.auth.getSession as jest.Mock).mockResolvedValue({
       data: { session: null }
     })
@@ -101,7 +121,7 @@ describe('useCaseOpening', () => {
     expect(result.current.openingError).toBe('Please log in to open cases')
   })
 
-  it('should handle API failure', async () => {
+  test('should handle API failure', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: false,
       json: async () => ({ error: 'Server error' })
@@ -118,7 +138,7 @@ describe('useCaseOpening', () => {
     expect(result.current.openingError).toContain('Server error')
   })
 
-  it('should preview case successfully', async () => {
+  test('should preview case successfully', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
@@ -137,7 +157,7 @@ describe('useCaseOpening', () => {
     expect(previewResult).toEqual(mockCaseOpeningResult)
   })
 
-  it('should handle preview failure', async () => {
+  test('should handle preview failure', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: false
     })
@@ -152,7 +172,7 @@ describe('useCaseOpening', () => {
     expect(previewResult).toBeNull()
   })
 
-  it('should complete case successfully', async () => {
+  test('should complete case successfully', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
@@ -171,7 +191,7 @@ describe('useCaseOpening', () => {
     expect(completeResult).toEqual(mockCaseOpeningResult)
   })
 
-  it('should handle completion failure', async () => {
+  test('should handle completion failure', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: false,
       json: async () => ({ error: 'Completion failed' })
@@ -187,7 +207,7 @@ describe('useCaseOpening', () => {
     expect(completeResult).toBeNull()
   })
 
-  it('should load case items successfully', async () => {
+  test('should load case items successfully', async () => {
     const mockItems = [
       { id: '1', name: 'Item 1', rarity: 'common', base_value: 100 },
       { id: '2', name: 'Item 2', rarity: 'rare', base_value: 500 }
@@ -208,7 +228,7 @@ describe('useCaseOpening', () => {
     expect(items).toEqual(mockItems)
   })
 
-  it('should handle case items loading failure', async () => {
+  test('should handle case items loading failure', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: false
     })
@@ -223,7 +243,7 @@ describe('useCaseOpening', () => {
     expect(items).toEqual([])
   })
 
-  it('should reset opening state', () => {
+  test('should reset opening state', () => {
     const { result } = renderHook(() => useCaseOpening())
 
     // Simulate error state
@@ -242,7 +262,7 @@ describe('useCaseOpening', () => {
     expect(result.current.openingError).toBeNull()
   })
 
-  it('should handle invalid case opening response', async () => {
+  test('should handle invalid case opening response', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({

@@ -3,11 +3,11 @@
  * Simple integration tests for roulette game functionality
  */
 
-import { describe, it, expect } from 'bun:test'
+import { describe, test, expect } from 'bun:test'
 import { RouletteGame } from './roulette-game'
 
 describe('Roulette Integration', () => {
-  it('should create a roulette game and play successfully', async () => {
+  test('should create a roulette game and play successfully', async () => {
     const rouletteGame = new RouletteGame()
     
     const bet = {
@@ -26,7 +26,7 @@ describe('Roulette Integration', () => {
     expect(result.winAmount).toBeGreaterThanOrEqual(0)
   })
 
-  it('should return bet types information', () => {
+  test('should return bet types information', () => {
     const betTypes = RouletteGame.getBetTypes()
     
     expect(betTypes).toBeDefined()
@@ -35,7 +35,7 @@ describe('Roulette Integration', () => {
     expect(betTypes.black).toBeDefined()
   })
 
-  it('should return wheel layout', () => {
+  test('should return wheel layout', () => {
     const wheelLayout = RouletteGame.getWheelLayout()
     
     expect(Array.isArray(wheelLayout)).toBe(true)
@@ -43,7 +43,7 @@ describe('Roulette Integration', () => {
     expect(wheelLayout[0]).toEqual({ number: 0, color: 'green' })
   })
 
-  it('should validate bets correctly', () => {
+  test('should validate bets correctly', () => {
     const rouletteGame = new RouletteGame()
     
     const validBet = {
@@ -66,7 +66,7 @@ describe('Roulette Integration', () => {
     expect(rouletteGame.validateGameSpecificBet(invalidBet)).toBe(false)
   })
 
-  it('should handle multiple games with different outcomes', async () => {
+  test('should handle multiple games with different outcomes', async () => {
     const rouletteGame = new RouletteGame()
     
     const bet = {

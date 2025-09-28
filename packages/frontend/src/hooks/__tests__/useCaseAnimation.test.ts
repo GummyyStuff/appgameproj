@@ -1,17 +1,36 @@
-import { describe, it, expect } from 'bun:test'
-import { renderHook, act } from '@testing-library/react'
+import { describe, test, expect, beforeEach, afterEach } from 'bun:test'
+import { renderHook, act, cleanup } from '@testing-library/react'
 import { useCaseAnimation } from '../useCaseAnimation'
 import { AnimationConfig } from '../../types/caseOpening'
 
+// Ensure DOM is properly set up before each test
+beforeEach(() => {
+  // Ensure document.body exists and is a proper DOM element
+  if (!document.body || typeof document.body.appendChild !== 'function') {
+    // Reinitialize document.body if it's not properly set up
+    document.body = document.createElement('body')
+    document.documentElement.appendChild(document.body)
+  }
+  // Clear any existing content
+  document.body.innerHTML = ''
+})
+
+// Clean up after each test
+afterEach(() => {
+  cleanup()
+  // Additional cleanup to ensure clean slate
+  document.body.innerHTML = ''
+})
+
 describe('useCaseAnimation', () => {
-  it('should initialize with no animation config', () => {
+  test('should initialize with no animation config', () => {
     const { result } = renderHook(() => useCaseAnimation())
 
     expect(result.current.animationConfig).toBeNull()
     expect(result.current.isAnimating).toBe(false)
   })
 
-  it('should start animation', () => {
+  test('should start animation', () => {
     const { result } = renderHook(() => useCaseAnimation())
 
     const config: AnimationConfig = {
@@ -30,7 +49,7 @@ describe('useCaseAnimation', () => {
     expect(result.current.isAnimating).toBe(true)
   })
 
-  it('should complete animation', () => {
+  test('should complete animation', () => {
     const { result } = renderHook(() => useCaseAnimation())
 
     const config: AnimationConfig = {
@@ -53,7 +72,7 @@ describe('useCaseAnimation', () => {
     expect(result.current.animationConfig).toEqual(config) // Config persists after completion
   })
 
-  it('should reset animation', () => {
+  test('should reset animation', () => {
     const { result } = renderHook(() => useCaseAnimation())
 
     const config: AnimationConfig = {
@@ -76,7 +95,7 @@ describe('useCaseAnimation', () => {
     expect(result.current.isAnimating).toBe(false)
   })
 
-  it('should handle multiple animation starts', () => {
+  test('should handle multiple animation starts', () => {
     const { result } = renderHook(() => useCaseAnimation())
 
     const config1: AnimationConfig = {
@@ -103,7 +122,7 @@ describe('useCaseAnimation', () => {
     expect(result.current.isAnimating).toBe(true)
   })
 
-  it('should maintain animation state during completion', () => {
+  test('should maintain animation state during completion', () => {
     const { result } = renderHook(() => useCaseAnimation())
 
     const config: AnimationConfig = {

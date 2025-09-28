@@ -3,7 +3,7 @@
  * Tests monitoring functionality, metrics collection, and system health
  */
 
-import { describe, it, expect, mock, beforeEach, afterEach } from 'bun:test'
+import { describe, test, expect, mock, jest, beforeEach, afterEach } from 'bun:test'
 
 // Set up environment variables
 process.env.NODE_ENV = 'test'
@@ -51,24 +51,24 @@ mock.module('../config/supabase', () => ({
 
 describe('Case Opening Monitoring Service', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    jest.clearAllMocks()
     // Mock performance.now
-    vi.spyOn(performance, 'now').mockReturnValue(1000)
-    // Mock console methods
-    vi.spyOn(console, 'log').mockImplementation(() => {})
-    vi.spyOn(console, 'error').mockImplementation(() => {})
-    vi.spyOn(console, 'warn').mockImplementation(() => {})
-    vi.spyOn(console, 'info').mockImplementation(() => {})
+    jest.spyOn(performance, 'now').mockReturnValue(1000)
+    // Spy on console methods (don't mock implementation to preserve calls)
+    jest.spyOn(console, 'log')
+    jest.spyOn(console, 'error')
+    jest.spyOn(console, 'warn')
+    jest.spyOn(console, 'info')
   })
 
   afterEach(() => {
-    vi.restoreAllMocks()
+    jest.restoreAllMocks()
   })
 
   describe('Operation Recording', () => {
-    it('should record successful operations', () => {
+    test('should record successful operations', () => {
       const startTime = 1000
-      vi.spyOn(performance, 'now').mockReturnValue(1050) // 50ms later
+      jest.spyOn(performance, 'now').mockReturnValue(1050) // 50ms later
 
       CaseOpeningMonitoringService.recordOperation(
         'test_operation',
@@ -91,9 +91,9 @@ describe('Case Opening Monitoring Service', () => {
       )
     })
 
-    it('should record failed operations', () => {
+    test('should record failed operations', () => {
       const startTime = 1000
-      vi.spyOn(performance, 'now').mockReturnValue(1100) // 100ms later
+      jest.spyOn(performance, 'now').mockReturnValue(1100) // 100ms later
 
       CaseOpeningMonitoringService.recordOperation(
         'test_operation',
@@ -109,16 +109,16 @@ describe('Case Opening Monitoring Service', () => {
       expect(console.error).toHaveBeenCalledWith(
         '❌ test_operation failed after 100ms',
         {
-          error: 'Test error',
           user_id: 'test-user',
-          case_type_id: 'test-case'
+          case_type_id: 'test-case',
+          error_message: 'Test error'
         }
       )
     })
 
-    it('should calculate duration correctly', () => {
+    test('should calculate duration correctly', () => {
       const startTime = 1000
-      vi.spyOn(performance, 'now').mockReturnValue(1123.456) // 123.456ms later
+      jest.spyOn(performance, 'now').mockReturnValue(1123.456) // 123.456ms later
 
       CaseOpeningMonitoringService.recordOperation('test_operation', startTime, true)
 
@@ -130,7 +130,7 @@ describe('Case Opening Monitoring Service', () => {
   })
 
   describe('Case Opening Specific Recording', () => {
-    it('should record case opening start', () => {
+    test('should record case opening start', () => {
       const startTime = CaseOpeningMonitoringService.recordCaseOpeningStart('user-123', 'case-456')
 
       expect(startTime).toBe(1000)
@@ -144,9 +144,9 @@ describe('Case Opening Monitoring Service', () => {
       )
     })
 
-    it('should record successful case opening', () => {
+    test('should record successful case opening', () => {
       const startTime = 1000
-      vi.spyOn(performance, 'now').mockReturnValue(1200) // 200ms later
+      jest.spyOn(performance, 'now').mockReturnValue(1200) // 200ms later
 
       CaseOpeningMonitoringService.recordCaseOpeningSuccess(
         startTime,
@@ -162,14 +162,16 @@ describe('Case Opening Monitoring Service', () => {
         {
           user_id: 'user-123',
           case_type_id: 'case-456',
-          item_rarity: 'legendary'
+          item_rarity: 'legendary',
+          currency_awarded: 5000,
+          opening_id: 'opening-789'
         }
       )
     })
 
-    it('should record failed case opening', () => {
+    test('should record failed case opening', () => {
       const startTime = 1000
-      vi.spyOn(performance, 'now').mockReturnValue(1150) // 150ms later
+      jest.spyOn(performance, 'now').mockReturnValue(1150) // 150ms later
 
       CaseOpeningMonitoringService.recordCaseOpeningFailure(
         startTime,
@@ -181,16 +183,16 @@ describe('Case Opening Monitoring Service', () => {
       expect(console.error).toHaveBeenCalledWith(
         '❌ case_opening failed after 150ms',
         {
-          error: 'Insufficient balance',
           user_id: 'user-123',
-          case_type_id: 'case-456'
+          case_type_id: 'case-456',
+          error_message: 'Insufficient balance'
         }
       )
     })
   })
 
   describe('Performance Metrics', () => {
-    it('should calculate performance metrics correctly', async () => {
+    test('should calculate performance metrics correctly', async () => {
       // Mock database response
       const mockMetrics = [
         { duration_ms: 100, success: true },
@@ -201,13 +203,13 @@ describe('Case Opening Monitoring Service', () => {
       ]
 
       const { supabaseAdmin } = await import('../config/supabase')
-      const mockSelect = vi.fn(() => ({
-        eq: vi.fn(() => ({
-          gte: vi.fn().mockResolvedValue({ data: mockMetrics, error: null })
+      const mockSelect = jest.fn(() => ({
+        eq: jest.fn(() => ({
+          gte: mock().mockResolvedValue({ data: mockMetrics, error: null })
         }))
       }))
       
-      supabaseAdmin.from = vi.fn(() => ({ select: mockSelect }))
+      supabaseAdmin.from = jest.fn(() => ({ select: mockSelect }))
 
       const metrics = await CaseOpeningMonitoringService.getPerformanceMetrics('case_opening', '24h')
 
@@ -223,30 +225,30 @@ describe('Case Opening Monitoring Service', () => {
       })
     })
 
-    it('should handle empty metrics gracefully', async () => {
+    test('should handle empty metrics gracefully', async () => {
       const { supabaseAdmin } = await import('../config/supabase')
-      const mockSelect = vi.fn(() => ({
-        eq: vi.fn(() => ({
-          gte: vi.fn().mockResolvedValue({ data: [], error: null })
+      const mockSelect = jest.fn(() => ({
+        eq: jest.fn(() => ({
+          gte: mock().mockResolvedValue({ data: [], error: null })
         }))
       }))
       
-      supabaseAdmin.from = vi.fn(() => ({ select: mockSelect }))
+      supabaseAdmin.from = jest.fn(() => ({ select: mockSelect }))
 
       const metrics = await CaseOpeningMonitoringService.getPerformanceMetrics('case_opening', '24h')
 
       expect(metrics).toBeNull()
     })
 
-    it('should handle database errors gracefully', async () => {
+    test('should handle database errors gracefully', async () => {
       const { supabaseAdmin } = await import('../config/supabase')
-      const mockSelect = vi.fn(() => ({
-        eq: vi.fn(() => ({
-          gte: vi.fn().mockResolvedValue({ data: null, error: new Error('Database error') })
+      const mockSelect = jest.fn(() => ({
+        eq: jest.fn(() => ({
+          gte: mock().mockResolvedValue({ data: null, error: new Error('Database error') })
         }))
       }))
       
-      supabaseAdmin.from = vi.fn(() => ({ select: mockSelect }))
+      supabaseAdmin.from = jest.fn(() => ({ select: mockSelect }))
 
       const metrics = await CaseOpeningMonitoringService.getPerformanceMetrics('case_opening', '24h')
 
@@ -256,7 +258,7 @@ describe('Case Opening Monitoring Service', () => {
   })
 
   describe('Fairness Metrics', () => {
-    it('should calculate fairness metrics correctly', async () => {
+    test('should calculate fairness metrics correctly', async () => {
       // Mock case type data
       const mockCaseType = {
         rarity_distribution: {
@@ -280,28 +282,22 @@ describe('Case Opening Monitoring Service', () => {
       const { supabaseAdmin } = await import('../config/supabase')
       
       // Mock the database calls
-      supabaseAdmin.from = vi.fn((table) => {
+      supabaseAdmin.from = jest.fn((table) => {
         if (table === 'case_types') {
           return {
-            select: vi.fn(() => ({
-              eq: vi.fn(() => ({
-                single: vi.fn().mockResolvedValue({ data: mockCaseType, error: null })
+            select: jest.fn(() => ({
+              eq: jest.fn(() => ({
+                single: mock().mockResolvedValue({ data: mockCaseType, error: null })
               }))
             }))
           }
         } else if (table === 'case_opening_metrics') {
+          const mockQuery = {
+            eq: mock().mockReturnThis(),
+            gte: mock().mockResolvedValue({ data: mockOpenings, error: null })
+          }
           return {
-            select: vi.fn(() => ({
-              eq: vi.fn(() => ({
-                eq: vi.fn(() => ({
-                  eq: vi.fn(() => ({
-                    eq: vi.fn(() => ({
-                      gte: vi.fn().mockResolvedValue({ data: mockOpenings, error: null })
-                    }))
-                  }))
-                }))
-              }))
-            }))
+            select: jest.fn(() => mockQuery)
           }
         }
         return {}
@@ -311,22 +307,22 @@ describe('Case Opening Monitoring Service', () => {
 
       expect(fairnessMetrics).toBeDefined()
       expect(fairnessMetrics?.total_openings).toBe(100)
-      expect(fairnessMetrics?.rarity_distribution.common).toBe(58)
-      expect(fairnessMetrics?.rarity_distribution.uncommon).toBe(27)
-      expect(fairnessMetrics?.rarity_distribution.rare).toBe(12)
-      expect(fairnessMetrics?.rarity_distribution.epic).toBe(2)
-      expect(fairnessMetrics?.rarity_distribution.legendary).toBe(1)
+      expect(fairnessMetrics?.rarity_distribution.common).toBeCloseTo(58, 1) // 58% (58/100 * 100)
+      expect(fairnessMetrics?.rarity_distribution.uncommon).toBeCloseTo(27, 1) // 27% (27/100 * 100)
+      expect(fairnessMetrics?.rarity_distribution.rare).toBeCloseTo(12, 1) // 12% (12/100 * 100)
+      expect(fairnessMetrics?.rarity_distribution.epic).toBeCloseTo(2, 1) // 2% (2/100 * 100)
+      expect(fairnessMetrics?.rarity_distribution.legendary).toBeCloseTo(1, 1) // 1% (1/100 * 100)
       expect(fairnessMetrics?.chi_square_statistic).toBeGreaterThan(0)
       expect(typeof fairnessMetrics?.is_fair).toBe('boolean')
     })
 
-    it('should handle missing case type gracefully', async () => {
+    test('should handle missing case type gracefully', async () => {
       const { supabaseAdmin } = await import('../config/supabase')
       
-      supabaseAdmin.from = vi.fn(() => ({
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            single: vi.fn().mockResolvedValue({ data: null, error: new Error('Not found') })
+      supabaseAdmin.from = jest.fn(() => ({
+        select: jest.fn(() => ({
+          eq: jest.fn(() => ({
+            single: mock().mockResolvedValue({ data: null, error: new Error('Not found') })
           }))
         }))
       }))
@@ -339,18 +335,22 @@ describe('Case Opening Monitoring Service', () => {
   })
 
   describe('System Health', () => {
-    it('should report healthy system', async () => {
+    test('should report healthy system', async () => {
       const mockHealthyMetrics = [
         { duration_ms: 50, success: true, timestamp: new Date().toISOString() },
         { duration_ms: 75, success: true, timestamp: new Date().toISOString() },
         { duration_ms: 60, success: true, timestamp: new Date().toISOString() },
-        { duration_ms: 80, success: true, timestamp: new Date().toISOString() }
+        { duration_ms: 80, success: true, timestamp: new Date().toISOString() },
+        { duration_ms: 45, success: true, timestamp: new Date().toISOString() },
+        { duration_ms: 55, success: true, timestamp: new Date().toISOString() },
+        { duration_ms: 70, success: true, timestamp: new Date().toISOString() },
+        { duration_ms: 65, success: true, timestamp: new Date().toISOString() }
       ]
 
       const { supabaseAdmin } = await import('../config/supabase')
-      supabaseAdmin.from = vi.fn(() => ({
-        select: vi.fn(() => ({
-          gte: vi.fn().mockResolvedValue({ data: mockHealthyMetrics, error: null })
+      supabaseAdmin.from = jest.fn(() => ({
+        select: jest.fn(() => ({
+          gte: mock().mockResolvedValue({ data: mockHealthyMetrics, error: null })
         }))
       }))
 
@@ -359,20 +359,20 @@ describe('Case Opening Monitoring Service', () => {
       expect(health.status).toBe('healthy')
       expect(health.metrics.success_rate).toBe(100)
       expect(health.metrics.error_rate).toBe(0)
-      expect(health.metrics.avg_response_time).toBe(66.25) // (50+75+60+80)/4
+      expect(health.metrics.avg_response_time).toBe(62.5) // (50+75+60+80+45+55+70+65)/8
       expect(health.issues).toHaveLength(0)
     })
 
-    it('should report degraded system with high response time', async () => {
+    test('should report degraded system with high response time', async () => {
       const mockSlowMetrics = [
         { duration_ms: 1500, success: true, timestamp: new Date().toISOString() },
         { duration_ms: 2000, success: true, timestamp: new Date().toISOString() }
       ]
 
       const { supabaseAdmin } = await import('../config/supabase')
-      supabaseAdmin.from = vi.fn(() => ({
-        select: vi.fn(() => ({
-          gte: vi.fn().mockResolvedValue({ data: mockSlowMetrics, error: null })
+      supabaseAdmin.from = jest.fn(() => ({
+        select: jest.fn(() => ({
+          gte: mock().mockResolvedValue({ data: mockSlowMetrics, error: null })
         }))
       }))
 
@@ -383,7 +383,7 @@ describe('Case Opening Monitoring Service', () => {
       expect(health.issues).toContain('High average response time: 1750.00ms')
     })
 
-    it('should report unhealthy system with high error rate', async () => {
+    test('should report unhealthy system with high error rate', async () => {
       const mockErrorMetrics = [
         { duration_ms: 100, success: false, timestamp: new Date().toISOString() },
         { duration_ms: 150, success: false, timestamp: new Date().toISOString() },
@@ -392,9 +392,9 @@ describe('Case Opening Monitoring Service', () => {
       ]
 
       const { supabaseAdmin } = await import('../config/supabase')
-      supabaseAdmin.from = vi.fn(() => ({
-        select: vi.fn(() => ({
-          gte: vi.fn().mockResolvedValue({ data: mockErrorMetrics, error: null })
+      supabaseAdmin.from = jest.fn(() => ({
+        select: jest.fn(() => ({
+          gte: mock().mockResolvedValue({ data: mockErrorMetrics, error: null })
         }))
       }))
 
@@ -405,11 +405,11 @@ describe('Case Opening Monitoring Service', () => {
       expect(health.issues).toContain('High error rate: 75.00%')
     })
 
-    it('should handle database errors in health check', async () => {
+    test('should handle database errors in health check', async () => {
       const { supabaseAdmin } = await import('../config/supabase')
-      supabaseAdmin.from = vi.fn(() => ({
-        select: vi.fn(() => ({
-          gte: vi.fn().mockResolvedValue({ data: null, error: new Error('Database error') })
+      supabaseAdmin.from = jest.fn(() => ({
+        select: jest.fn(() => ({
+          gte: mock().mockResolvedValue({ data: null, error: new Error('Database error') })
         }))
       }))
 
@@ -421,7 +421,7 @@ describe('Case Opening Monitoring Service', () => {
   })
 
   describe('Logging Functions', () => {
-    it('should log critical errors', () => {
+    test('should log critical errors', () => {
       const error = new Error('Critical test error')
       error.stack = 'Error stack trace'
 
@@ -441,7 +441,7 @@ describe('Case Opening Monitoring Service', () => {
       })
     })
 
-    it('should log warnings', () => {
+    test('should log warnings', () => {
       CaseOpeningMonitoringService.logWarning(
         'test_operation',
         'Test warning message',
@@ -457,7 +457,7 @@ describe('Case Opening Monitoring Service', () => {
       })
     })
 
-    it('should log info messages', () => {
+    test('should log info messages', () => {
       CaseOpeningMonitoringService.logInfo(
         'test_operation',
         'Test info message',
@@ -475,7 +475,7 @@ describe('Case Opening Monitoring Service', () => {
   })
 
   describe('Dashboard Data', () => {
-    it('should compile dashboard data successfully', async () => {
+    test('should compile dashboard data successfully', async () => {
       // Mock all the required data
       const mockHealthyMetrics = [
         { duration_ms: 50, success: true, timestamp: new Date().toISOString() }
@@ -492,16 +492,16 @@ describe('Case Opening Monitoring Service', () => {
       ]
 
       const { supabaseAdmin } = await import('../config/supabase')
-      supabaseAdmin.from = vi.fn((table) => {
+      supabaseAdmin.from = jest.fn((table) => {
         if (table === 'case_opening_metrics') {
           return {
-            select: vi.fn(() => ({
-              gte: vi.fn().mockResolvedValue({ data: mockHealthyMetrics, error: null }),
-              eq: vi.fn(() => ({
-                gte: vi.fn().mockResolvedValue({ data: mockHealthyMetrics, error: null })
+            select: jest.fn(() => ({
+              gte: mock().mockResolvedValue({ data: mockHealthyMetrics, error: null }),
+              eq: jest.fn(() => ({
+                gte: mock().mockResolvedValue({ data: mockHealthyMetrics, error: null })
               })),
-              order: vi.fn(() => ({
-                limit: vi.fn().mockResolvedValue({ data: mockRecentMetrics, error: null })
+              order: jest.fn(() => ({
+                limit: mock().mockResolvedValue({ data: mockRecentMetrics, error: null })
               }))
             }))
           }
@@ -523,9 +523,9 @@ describe('Case Opening Monitoring Service', () => {
   })
 
   describe('Currency Transaction Recording', () => {
-    it('should record successful currency transactions', () => {
+    test('should record successful currency transactions', () => {
       const startTime = 1000
-      vi.spyOn(performance, 'now').mockReturnValue(1025) // 25ms later
+      jest.spyOn(performance, 'now').mockReturnValue(1025) // 25ms later
 
       CaseOpeningMonitoringService.recordCurrencyTransaction(
         startTime,
@@ -545,9 +545,9 @@ describe('Case Opening Monitoring Service', () => {
       )
     })
 
-    it('should record failed currency transactions', () => {
+    test('should record failed currency transactions', () => {
       const startTime = 1000
-      vi.spyOn(performance, 'now').mockReturnValue(1075) // 75ms later
+      jest.spyOn(performance, 'now').mockReturnValue(1075) // 75ms later
 
       CaseOpeningMonitoringService.recordCurrencyTransaction(
         startTime,
@@ -561,19 +561,19 @@ describe('Case Opening Monitoring Service', () => {
       expect(console.error).toHaveBeenCalledWith(
         '❌ currency_transaction failed after 75ms',
         {
-          error: 'Insufficient balance',
           user_id: 'user-123',
           transaction_type: 'credit',
-          amount: 1000
+          amount: 1000,
+          error_message: 'Insufficient balance'
         }
       )
     })
   })
 
   describe('Database Operation Recording', () => {
-    it('should record database operations', () => {
+    test('should record database operations', () => {
       const startTime = 1000
-      vi.spyOn(performance, 'now').mockReturnValue(1030) // 30ms later
+      jest.spyOn(performance, 'now').mockReturnValue(1030) // 30ms later
 
       CaseOpeningMonitoringService.recordDatabaseOperation(
         'select_case_types',
@@ -590,9 +590,9 @@ describe('Case Opening Monitoring Service', () => {
       )
     })
 
-    it('should record failed database operations', () => {
+    test('should record failed database operations', () => {
       const startTime = 1000
-      vi.spyOn(performance, 'now').mockReturnValue(1200) // 200ms later
+      jest.spyOn(performance, 'now').mockReturnValue(1200) // 200ms later
 
       CaseOpeningMonitoringService.recordDatabaseOperation(
         'insert_metrics',
@@ -605,8 +605,8 @@ describe('Case Opening Monitoring Service', () => {
       expect(console.error).toHaveBeenCalledWith(
         '❌ db_insert_metrics failed after 200ms',
         {
-          error: 'Connection timeout',
-          record_count: undefined
+          record_count: undefined,
+          error_message: 'Connection timeout'
         }
       )
     })

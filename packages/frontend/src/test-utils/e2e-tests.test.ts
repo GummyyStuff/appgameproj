@@ -3,7 +3,7 @@
  * Complete user workflow testing
  */
 
-import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test'
+import { describe, test, expect } from 'bun:test'
 
 // Mock browser environment for E2E-style tests
 const mockBrowser = {
@@ -31,7 +31,7 @@ describe('End-to-End User Workflows', () => {
   })
 
   describe('User Registration and Login Flow', () => {
-    it('should complete full registration workflow', async () => {
+    test('should complete full registration workflow', async () => {
       // Navigate to registration
       const signUpButton = await mockBrowser.findElement('[data-testid="sign-up-button"]')
       await signUpButton.click()
@@ -59,7 +59,7 @@ describe('End-to-End User Workflows', () => {
       expect(await successMessage.isVisible()).toBe(true)
     })
 
-    it('should complete login workflow', async () => {
+    test('should complete login workflow', async () => {
       // Navigate to login
       const loginButton = await mockBrowser.findElement('[data-testid="login-button"]')
       await loginButton.click()
@@ -86,7 +86,7 @@ describe('End-to-End User Workflows', () => {
       expect(await userBalance.isVisible()).toBe(true)
     })
 
-    it('should handle password reset workflow', async () => {
+    test('should handle password reset workflow', async () => {
       // Navigate to forgot password
       const forgotPasswordLink = await mockBrowser.findElement('[data-testid="forgot-password-link"]')
       await forgotPasswordLink.click()
@@ -121,7 +121,7 @@ describe('End-to-End User Workflows', () => {
       await mockBrowser.navigate('http://localhost:3000/roulette')
     })
 
-    it('should complete full roulette game workflow', async () => {
+    test('should complete full roulette game workflow', async () => {
       // Check initial balance
       const balanceElement = await mockBrowser.findElement('[data-testid="balance-display"]')
       const initialBalance = await balanceElement.getText()
@@ -159,7 +159,7 @@ describe('End-to-End User Workflows', () => {
       expect(await gameHistory.isVisible()).toBe(true)
     })
 
-    it('should handle multiple bet types', async () => {
+    test('should handle multiple bet types', async () => {
       const betTypes = [
         { selector: '[data-testid="red-bet-button"]', name: 'red' },
         { selector: '[data-testid="black-bet-button"]', name: 'black' },
@@ -194,7 +194,7 @@ describe('End-to-End User Workflows', () => {
       }
     })
 
-    it('should validate insufficient balance', async () => {
+    test('should validate insufficient balance', async () => {
       // Set bet amount higher than balance
       const betAmountInput = await mockBrowser.findElement('[data-testid="bet-amount-input"]')
       await betAmountInput.type('20000') // More than starting balance
@@ -225,7 +225,7 @@ describe('End-to-End User Workflows', () => {
       await mockBrowser.navigate('http://localhost:3000/blackjack')
     })
 
-    it('should complete full blackjack game workflow', async () => {
+    test('should complete full blackjack game workflow', async () => {
       // Set bet amount
       const betAmountInput = await mockBrowser.findElement('[data-testid="bet-amount-input"]')
       await betAmountInput.type('100')
@@ -265,7 +265,7 @@ describe('End-to-End User Workflows', () => {
       expect(await balanceElement.isVisible()).toBe(true)
     })
 
-    it('should handle hit action', async () => {
+    test('should handle hit action', async () => {
       // Start game
       const betAmountInput = await mockBrowser.findElement('[data-testid="bet-amount-input"]')
       await betAmountInput.type('100')
@@ -288,7 +288,7 @@ describe('End-to-End User Workflows', () => {
       expect(await playerValue.isVisible()).toBe(true)
     })
 
-    it('should handle double down when available', async () => {
+    test('should handle double down when available', async () => {
       // Start game with conditions for double down
       const betAmountInput = await mockBrowser.findElement('[data-testid="bet-amount-input"]')
       await betAmountInput.type('100')
@@ -326,7 +326,7 @@ describe('End-to-End User Workflows', () => {
       await submitButton.click()
     })
 
-    it('should view and update user profile', async () => {
+    test('should view and update user profile', async () => {
       // Navigate to profile
       await mockBrowser.navigate('http://localhost:3000/profile')
 
@@ -354,7 +354,7 @@ describe('End-to-End User Workflows', () => {
       expect(await successMessage.isVisible()).toBe(true)
     })
 
-    it('should view game statistics', async () => {
+    test('should view game statistics', async () => {
       // Navigate to statistics
       await mockBrowser.navigate('http://localhost:3000/statistics')
 
@@ -377,7 +377,7 @@ describe('End-to-End User Workflows', () => {
       expect(await blackjackStats.isVisible()).toBe(true)
     })
 
-    it('should view game history', async () => {
+    test('should view game history', async () => {
       // Navigate to history
       await mockBrowser.navigate('http://localhost:3000/history')
 
@@ -402,7 +402,7 @@ describe('End-to-End User Workflows', () => {
       expect(await filteredResults.isVisible()).toBe(true)
     })
 
-    it('should claim daily bonus', async () => {
+    test('should claim daily bonus', async () => {
       // Navigate to profile
       await mockBrowser.navigate('http://localhost:3000/profile')
 
@@ -439,7 +439,7 @@ describe('End-to-End User Workflows', () => {
       await submitButton.click()
     })
 
-    it('should navigate between all game pages', async () => {
+    test('should navigate between all game pages', async () => {
       const gamePages = [
         { path: '/roulette', testId: 'roulette-game' },
         { path: '/blackjack', testId: 'blackjack-game' }
@@ -453,7 +453,7 @@ describe('End-to-End User Workflows', () => {
       }
     })
 
-    it('should use navigation menu', async () => {
+    test('should use navigation menu', async () => {
       // Test main navigation
       const navMenu = await mockBrowser.findElement('[data-testid="nav-menu"]')
       expect(await navMenu.isVisible()).toBe(true)
@@ -475,7 +475,7 @@ describe('End-to-End User Workflows', () => {
       }
     })
 
-    it('should handle responsive design', async () => {
+    test('should handle responsive design', async () => {
       // Test mobile viewport
       // In real test, would resize browser window
       
@@ -488,7 +488,7 @@ describe('End-to-End User Workflows', () => {
       }
     })
 
-    it('should handle logout workflow', async () => {
+    test('should handle logout workflow', async () => {
       // Find logout button
       const logoutButton = await mockBrowser.findElement('[data-testid="logout-button"]')
       await logoutButton.click()
@@ -502,7 +502,7 @@ describe('End-to-End User Workflows', () => {
   })
 
   describe('Error Handling Workflows', () => {
-    it('should handle network errors gracefully', async () => {
+    test('should handle network errors gracefully', async () => {
       // Mock network failure
       // In real test, would intercept network requests
       
@@ -523,7 +523,7 @@ describe('End-to-End User Workflows', () => {
       expect(await errorMessage.isVisible()).toBe(true)
     })
 
-    it('should handle session expiration', async () => {
+    test('should handle session expiration', async () => {
       // Mock session expiration
       // In real test, would manipulate session storage/cookies
       

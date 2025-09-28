@@ -3,24 +3,24 @@ import { render, screen } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import StatisticsDashboard from '../StatisticsDashboard'
 
-import { vi } from 'vitest'
+import { jest } from 'bun:test'
 
 // Mock the auth hook
-vi.mock('../../../hooks/useAuth', () => ({
+mock.module('../../../hooks/useAuth', () => ({
   useAuth: () => ({
     user: { id: 'test-user-id' }
   })
 }))
 
 // Mock Supabase
-vi.mock('../../../lib/supabase', () => ({
+mock.module('../../../lib/supabase', () => ({
   supabase: {
-    from: vi.fn(() => ({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          order: vi.fn(() => ({
-            gte: vi.fn(() => ({
-              limit: vi.fn(() => Promise.resolve({ data: [], error: null }))
+    from: jest.fn(() => ({
+      select: jest.fn(() => ({
+        eq: jest.fn(() => ({
+          order: jest.fn(() => ({
+            gte: jest.fn(() => ({
+              limit: jest.fn(() => Promise.resolve({ data: [], error: null }))
             }))
           }))
         }))
@@ -30,7 +30,7 @@ vi.mock('../../../lib/supabase', () => ({
 }))
 
 // Mock recharts components
-vi.mock('recharts', () => ({
+mock.module('recharts', () => ({
   AreaChart: ({ children }: any) => <div data-testid="area-chart">{children}</div>,
   Area: () => <div data-testid="area" />,
   PieChart: ({ children }: any) => <div data-testid="pie-chart">{children}</div>,
@@ -60,25 +60,25 @@ const renderWithProviders = (component: React.ReactElement) => {
 }
 
 describe('StatisticsDashboard', () => {
-  it('renders the dashboard title', async () => {
+  test('renders the dashboard title', async () => {
     renderWithProviders(<StatisticsDashboard />)
     
     expect(screen.getByText('Statistics Dashboard')).toBeInTheDocument()
   })
 
-  it('renders time range selector', async () => {
+  test('renders time range selector', async () => {
     renderWithProviders(<StatisticsDashboard />)
     
     expect(screen.getByDisplayValue('Last 30 Days')).toBeInTheDocument()
   })
 
-  it('renders chart type selector', async () => {
+  test('renders chart type selector', async () => {
     renderWithProviders(<StatisticsDashboard />)
     
     expect(screen.getByDisplayValue('Profit Trend')).toBeInTheDocument()
   })
 
-  it('shows loading state initially', async () => {
+  test('shows loading state initially', async () => {
     renderWithProviders(<StatisticsDashboard />)
     
     expect(screen.getByText('Loading statistics...')).toBeInTheDocument()

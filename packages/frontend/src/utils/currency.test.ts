@@ -3,7 +3,7 @@
  * Simple utility function tests for frontend
  */
 
-import { describe, it, expect } from 'bun:test'
+import { describe, test, expect } from 'bun:test'
 
 // Simple currency formatting function
 export function formatCurrency(amount: number, currency: 'roubles' | 'dollars' | 'euros' = 'roubles'): string {
@@ -31,41 +31,41 @@ export function isValidUsername(username: string): boolean {
 
 describe('Currency Utils', () => {
   describe('formatCurrency', () => {
-    it('should format roubles correctly', () => {
+    test('should format roubles correctly', () => {
       expect(formatCurrency(1000)).toBe('₽1,000')
       expect(formatCurrency(1000, 'roubles')).toBe('₽1,000')
     })
 
-    it('should format dollars correctly', () => {
+    test('should format dollars correctly', () => {
       expect(formatCurrency(1000, 'dollars')).toBe('$1,000')
     })
 
-    it('should format euros correctly', () => {
+    test('should format euros correctly', () => {
       expect(formatCurrency(1000, 'euros')).toBe('€1,000')
     })
 
-    it('should handle decimal amounts', () => {
+    test('should handle decimal amounts', () => {
       expect(formatCurrency(1000.5)).toBe('₽1,000.5')
       expect(formatCurrency(1000.0)).toBe('₽1,000')
     })
 
-    it('should handle large amounts', () => {
+    test('should handle large amounts', () => {
       expect(formatCurrency(1000000)).toBe('₽1,000,000')
     })
 
-    it('should handle zero amounts', () => {
+    test('should handle zero amounts', () => {
       expect(formatCurrency(0)).toBe('₽0')
     })
   })
 
   describe('isValidBetAmount', () => {
-    it('should validate positive amounts', () => {
+    test('should validate positive amounts', () => {
       expect(isValidBetAmount(100)).toBe(true)
       expect(isValidBetAmount(1)).toBe(true)
       expect(isValidBetAmount(10000)).toBe(true)
     })
 
-    it('should reject invalid amounts', () => {
+    test('should reject invalid amounts', () => {
       expect(isValidBetAmount(0)).toBe(false)
       expect(isValidBetAmount(-100)).toBe(false)
       expect(isValidBetAmount(10001)).toBe(false)
@@ -75,13 +75,13 @@ describe('Currency Utils', () => {
   })
 
   describe('isValidEmail', () => {
-    it('should validate correct emails', () => {
+    test('should validate correct emails', () => {
       expect(isValidEmail('test@example.com')).toBe(true)
       expect(isValidEmail('user@domain.co.uk')).toBe(true)
       expect(isValidEmail('name.surname@company.org')).toBe(true)
     })
 
-    it('should reject invalid emails', () => {
+    test('should reject invalid emails', () => {
       expect(isValidEmail('invalid-email')).toBe(false)
       expect(isValidEmail('test@')).toBe(false)
       expect(isValidEmail('@example.com')).toBe(false)
@@ -91,14 +91,14 @@ describe('Currency Utils', () => {
   })
 
   describe('isValidUsername', () => {
-    it('should validate correct usernames', () => {
+    test('should validate correct usernames', () => {
       expect(isValidUsername('testuser')).toBe(true)
       expect(isValidUsername('user123')).toBe(true)
       expect(isValidUsername('my_username')).toBe(true)
       expect(isValidUsername('player-one')).toBe(true)
     })
 
-    it('should reject invalid usernames', () => {
+    test('should reject invalid usernames', () => {
       expect(isValidUsername('')).toBe(false)
       expect(isValidUsername('ab')).toBe(false) // Too short
       expect(isValidUsername('a'.repeat(25))).toBe(false) // Too long

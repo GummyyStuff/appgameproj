@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'bun:test'
+import { describe, test, expect } from 'bun:test'
 import { generateCarouselSequence, validateCarouselSequence, CAROUSEL_TIMING } from '../../../utils/carousel'
 
 /**
@@ -16,7 +16,7 @@ describe('Carousel Validation Tests', () => {
   ] as any[]
 
   describe('Mathematical Precision Tests', () => {
-    it('should calculate exact center positioning for all winning positions', () => {
+    test('should calculate exact center positioning for all winning positions', () => {
       const itemWidth = CAROUSEL_TIMING.ITEM_WIDTH // 120px
       const visibleItems = CAROUSEL_TIMING.VISIBLE_ITEMS // 5
       const viewportWidth = visibleItems * itemWidth // 600px
@@ -38,7 +38,7 @@ describe('Carousel Validation Tests', () => {
       })
     })
 
-    it('should ensure winning item is always visible in viewport', () => {
+    test('should ensure winning item is always visible in viewport', () => {
       const itemWidth = CAROUSEL_TIMING.ITEM_WIDTH
       const visibleItems = CAROUSEL_TIMING.VISIBLE_ITEMS
       const viewportWidth = visibleItems * itemWidth
@@ -64,7 +64,7 @@ describe('Carousel Validation Tests', () => {
   })
 
   describe('Sequence Generation Accuracy', () => {
-    it('should generate sequences that pass all validation checks', () => {
+    test('should generate sequences that pass all validation checks', () => {
       const testCases = [
         { length: 50, winningPos: 35 },
         { length: 75, winningPos: 60 },
@@ -93,7 +93,7 @@ describe('Carousel Validation Tests', () => {
       })
     })
 
-    it('should handle all rarity types correctly', () => {
+    test('should handle all rarity types correctly', () => {
       const rarityTests = mockCaseItems.map((item, index) => ({
         item,
         expectedRarity: item.rarity
@@ -115,7 +115,7 @@ describe('Carousel Validation Tests', () => {
   })
 
   describe('User Experience Validation', () => {
-    it('should create realistic animation distances', () => {
+    test('should create realistic animation distances', () => {
       const itemWidth = CAROUSEL_TIMING.ITEM_WIDTH
       const sequenceLength = CAROUSEL_TIMING.SEQUENCE_LENGTH
       
@@ -133,7 +133,7 @@ describe('Carousel Validation Tests', () => {
       }
     })
 
-    it('should provide good item variety in sequences', () => {
+    test('should provide good item variety in sequences', () => {
       const sequence = generateCarouselSequence(
         mockCaseItems,
         mockCaseItems[2], // LEDX
@@ -161,7 +161,7 @@ describe('Carousel Validation Tests', () => {
   })
 
   describe('Edge Case Handling', () => {
-    it('should handle minimum viable sequences', () => {
+    test('should handle minimum viable sequences', () => {
       // Test very short sequences
       const minSequence = generateCarouselSequence(
         mockCaseItems,
@@ -175,7 +175,7 @@ describe('Carousel Validation Tests', () => {
       expect(minSequence[2].isWinning).toBe(true)
     })
 
-    it('should handle single item case pools', () => {
+    test('should handle single item case pools', () => {
       const singleItem = [mockCaseItems[0]]
       const sequence = generateCarouselSequence(
         singleItem,
@@ -195,7 +195,7 @@ describe('Carousel Validation Tests', () => {
       })
     })
 
-    it('should handle boundary winning positions', () => {
+    test('should handle boundary winning positions', () => {
       const boundaryTests = [
         { sequenceLength: 20, winningPos: 0 },   // First position
         { sequenceLength: 20, winningPos: 19 },  // Last position
@@ -218,7 +218,7 @@ describe('Carousel Validation Tests', () => {
   })
 
   describe('Performance Validation', () => {
-    it('should generate large sequences efficiently', () => {
+    test('should generate large sequences efficiently', () => {
       const startTime = performance.now()
       
       // Generate a large sequence
@@ -237,7 +237,7 @@ describe('Carousel Validation Tests', () => {
       expect(duration).toBeLessThan(100) // Should complete in under 100ms
     })
 
-    it('should validate large sequences quickly', () => {
+    test('should validate large sequences quickly', () => {
       const largeSequence = generateCarouselSequence(
         mockCaseItems,
         mockCaseItems[2],
@@ -255,7 +255,7 @@ describe('Carousel Validation Tests', () => {
   })
 
   describe('Consistency Validation', () => {
-    it('should produce deterministic results for same inputs', () => {
+    test('should produce deterministic results for same inputs', () => {
       const params = {
         items: mockCaseItems,
         winningItem: mockCaseItems[3],
@@ -281,7 +281,7 @@ describe('Carousel Validation Tests', () => {
       })
     })
 
-    it('should maintain item integrity throughout sequence', () => {
+    test('should maintain item integrity throughout sequence', () => {
       const sequence = generateCarouselSequence(
         mockCaseItems,
         mockCaseItems[4],

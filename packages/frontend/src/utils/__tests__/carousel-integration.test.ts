@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'bun:test'
+import { describe, test, expect } from 'bun:test'
 import { 
   generateCarouselSequence, 
   calculateWinningPosition, 
@@ -29,7 +29,7 @@ const mockCaseItems: TarkovItem[] = [
 
 describe('Carousel Integration Tests', () => {
   describe('End-to-End Carousel Generation', () => {
-    it('should generate a complete, valid carousel sequence', () => {
+    test('should generate a complete, valid carousel sequence', () => {
       const winningItem = mockCaseItems[1] // GPU (legendary)
       const sequenceLength = CAROUSEL_TIMING.SEQUENCE_LENGTH
       const winningPosition = calculateWinningPosition(sequenceLength)
@@ -48,7 +48,7 @@ describe('Carousel Integration Tests', () => {
       expect(sequence[winningPosition].isWinning).toBe(true)
     })
 
-    it('should create mathematically accurate positioning', () => {
+    test('should create mathematically accurate positioning', () => {
       const itemWidth = CAROUSEL_TIMING.ITEM_WIDTH
       const visibleItems = CAROUSEL_TIMING.VISIBLE_ITEMS
       const viewportCenter = (visibleItems * itemWidth) / 2 - itemWidth / 2
@@ -70,7 +70,7 @@ describe('Carousel Integration Tests', () => {
       }
     })
 
-    it('should handle different case scenarios', () => {
+    test('should handle different case scenarios', () => {
       const scenarios = [
         { items: mockCaseItems.slice(0, 1), winningItem: mockCaseItems[0] }, // Single item
         { items: mockCaseItems.slice(0, 2), winningItem: mockCaseItems[1] }, // Two items
@@ -92,7 +92,7 @@ describe('Carousel Integration Tests', () => {
   })
 
   describe('Carousel Accuracy Validation', () => {
-    it('should ensure winning item lands precisely in center', () => {
+    test('should ensure winning item lands precisely in center', () => {
       const testCases = [
         { sequenceLength: 50, winningPosition: 30 },
         { sequenceLength: 75, winningPosition: 60 },
@@ -117,7 +117,7 @@ describe('Carousel Integration Tests', () => {
       })
     })
 
-    it('should maintain consistent item distribution', () => {
+    test('should maintain consistent item distribution', () => {
       const sequence = generateCarouselSequence(
         mockCaseItems,
         mockCaseItems[1],
@@ -147,7 +147,7 @@ describe('Carousel Integration Tests', () => {
   })
 
   describe('Performance and Reliability', () => {
-    it('should handle edge cases without errors', () => {
+    test('should handle edge cases without errors', () => {
       const edgeCases = [
         { sequenceLength: 10, winningPosition: 0 }, // Winning at start
         { sequenceLength: 10, winningPosition: 9 }, // Winning at end
@@ -167,7 +167,7 @@ describe('Carousel Integration Tests', () => {
       })
     })
 
-    it('should generate consistent results for same inputs', () => {
+    test('should generate consistent results for same inputs', () => {
       const winningItem = mockCaseItems[2]
       const sequenceLength = 50
       const winningPosition = 30
@@ -185,7 +185,7 @@ describe('Carousel Integration Tests', () => {
       })
     })
 
-    it('should validate timing constants are realistic', () => {
+    test('should validate timing constants are realistic', () => {
       // Verify timing constants make sense for user experience
       expect(CAROUSEL_TIMING.FAST_SPIN_DURATION).toBeGreaterThan(1000) // At least 1 second
       expect(CAROUSEL_TIMING.FAST_SPIN_DURATION).toBeLessThan(5000) // Not too long
@@ -205,7 +205,7 @@ describe('Carousel Integration Tests', () => {
   })
 
   describe('Real-world Scenario Testing', () => {
-    it('should simulate a complete case opening flow', () => {
+    test('should simulate a complete case opening flow', () => {
       // Simulate opening a case with different rarities
       const caseItems = [
         ...Array(60).fill(mockCaseItems[0]), // 60% common
@@ -235,7 +235,7 @@ describe('Carousel Integration Tests', () => {
       expect(uniqueItems.size).toBeGreaterThan(1) // Should have variety
     })
 
-    it('should handle multiple consecutive case openings', () => {
+    test('should handle multiple consecutive case openings', () => {
       const openings = [
         { winningItem: mockCaseItems[0], expectedRarity: 'common' },
         { winningItem: mockCaseItems[1], expectedRarity: 'legendary' },

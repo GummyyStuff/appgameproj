@@ -3,7 +3,7 @@
  * Comprehensive testing of roulette game logic, betting validation, and payout calculations
  */
 
-import { describe, it, expect, beforeEach } from 'bun:test'
+import { describe, test, expect, beforeEach } from 'bun:test'
 import { RouletteGame } from './roulette-game'
 import type { RouletteBet } from './roulette-game'
 
@@ -15,7 +15,7 @@ describe('RouletteGame', () => {
   })
 
   describe('Bet Validation', () => {
-    it('should validate basic bet parameters', () => {
+    test('should validate basic bet parameters', () => {
       const validBet: RouletteBet = {
         userId: 'user123',
         amount: 100,
@@ -27,7 +27,7 @@ describe('RouletteGame', () => {
       expect(rouletteGame.validateGameSpecificBet(validBet)).toBe(true)
     })
 
-    it('should reject invalid bet types', () => {
+    test('should reject invalid bet types', () => {
       const invalidBet: RouletteBet = {
         userId: 'user123',
         amount: 100,
@@ -39,7 +39,7 @@ describe('RouletteGame', () => {
       expect(rouletteGame.validateGameSpecificBet(invalidBet)).toBe(false)
     })
 
-    it('should validate number bets correctly', () => {
+    test('should validate number bets correctly', () => {
       const validNumberBets = [0, 17, 36]
       const invalidNumberBets = [-1, 37, 100]
 
@@ -66,7 +66,7 @@ describe('RouletteGame', () => {
       }
     })
 
-    it('should validate dozen bets correctly', () => {
+    test('should validate dozen bets correctly', () => {
       const validDozenBets = [1, 2, 3]
       const invalidDozenBets = [0, 4, -1]
 
@@ -93,7 +93,7 @@ describe('RouletteGame', () => {
       }
     })
 
-    it('should validate column bets correctly', () => {
+    test('should validate column bets correctly', () => {
       const validColumnBets = [1, 2, 3]
       const invalidColumnBets = [0, 4, -1]
 
@@ -120,7 +120,7 @@ describe('RouletteGame', () => {
       }
     })
 
-    it('should validate color and even/odd bets correctly', () => {
+    test('should validate color and even/odd bets correctly', () => {
       const colorBets = ['red', 'black', 'odd', 'even', 'low', 'high']
 
       for (const betType of colorBets) {
@@ -137,7 +137,7 @@ describe('RouletteGame', () => {
   })
 
   describe('Game Play', () => {
-    it('should successfully play a valid roulette game', async () => {
+    test('should successfully play a valid roulette game', async () => {
       const bet: RouletteBet = {
         userId: 'user123',
         amount: 100,
@@ -154,7 +154,7 @@ describe('RouletteGame', () => {
       expect(result.winAmount).toBeGreaterThanOrEqual(0)
     })
 
-    it('should reject invalid bets', async () => {
+    test('should reject invalid bets', async () => {
       const invalidBet: RouletteBet = {
         userId: 'user123',
         amount: -100, // Invalid amount
@@ -170,7 +170,7 @@ describe('RouletteGame', () => {
       expect(result.winAmount).toBe(0)
     })
 
-    it('should generate valid winning numbers (0-36)', async () => {
+    test('should generate valid winning numbers (0-36)', async () => {
       const bet: RouletteBet = {
         userId: 'user123',
         amount: 100,
@@ -193,7 +193,7 @@ describe('RouletteGame', () => {
   })
 
   describe('Payout Calculations', () => {
-    it('should calculate correct payouts for number bets', async () => {
+    test('should calculate correct payouts for number bets', async () => {
       const bet: RouletteBet = {
         userId: 'user123',
         amount: 100,
@@ -214,7 +214,7 @@ describe('RouletteGame', () => {
       expect(payout).toBe(3500) // 100 * 35
     })
 
-    it('should calculate correct payouts for color bets', async () => {
+    test('should calculate correct payouts for color bets', async () => {
       const bet: RouletteBet = {
         userId: 'user123',
         amount: 100,
@@ -235,7 +235,7 @@ describe('RouletteGame', () => {
       expect(payout).toBe(100) // 100 * 1
     })
 
-    it('should return zero payout for losing bets', async () => {
+    test('should return zero payout for losing bets', async () => {
       const bet: RouletteBet = {
         userId: 'user123',
         amount: 100,
@@ -258,7 +258,7 @@ describe('RouletteGame', () => {
   })
 
   describe('Static Methods', () => {
-    it('should return valid bet types information', () => {
+    test('should return valid bet types information', () => {
       const betTypes = RouletteGame.getBetTypes()
 
       expect(betTypes).toBeDefined()
@@ -279,7 +279,7 @@ describe('RouletteGame', () => {
       expect(betTypes.number.example).toBeDefined()
     })
 
-    it('should return valid wheel layout', () => {
+    test('should return valid wheel layout', () => {
       const wheelLayout = RouletteGame.getWheelLayout()
 
       expect(wheelLayout).toBeDefined()
@@ -311,7 +311,7 @@ describe('RouletteGame', () => {
   })
 
   describe('Edge Cases', () => {
-    it('should handle zero winning number correctly for outside bets', async () => {
+    test('should handle zero winning number correctly for outside bets', async () => {
       const outsideBets = ['red', 'black', 'odd', 'even', 'low', 'high']
 
       for (const betType of outsideBets) {
@@ -336,7 +336,7 @@ describe('RouletteGame', () => {
       }
     })
 
-    it('should handle boundary numbers for low/high bets', async () => {
+    test('should handle boundary numbers for low/high bets', async () => {
       const lowBet: RouletteBet = {
         userId: 'user123',
         amount: 100,
@@ -372,7 +372,7 @@ describe('RouletteGame', () => {
       expect(rouletteGame.calculatePayout(highBet, highWinResult as any)).toBe(100)
     })
 
-    it('should handle maximum bet amounts', async () => {
+    test('should handle maximum bet amounts', async () => {
       const maxBet: RouletteBet = {
         userId: 'user123',
         amount: 10000, // Maximum bet
@@ -390,7 +390,7 @@ describe('RouletteGame', () => {
       }
     })
 
-    it('should handle minimum bet amounts', async () => {
+    test('should handle minimum bet amounts', async () => {
       const minBet: RouletteBet = {
         userId: 'user123',
         amount: 1, // Minimum bet
@@ -405,7 +405,7 @@ describe('RouletteGame', () => {
   })
 
   describe('Randomness and Fairness', () => {
-    it('should produce different results across multiple games', async () => {
+    test('should produce different results across multiple games', async () => {
       const bet: RouletteBet = {
         userId: 'user123',
         amount: 100,
@@ -430,7 +430,7 @@ describe('RouletteGame', () => {
       expect(uniqueResults.size).toBeGreaterThan(1)
     })
 
-    it('should maintain statistical properties over many games', async () => {
+    test('should maintain statistical properties over many games', async () => {
       const bet: RouletteBet = {
         userId: 'user123',
         amount: 100,

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'bun:test'
+import { describe, test, expect } from 'bun:test'
 import '../test-utils/setup' // Setup test environment
 import { Hono } from 'hono'
 import { rateLimitMiddleware, globalRateLimiter } from '../middleware/rate-limit'
@@ -34,7 +34,7 @@ describe('Security Hardening', () => {
       app.get('/test', (c) => c.json({ success: true }))
     })
 
-    it('should allow requests within limit', async () => {
+    test('should allow requests within limit', async () => {
       const req = new Request('http://localhost/test', {
         headers: { 'X-Real-IP': '192.168.1.1' }
       })
@@ -47,7 +47,7 @@ describe('Security Hardening', () => {
       }
     })
 
-    it('should block requests exceeding limit', async () => {
+    test('should block requests exceeding limit', async () => {
       const req = new Request('http://localhost/test', {
         headers: { 'X-Real-IP': '192.168.1.2' }
       })
@@ -65,7 +65,7 @@ describe('Security Hardening', () => {
       expect(body.error.message).toBe('Too many requests. Please try again later.')
     })
 
-    it('should include rate limit headers', async () => {
+    test('should include rate limit headers', async () => {
       const req = new Request('http://localhost/test', {
         headers: { 'X-Real-IP': '192.168.1.3' }
       })
@@ -79,7 +79,7 @@ describe('Security Hardening', () => {
 
   describe('Input Validation and Sanitization', () => {
     describe('InputSanitizer', () => {
-      it('should sanitize strings', () => {
+      test('should sanitize strings', () => {
         const malicious = '<script>alert("xss")</script>\x00\x01test'
         const sanitized = InputSanitizer.sanitizeString(malicious)
         expect(sanitized).toBe('<script>alert("xss")</script>test')
@@ -87,32 +87,32 @@ describe('Security Hardening', () => {
         expect(sanitized).not.toContain('\x01')
       })
 
-      it('should escape HTML', () => {
+      test('should escape HTML', () => {
         const html = '<div onclick="alert(1)">Test & "quotes"</div>'
         const escaped = InputSanitizer.escapeHtml(html)
         expect(escaped).toBe('&lt;div onclick=&quot;alert(1)&quot;&gt;Test &amp; &quot;quotes&quot;&lt;&#x2F;div&gt;')
       })
 
-      it('should sanitize email addresses', () => {
+      test('should sanitize email addresses', () => {
         const email = '  TEST@EXAMPLE.COM  '
         const sanitized = InputSanitizer.sanitizeEmail(email)
         expect(sanitized).toBe('test@example.com')
       })
 
-      it('should sanitize usernames', () => {
+      test('should sanitize usernames', () => {
         const username = '  test<>user123!@#  '
         const sanitized = InputSanitizer.sanitizeUsername(username)
         expect(sanitized).toBe('testuser123')
       })
 
-      it('should sanitize numbers', () => {
+      test('should sanitize numbers', () => {
         expect(InputSanitizer.sanitizeNumber('123.45')).toBe(123.45)
         expect(InputSanitizer.sanitizeNumber('invalid')).toBe(null)
         expect(InputSanitizer.sanitizeNumber(Infinity)).toBe(null)
         expect(InputSanitizer.sanitizeNumber(NaN)).toBe(null)
       })
 
-      it('should deep sanitize objects', () => {
+      test('should deep sanitize objects', () => {
         const obj = {
           name: '<script>alert(1)</script>',
           age: '25',
@@ -132,7 +132,7 @@ describe('Security Hardening', () => {
     })
 
     describe('ThreatDetector', () => {
-      it('should detect SQL injection attempts', () => {
+      test('should detect SQL injection attempts', () => {
         const sqlInjections = [
           "'; DROP TABLE users; --",
           "1' OR '1'='1",
@@ -148,7 +148,7 @@ describe('Security Hardening', () => {
         expect(ThreatDetector.detectSqlInjection('normal text')).toBe(false)
       })
 
-      it('should detect XSS attempts', () => {
+      test('should detect XSS attempts', () => {
         const xssAttempts = [
           '<script>alert("xss")</script>',
           '<iframe src="javascript:alert(1)"></iframe>',
@@ -164,7 +164,7 @@ describe('Security Hardening', () => {
         expect(ThreatDetector.detectXss('normal text')).toBe(false)
       })
 
-      it('should detect path traversal attempts', () => {
+      test('should detect path traversal attempts', () => {
         const pathTraversals = [
           '../../../etc/passwd',
           '..\\..\\windows\\system32',
@@ -179,7 +179,7 @@ describe('Security Hardening', () => {
         expect(ThreatDetector.detectPathTraversal('normal/path/file.txt')).toBe(false)
       })
 
-      it('should detect command injection attempts', () => {
+      test('should detect command injection attempts', () => {
         const commandInjections = [
           'test; rm -rf /',
           'file | cat /etc/passwd',
@@ -195,7 +195,7 @@ describe('Security Hardening', () => {
         expect(ThreatDetector.detectCommandInjection('normal text')).toBe(false)
       })
 
-      it('should analyze input for multiple threats', () => {
+      test('should analyze input for multiple threats', () => {
         const maliciousInput = "'; DROP TABLE users; <script>alert(1)</script> ../../../etc/passwd"
         const threats = ThreatDetector.analyzeInput(maliciousInput)
         
@@ -226,7 +226,7 @@ describe('Security Hardening', () => {
         })
       })
 
-      it('should validate and sanitize valid input', async () => {
+      test('should validate and sanitize valid input', async () => {
         const req = new Request('http://localhost/test', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -246,7 +246,7 @@ describe('Security Hardening', () => {
         expect(body.data.age).toBe(25)
       })
 
-      it('should reject invalid input', async () => {
+      test('should reject invalid input', async () => {
         const req = new Request('http://localhost/test', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -265,7 +265,7 @@ describe('Security Hardening', () => {
         expect(body.error.code).toBe('VALIDATION_ERROR')
       })
 
-      it('should detect and reject malicious input', async () => {
+      test('should detect and reject malicious input', async () => {
         const req = new Request('http://localhost/test', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -286,7 +286,7 @@ describe('Security Hardening', () => {
   })
 
   describe('Audit Logging', () => {
-    it('should log audit events', async () => {
+    test('should log audit events', async () => {
       const mockEntry = {
         user_id: 'test-user-id',
         action: 'test_action',
@@ -304,7 +304,7 @@ describe('Security Hardening', () => {
       expect(mockEntry.success).toBe(true)
     })
 
-    it('should log successful actions', async () => {
+    test('should log successful actions', async () => {
       // Should not throw any errors
       await AuditLogger.logSuccess(
         'test_action',
@@ -318,7 +318,7 @@ describe('Security Hardening', () => {
       )
     })
 
-    it('should log failed actions', async () => {
+    test('should log failed actions', async () => {
       // Should not throw any errors
       await AuditLogger.logFailure(
         'test_action',
@@ -339,7 +339,7 @@ describe('Security Hardening', () => {
       sessionManager.destroy()
     })
 
-    it('should register and validate sessions', () => {
+    test('should register and validate sessions', () => {
       const sessionId = 'test-session-123'
       const userId = 'user-123'
       
@@ -352,7 +352,7 @@ describe('Security Hardening', () => {
       expect(session?.ipAddress).toBe('192.168.1.1')
     })
 
-    it('should update session activity', () => {
+    test('should update session activity', () => {
       const sessionId = 'test-session-456'
       const userId = 'user-456'
       
@@ -367,7 +367,7 @@ describe('Security Hardening', () => {
       }, 10)
     })
 
-    it('should remove expired sessions', () => {
+    test('should remove expired sessions', () => {
       const sessionId = 'test-session-expired'
       const userId = 'user-expired'
       
@@ -384,7 +384,7 @@ describe('Security Hardening', () => {
       expect(sessionManager.isSessionValid(sessionId)).toBe(false)
     })
 
-    it('should get user sessions', () => {
+    test('should get user sessions', () => {
       const userId = 'user-multi-session'
       
       sessionManager.registerSession('session-1', userId)
@@ -396,7 +396,7 @@ describe('Security Hardening', () => {
       expect(userSessions.every(s => s.sessionId.startsWith('session-'))).toBe(true)
     })
 
-    it('should revoke user sessions', () => {
+    test('should revoke user sessions', () => {
       const userId = 'user-revoke-test'
       
       sessionManager.registerSession('session-a', userId)
@@ -417,7 +417,7 @@ describe('Security Hardening', () => {
       ipSecurityManager.destroy()
     })
 
-    it('should track IP violations', () => {
+    test('should track IP violations', () => {
       const ip = '192.168.1.100'
       
       expect(ipSecurityManager.getViolationCount(ip)).toBe(0)
@@ -432,7 +432,7 @@ describe('Security Hardening', () => {
       expect(ipSecurityManager.isBlocked(ip)).toBe(false) // Not blocked yet
     })
 
-    it('should block IPs after threshold violations', () => {
+    test('should block IPs after threshold violations', () => {
       const ip = '192.168.1.101'
       
       // Record violations to exceed threshold (10)
@@ -455,7 +455,7 @@ describe('Security Hardening', () => {
       app.get('/test', (c) => c.json({ success: true }))
     })
 
-    it('should add security headers', async () => {
+    test('should add security headers', async () => {
       const req = new Request('http://localhost/test')
       const res = await app.fetch(req)
       
@@ -467,7 +467,7 @@ describe('Security Hardening', () => {
       expect(res.headers.get('Server')).toBe('TarkovCasino')
     })
 
-    it('should add cache control headers for API endpoints', async () => {
+    test('should add cache control headers for API endpoints', async () => {
       app.get('/api/test', (c) => c.json({ success: true }))
       
       const req = new Request('http://localhost/api/test')
@@ -506,7 +506,7 @@ describe('Integration Tests', () => {
     })
   })
 
-  it('should apply full security stack', async () => {
+  test('should apply full security stack', async () => {
     const req = new Request('http://localhost/secure-endpoint', {
       method: 'POST',
       headers: { 
@@ -535,7 +535,7 @@ describe('Integration Tests', () => {
     expect(body.data.email).toBe('test@example.com')
   })
 
-  it('should reject malicious requests', async () => {
+  test('should reject malicious requests', async () => {
     const req = new Request('http://localhost/secure-endpoint', {
       method: 'POST',
       headers: { 
@@ -557,7 +557,7 @@ describe('Integration Tests', () => {
     expect(body.error.message).toBe('Invalid input detected')
   })
 
-  it('should enforce rate limits', async () => {
+  test('should enforce rate limits', async () => {
     const requests = []
     
     // Make 6 requests (limit is 5)

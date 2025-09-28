@@ -202,7 +202,7 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
       // Setup animation after a brief delay
       setTimeout(async () => {
         recordFlowStep(flowId, 'animation_setup_delay', true)
-        await setupAnimation(selectedCase, openingResponse, flowId)
+        await setupCaseOpeningAnimation(selectedCase, flowId, undefined, openingResponse)
       }, 1000)
 
     } catch (err) {
@@ -226,8 +226,24 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
     }
   }, [user, balance, gameState.phase, caseData, caseOpening, errorHandling, toast, playCaseOpen, transitionToPhase, startUserFlow, recordFlowStep, recordErrorRecovery, completeUserFlow, monitorAPICall, monitorGameAction, startTiming])
 
-  const completeCaseOpening = useCallback(async (result: CaseOpeningResult, selectedCase: CaseType, flowId?: string, caseOpeningStart?: number, openingResponse?: CaseOpeningResponse) => {
+  // Consolidated function using TypeScript function overloading for flexible parameter handling
+  const setupCaseOpeningAnimation: {
+    (selectedCase: CaseType, flowId: string, result: CaseOpeningResult): Promise<void>;
+    (selectedCase: CaseType, flowId: string, result: undefined, openingResponse: CaseOpeningResponse): Promise<void>;
+  } = useCallback(async (
+    selectedCase: CaseType,
+    flowId: string,
+    result?: CaseOpeningResult,
+    openingResponse?: CaseOpeningResponse
+  ): Promise<void> => {
+    // Validate that we have a result either directly or from openingResponse
+    if (!result && !openingResponse?.opening_result) {
+      throw new Error('Either result or openingResponse must be provided')
+    }
+
+    const caseResult = result || openingResponse!.opening_result
     const animationSetupTiming = startTiming('animation_setup')
+
     try {
       recordFlowStep(flowId, 'animation_setup_started', true)
 
@@ -257,10 +273,7 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
         animationConfig
       }))
 
-      // Use the result passed as parameter
-      const caseResult = result
       const winningItem = caseResult.item_won
-      const winningPosition = calculateWinningPosition(CAROUSEL_TIMING.SEQUENCE_LENGTH)
 
       // Ensure we have a proper item pool
       let itemPool = caseItems.length > 0 ? caseItems : getFallbackItems(winningItem)
@@ -276,7 +289,49 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
 
       recordFlowStep(flowId, 'item_pool_filtered', true, `${itemPool.length} valid items`)
 
+      // Check if we have enough items for a proper carousel animation
+      const MIN_CAROUSEL_ITEMS = 10 // Need at least 10 items for smooth carousel experience
+      if (itemPool.length < MIN_CAROUSEL_ITEMS) {
+        // Not enough items for carousel - use reveal animation instead
+        recordFlowStep(flowId, 'insufficient_items_for_carousel', false, `Only ${itemPool.length} items, need ${MIN_CAROUSEL_ITEMS}`)
+
+        // Transition to revealing phase for simple reveal animation
+        transitionToPhase('revealing', 'Insufficient items for carousel, using reveal animation')
+        recordFlowStep(flowId, 'reveal_phase_started', true)
+
+        setGameState(prev => ({
+          ...prev,
+          phase: 'revealing',
+          result: caseResult,
+          pendingCompletion: {
+            caseTypeId: selectedCase.id,
+            openingId: caseResult.opening_id,
+            token: '',
+            predeterminedWinner: caseResult
+          }
+        }))
+
+        // Complete after reveal animation delay
+        setTimeout(() => {
+          recordFlowStep(flowId, 'reveal_delay_completed', true)
+          transitionToPhase('complete', 'Reveal animation completed')
+          // recordCaseOpening(caseResult) // TODO: Fix function signature
+          setGameState(prev => ({
+            ...prev,
+            phase: 'complete',
+            result: caseResult,
+            history: [caseResult, ...prev.history.slice(0, 9)],
+            pendingCompletion: undefined
+          }))
+        }, 1500)
+
+        animationSetupTiming()
+        recordFlowStep(flowId, 'animation_setup_completed', true)
+        return
+      }
+
       // Generate the full sequence with winning item at the correct position
+      const winningPosition = calculateWinningPosition(CAROUSEL_TIMING.SEQUENCE_LENGTH)
       const sequenceGenerationTiming = startTiming('sequence_generation')
       const carouselSequence = generateCarouselSequence(itemPool, winningItem, CAROUSEL_TIMING.SEQUENCE_LENGTH, winningPosition)
       sequenceGenerationTiming()
@@ -327,8 +382,10 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
 
       if (recovered) {
         recordFlowStep(flowId, 'fallback_attempted', true)
-        // Try reveal fallback
-        await handleRevealFallback(selectedCase, openingResponse, flowId)
+        // Try reveal fallback - only if we have openingResponse
+        if (openingResponse) {
+          await handleRevealFallback(selectedCase, openingResponse, flowId)
+        }
       } else {
         transitionToPhase('error', 'Animation setup failed')
         setGameState(prev => ({
@@ -358,11 +415,19 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
         history: [result, ...prev.history.slice(0, 9)]
       }))
 
-      // Show winnings message and update game state
+      // Complete the reveal animation after a short delay
       setTimeout(() => {
         recordFlowStep(flowId, 'reveal_delay_completed', true)
-        completeCaseOpening(result, selectedCase, flowId, undefined, openingResponse)
-      }, 500)
+        // Transition to complete phase after reveal animation
+        transitionToPhase('complete', 'Reveal animation completed')
+        // recordCaseOpening(result) // TODO: Fix function signature
+        setGameState(prev => ({
+          ...prev,
+          phase: 'complete',
+          result,
+          history: [result, ...prev.history.slice(0, 9)]
+        }))
+      }, 1000) // Give time for reveal animation to play
 
     } catch (error) {
       console.error('Reveal fallback error:', error)
@@ -375,122 +440,8 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
       }))
       completeUserFlow(flowId)
     }
-  }, [transitionToPhase, recordFlowStep, completeCaseOpening, completeUserFlow])
+  }, [transitionToPhase, recordFlowStep, completeUserFlow])
 
-  const setupAnimation = useCallback(async (selectedCase: CaseType, openingResponse: CaseOpeningResponse, flowId: string) => {
-    const animationSetupTiming = startTiming('animation_setup')
-    try {
-      recordFlowStep(flowId, 'animation_setup_started', true)
-
-      // Load case items for carousel generation
-      const caseItemsTiming = startTiming('case_items_load')
-      const caseItems = await caseOpening.loadCaseItems(selectedCase.id)
-      caseItemsTiming()
-      recordFlowStep(flowId, 'case_items_loaded', true, `${caseItems.length} items loaded`)
-
-      // Transition to opening phase with carousel animation config
-      transitionToPhase('opening', 'Setting up carousel animation')
-      recordFlowStep(flowId, 'animation_config_created', true)
-
-      const animationConfig: AnimationConfig = {
-        type: 'carousel',
-        duration: CAROUSEL_TIMING.TOTAL_DURATION,
-        easing: [0.25, 0.46, 0.45, 0.94], // Smooth deceleration easing
-        items: caseItems
-      }
-
-      caseAnimation.startAnimation(animationConfig)
-      recordFlowStep(flowId, 'animation_started', true)
-
-      setGameState(prev => ({
-        ...prev,
-        phase: 'opening',
-        animationConfig
-      }))
-
-      // Use the result from the opening response (since we have the full result now)
-      const caseResult = openingResponse.opening_result
-      const winningItem = caseResult.item_won
-      const winningPosition = calculateWinningPosition(CAROUSEL_TIMING.SEQUENCE_LENGTH)
-
-      // Ensure we have a proper item pool
-      let itemPool = caseItems.length > 0 ? caseItems : getFallbackItems(winningItem)
-
-      // Filter out any invalid items
-      itemPool = itemPool.filter(item =>
-        item &&
-        item.id &&
-        item.name &&
-        item.rarity &&
-        typeof item.base_value === 'number'
-      )
-
-      recordFlowStep(flowId, 'item_pool_filtered', true, `${itemPool.length} valid items`)
-
-      // Generate the full sequence with winning item at the correct position
-      const sequenceGenerationTiming = startTiming('sequence_generation')
-      const carouselSequence = generateCarouselSequence(itemPool, winningItem, CAROUSEL_TIMING.SEQUENCE_LENGTH, winningPosition)
-      sequenceGenerationTiming()
-      recordFlowStep(flowId, 'sequence_generated', true, `Sequence length: ${carouselSequence.length}`)
-
-      // Transition to animating phase with carousel data
-      transitionToPhase('animating', 'Starting carousel animation')
-      recordFlowStep(flowId, 'animating_phase_started', true)
-
-      const updatedAnimationConfig: AnimationConfig = {
-        ...animationConfig,
-        items: carouselSequence,
-        winningIndex: winningPosition
-      }
-
-      caseAnimation.startAnimation(updatedAnimationConfig)
-      recordFlowStep(flowId, 'carousel_animation_started', true)
-
-      setGameState(prev => ({
-        ...prev,
-        phase: 'animating',
-        result: caseResult,
-        animationConfig: updatedAnimationConfig,
-        pendingCompletion: {
-          caseTypeId: selectedCase.id,
-          openingId: caseResult.opening_id,
-          token: '', // Not needed with simplified API
-          predeterminedWinner: caseResult
-        }
-      }))
-
-      animationSetupTiming()
-      recordFlowStep(flowId, 'animation_setup_completed', true)
-
-    } catch (error) {
-      console.error('Animation setup error:', error)
-      animationSetupTiming()
-
-      recordFlowStep(flowId, 'animation_setup_error', false, error instanceof Error ? error.message : 'Unknown error')
-
-      // Fallback to reveal animation
-      const recovered = await errorHandling.handleError(
-        error instanceof Error ? error : new Error('Animation setup failed'),
-        'animation setup'
-      )
-
-      recordErrorRecovery(recovered)
-
-      if (recovered) {
-        recordFlowStep(flowId, 'fallback_attempted', true)
-        // Try reveal fallback
-        await handleRevealFallback(selectedCase, openingResponse, flowId)
-      } else {
-        transitionToPhase('error', 'Animation setup failed')
-        setGameState(prev => ({
-          ...prev,
-          phase: 'error',
-          error: 'Failed to setup animation'
-        }))
-        completeUserFlow(flowId)
-      }
-    }
-  }, [caseOpening, caseAnimation, transitionToPhase, errorHandling, startTiming, recordFlowStep, recordErrorRecovery, completeUserFlow, handleRevealFallback])
 
   const completeAnimation = useCallback(async (result: CaseOpeningResult) => {
     if (!gameState.pendingCompletion) {
@@ -505,7 +456,18 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
         throw new Error('Failed to complete case opening')
       }
 
-      await completeCaseOpening(finalResult, gameState.selectedCase!, undefined, undefined, undefined)
+      // Animation is complete - transition to complete phase with final result
+      transitionToPhase('complete', 'Case opening animation completed')
+      // recordCaseOpening(finalResult) // TODO: Fix function signature
+
+      setGameState(prev => ({
+        ...prev,
+        phase: 'complete',
+        result: finalResult,
+        history: [finalResult, ...prev.history.slice(0, 9)],
+        pendingCompletion: undefined
+      }))
+
     } catch (error) {
       console.error('Animation completion error:', error)
       const recovered = await errorHandling.handleError(
@@ -524,7 +486,7 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
         }))
       }
     }
-  }, [gameState.pendingCompletion, gameState.selectedCase, caseOpening, completeCaseOpening, errorHandling, transitionToPhase, toast])
+  }, [gameState.pendingCompletion, gameState.selectedCase, caseOpening, errorHandling, transitionToPhase, toast])
 
   /**
    * Resets the game to idle state while preserving opening history.
