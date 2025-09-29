@@ -113,3 +113,6 @@ Thumbs.db
 
 # Supabase
 .supabase/
+
+# CS2 Case Simulator
+cs2-case-simulator/
