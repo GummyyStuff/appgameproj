@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { motion, useAnimation, Easing } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { TarkovItem } from './ItemReveal'
 import { formatCurrency } from '../../utils/currency'
 import { useSoundEffects } from '../../hooks/useSoundEffects'
-import VirtualizedCarousel from './VirtualizedCarousel'
-import { PerformanceMonitor, optimizeForPerformance } from '../../utils/performanceMonitor'
 
 export interface CarouselItemData {
   item: TarkovItem
@@ -18,23 +16,11 @@ interface CaseOpeningCarouselProps {
   isSpinning: boolean
   onSpinComplete: () => void
   finalItem?: TarkovItem | null
-  animationDuration?: number
   itemWidth?: number
-  visibleItems?: number
   soundEnabled?: boolean
-  // New unified animation props
   duration?: number
-  easing?: Easing | Easing[]
 }
 
-interface CarouselAnimationConfig {
-  totalItems: number
-  itemWidth: number
-  winningIndex: number
-  spinDuration: number
-  decelerationDuration: number
-  finalPosition: number
-}
 
 const rarityColors = {
   common: {
@@ -79,512 +65,200 @@ const CaseOpeningCarousel: React.FC<CaseOpeningCarouselProps> = ({
   onSpinComplete,
   finalItem,
   itemWidth = 160,
-  visibleItems = 7,
   soundEnabled = true,
-  duration,
-  easing
+  duration = 6000
 }) => {
   const { playCaseOpen, playCaseReveal } = useSoundEffects(soundEnabled)
+
+  // Single layer carousel system
   const carouselRef = useRef<HTMLDivElement>(null)
-  const controls = useAnimation()
-  const [animationPhase, setAnimationPhase] = useState<'idle' | 'spinning' | 'decelerating' | 'settling' | 'complete'>('idle')
 
-  const [blurIntensity, setBlurIntensity] = useState(0)
-  const [shouldShake, setShouldShake] = useState(false)
+  const [scrollX, setScrollX] = useState(0)
+  const [isAnimating, setIsAnimating] = useState(false)
 
-  // Performance optimization: use virtualization only when not animating and for large item sets
-  const performanceOpts = optimizeForPerformance()
-  const shouldUseVirtualization = !isSpinning && (items.length > 15 || !performanceOpts.hardwareAcceleration)
-  const effectiveVisibleItems = shouldUseVirtualization ? Math.min(visibleItems, 7) : visibleItems
+  // Simplified dimensions
+  const isMobile = window.innerWidth < 640
+  const skinWidth = isMobile ? 160 : 256
 
-  // Calculate carousel dimensions
-  const viewportWidth = effectiveVisibleItems * itemWidth
-  const centerOffset = viewportWidth / 2 - itemWidth / 2
-  
-  // Validate winning index
+  // Simple easing for smooth animation
+  const easingStyle = `transform ${duration}ms cubic-bezier(0.1, 0.4, 0.4, 1)`
+
+  // Calculate positions
   const safeWinningIndex = Math.max(0, Math.min(winningIndex, items.length - 1))
 
-  // Animation configuration - use provided values or defaults
-  const animationConfig: CarouselAnimationConfig = {
-    totalItems: items.length,
-    itemWidth,
-    winningIndex: safeWinningIndex,
-    spinDuration: duration ? duration * 0.4 : 2000, // 40% for spinning phase
-    decelerationDuration: duration ? duration * 0.6 : 3000, // 60% for deceleration phase
-    finalPosition: -(safeWinningIndex * itemWidth - centerOffset)
-  }
-
-  // Calculate initial position - start at the beginning of the sequence
-  // The carousel should start showing the first few items, not the winning item
-  const initialPosition = 0
-
-  // Reset animation state when items change
-  useEffect(() => {
-    setAnimationPhase('idle')
-    setBlurIntensity(0)
-    setShouldShake(false)
-    // Reset to initial position when items change
-    if (items.length > 0) {
-      controls.set({ x: initialPosition })
-    }
-  }, [items, controls])
-
-  // Handle animation phase reset when spinning stops
-  useEffect(() => {
-    if (!isSpinning) {
-      setAnimationPhase('idle')
-      setBlurIntensity(0)
-      setShouldShake(false)
-    }
-  }, [isSpinning])
+  // Single layer transform
+  const carouselTransform = `translateX(-${scrollX}px)`
 
   useEffect(() => {
     if (isSpinning && items.length > 0) {
-      // Validate items before starting animation
-      const validItems = items.filter(itemData => itemData && itemData.item)
-      if (validItems.length === 0) {
-        console.error('CaseOpeningCarousel: No valid items found')
-        onSpinComplete()
-        return
-      }
       startCarouselAnimation()
     }
   }, [isSpinning, items])
 
-  const startCarouselAnimation = async () => {
-    setAnimationPhase('spinning')
-
-    // Start performance monitoring
-    const perfMonitor = PerformanceMonitor.getInstance()
-    perfMonitor.startAnimationMonitoring()
-
-    // Set up performance monitoring callback for fallback
-    let performanceIssueDetected = false
-    const unsubscribe = perfMonitor.subscribe((metrics) => {
-      if (metrics.frameRate < 30 && !performanceIssueDetected) {
-        performanceIssueDetected = true
-        console.warn('Performance issue detected, switching to optimized mode')
-        // Could trigger fallback animation here if needed
-      }
-    })
-
-    // Clean up subscription when animation completes
-    setTimeout(() => unsubscribe(), animationConfig.spinDuration + animationConfig.decelerationDuration + 1000)
-
-    // Play carousel start sound
+  const startCarouselAnimation = () => {
+    setIsAnimating(true)
     playCaseOpen()
 
-    try {
-      // Calculate positions for smooth single-direction animation
-      const finalPosition = animationConfig.finalPosition
+    // Get the actual container width at animation start time
+    const currentContainerWidth = carouselRef.current?.parentElement?.clientWidth || window.innerWidth
 
-      // Start far to the right for excitement (traditional slot machine spin direction)
-      const extraSpinDistance = itemWidth * 50 // Extra distance for excitement
-      const startPosition = finalPosition + extraSpinDistance
-      
-      // Debug the winning item position calculation
-      const winningItemLeftEdge = safeWinningIndex * itemWidth
-      const winningItemCenter = winningItemLeftEdge + (itemWidth / 2)
-      const viewportCenter = centerOffset + (itemWidth / 2)
-      
-      
-      // Firefox-compatible animation approach
-      setBlurIntensity(8)
-      setAnimationPhase('spinning')
-      
-      // Firefox has issues with complex easing curves causing direction reversals
-      // Use linear easing and multiple simple animations for Firefox compatibility
-      const isFirefox = navigator.userAgent.toLowerCase().includes('firefox')
-      const easing = isFirefox ? 'linear' : [0.1, 0.8, 0.9, 1]
-      
-      // Never-overshoot approach: Calculate positions to ensure we never go past the winning item
-      
-      // The key insight: we must animate in the correct direction
-      // For right-to-left spin, finalPosition should be less than startPosition
-      const totalDistance = finalPosition - startPosition
+    // Simple centering calculation
+    const centerOffset = currentContainerWidth / 2 - skinWidth / 2
+    const targetScroll = safeWinningIndex * skinWidth - centerOffset
 
-      // Safety check: ensure we have a valid animation distance
-      if (Math.abs(totalDistance) < 100) {
-        console.error('Animation distance too small - may cause jerky movement', {
-          startPosition,
-          finalPosition,
-          totalDistance
-        })
+    console.log('🎰 Carousel Animation Debug:', {
+      safeWinningIndex,
+      skinWidth,
+      containerWidth: currentContainerWidth,
+      centerOffset,
+      targetScroll,
+      winningItemInSequence: items[safeWinningIndex]?.item?.name,
+      winningItemFromBackend: finalItem?.name,
+      sequenceLength: items.length
+    })
 
-        // Fallback: animate directly to final position
-        controls.set({ x: startPosition })
-        await controls.start({
-          x: finalPosition,
-          transition: {
-            duration: (animationConfig.spinDuration + animationConfig.decelerationDuration) / 1000,
-            ease: [0.15, 0.8, 0.4, 1], // Same improved easing
-            type: "tween" as const
-          }
-        })
-      } else {
-        // SINGLE SMOOTH ANIMATION - No phases, no intermediate positions, no direction changes
+    // Initialize position
+    if (carouselRef.current) {
+      carouselRef.current.style.transformOrigin = 'center center'
+      carouselRef.current.style.transition = 'none'
+      carouselRef.current.style.transform = 'translateX(0)'
+    }
 
-        // Single smooth animation from start directly to final position
-        // Use a custom easing that starts fast and decelerates naturally (like a real slot machine)
-        const animationEasing = easing ?? [0.15, 0.8, 0.4, 1] // More aggressive deceleration
-        const animationDuration = (animationConfig.spinDuration + animationConfig.decelerationDuration) / 1000
+    // Set up audio feedback during animation
+    const thresholds = items.map((_, i) => i * skinWidth - currentContainerWidth / 2 + 2)
+    const playedIndices = new Set<number>()
+    const startTime = Date.now()
 
-        // Set initial position to start position for spinning effect
-        controls.set({ x: startPosition })
+    const checkPosition = () => {
+      if (!carouselRef.current) return
+      const style = getComputedStyle(carouselRef.current)
+      const transform = style.transform
+      let currentScroll = 0
 
-        // Enable hardware acceleration and performance optimizations
-        const animationPromise = controls.start({
-          x: finalPosition,
-          transition: {
-            duration: animationDuration,
-            ease: animationEasing as Easing | Easing[],
-            // Optimize for smooth animation
-            type: "tween" as const
-          }
-        })
-
-        // Add timeout as backup in case animation promise doesn't resolve properly
-        const timeoutPromise = new Promise<void>((resolve) => {
-          setTimeout(() => {
-            resolve()
-          }, animationDuration * 1000 + 500) // Add 500ms buffer
-        })
-
-        // Smooth visual phase transitions during animation
-        // Start deceleration phase 80% through the spin duration
-        const decelerationStart = Math.floor(animationConfig.spinDuration * 0.8)
-        setTimeout(() => {
-          setAnimationPhase('decelerating')
-          setBlurIntensity(1.0) // Gentle blur during deceleration
-          playCaseReveal()
-        }, decelerationStart)
-
-        // Start settling phase near the end
-        const settlingStart = animationConfig.spinDuration + Math.floor(animationConfig.decelerationDuration * 0.7)
-        setTimeout(() => {
-          setAnimationPhase('settling')
-          setBlurIntensity(0)
-        }, settlingStart)
-
-        // Wait for either animation completion or timeout
-        await Promise.race([animationPromise, timeoutPromise])
-      }
-
-      // Phase 3: Settling
-      setAnimationPhase('settling')
-      setBlurIntensity(0)
-      await new Promise(resolve => setTimeout(resolve, 300))
-
-      // Animation complete
-      setAnimationPhase('complete')
-
-      // Stop performance monitoring
-      perfMonitor.stopAnimationMonitoring()
-
-      // Check if winning item is high rarity for screen shake
-      const winningItem = items[safeWinningIndex]
-      if (winningItem && winningItem.item) {
-        const itemRarity = winningItem.item.rarity || 'common'
-        if (itemRarity === 'epic' || itemRarity === 'legendary') {
-          setShouldShake(true)
-          setTimeout(() => setShouldShake(false), 1000)
+      if (transform && transform !== 'none') {
+        const match = transform.match(/matrix.*\((.+)\)/)
+        if (match) {
+          const values = match[1].split(', ')
+          currentScroll = -parseFloat(values[4])
         }
       }
 
-      onSpinComplete()
+      // Play audio feedback as items pass through center
+      if (soundEnabled) {
+        thresholds.forEach((threshold, index) => {
+          if (!playedIndices.has(index) && currentScroll >= threshold) {
+            playedIndices.add(index)
+            playCaseReveal()
+          }
+        })
+      }
 
-    } catch (error) {
-      console.error('Carousel animation error:', error)
-      setAnimationPhase('complete')
-      // Stop performance monitoring even on error
-      perfMonitor.stopAnimationMonitoring()
-      onSpinComplete()
+      if (Date.now() - startTime < duration) {
+        requestAnimationFrame(checkPosition)
+      }
     }
+
+    // Start animation after a brief delay
+    setTimeout(() => {
+      if (carouselRef.current) carouselRef.current.style.transition = easingStyle
+      setScrollX(targetScroll)
+      requestAnimationFrame(checkPosition)
+    }, 50)
+
+    // Complete animation
+    setTimeout(() => {
+      setIsAnimating(false)
+
+      // Debug: Check what item is actually centered
+      const centerOffset = currentContainerWidth / 2 - skinWidth / 2
+      const centeredItemIndex = Math.round((targetScroll + centerOffset) / skinWidth)
+
+      console.log('🎰 Carousel Animation Complete:', {
+        targetScroll,
+        centerOffset,
+        calculatedCenteredIndex: centeredItemIndex,
+        centeredItem: items[centeredItemIndex]?.item?.name,
+        isWinningItem: items[centeredItemIndex]?.isWinning,
+        finalItem: finalItem?.name
+      })
+
+      onSpinComplete()
+    }, duration)
   }
 
   return (
     <div className="flex justify-center w-full">
-      <motion.div 
-        className="relative"
-        animate={shouldShake ? {
-          x: [0, -2, 2, -2, 2, 0],
-          y: [0, -1, 1, -1, 1, 0]
-        } : {}}
-        transition={{ duration: 0.5, repeat: shouldShake ? 2 : 0 }}
-      >
-      {/* Carousel Container */}
-      <div 
-        className={`
-          relative overflow-hidden rounded-xl transition-all duration-300 mx-auto
-          ${animationPhase === 'spinning' 
-            ? 'bg-tarkov-dark/70 border-2 border-tarkov-accent/60 shadow-lg shadow-tarkov-accent/30' 
-            : animationPhase === 'complete'
-              ? 'bg-tarkov-dark/50 border-2 border-tarkov-accent/80 shadow-xl shadow-tarkov-accent/50'
-              : 'bg-tarkov-dark/50 border-2 border-tarkov-accent/30'
-          }
-        `}
-        style={{
-          width: viewportWidth, // Fixed width based on visible items
-          height: 280
-        }}
-      >
-        {/* Center Pointer Indicator */}
-        <div className="absolute top-0 left-1/2 transform -translate-x-1/2 z-20">
-          <div className="w-0 h-0 border-l-4 border-r-4 border-b-8 border-l-transparent border-r-transparent border-b-tarkov-accent drop-shadow-lg" />
-        </div>
+      <div className="relative h-32 sm:h-48 select-none w-full max-w-5xl mx-auto">
+        {/* Simple single-layer carousel */}
+        <div className="overflow-hidden relative w-full h-full bg-tarkov-dark/50 border-2 border-tarkov-accent/30 rounded-xl">
+          {/* Gradient fade edges */}
+          <div className="absolute top-0 left-0 w-12 h-full bg-gradient-to-r from-tarkov-dark via-tarkov-dark/60 to-transparent z-10 pointer-events-none" />
+          <div className="absolute top-0 right-0 w-12 h-full bg-gradient-to-l from-tarkov-dark via-tarkov-dark/60 to-transparent z-10 pointer-events-none" />
 
-        {/* Bottom Pointer Indicator */}
-        <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 z-20">
-          <div className="w-0 h-0 border-l-4 border-r-4 border-t-8 border-l-transparent border-r-transparent border-t-tarkov-accent drop-shadow-lg" />
-        </div>
-
-        {/* Center Selection Area Highlight */}
-        <div 
-          className="absolute top-0 bottom-0 bg-tarkov-accent/10 border-l-2 border-r-2 border-tarkov-accent/50 z-10"
-          style={{ 
-            left: centerOffset,
-            width: itemWidth
-          }}
-        />
-
-        {/* Carousel Items Container */}
-        {shouldUseVirtualization ? (
-          <VirtualizedCarousel
-            items={items}
-            winningIndex={winningIndex}
-            phase={animationPhase}
-            visibleCount={effectiveVisibleItems}
-            itemWidth={itemWidth}
-            className="absolute top-0 left-0 h-full"
-          />
-        ) : (
-          <motion.div
+          {/* Carousel items */}
+          <div
             ref={carouselRef}
-            className="flex absolute top-0 left-0 h-full transition-all duration-300"
-            animate={controls}
-            initial={{ x: initialPosition }}
-            style={{
-              width: items.length * itemWidth,
-              filter: (animationPhase === 'spinning' || animationPhase === 'decelerating') && blurIntensity > 0 ? `blur(${blurIntensity}px)` : 'none',
-              willChange: 'transform', // Optimize for animations
-              backfaceVisibility: 'hidden', // Prevent flickering
-              // Firefox-specific optimizations
-              transformStyle: 'preserve-3d',
-              WebkitTransformStyle: 'preserve-3d',
-              // Additional performance optimizations
-              contain: 'layout style paint',
-              WebkitFontSmoothing: 'antialiased',
-              MozOsxFontSmoothing: 'grayscale'
-            }}
+            className="flex absolute left-0 top-0 will-change-transform origin-center h-full"
+            style={{ transform: carouselTransform }}
           >
-            {items.map((itemData, index) => {
-              // Use finalItem for the winning index when animation is complete
-              const displayItemData = (index === winningIndex && animationPhase === 'complete' && finalItem)
-                ? { ...itemData, item: finalItem, isWinning: true }
-                : itemData
-
-              return (
+            {items.map((itemData, index) => (
+              <div key={itemData.id} className="sm:w-64 w-40 h-32 sm:h-48 flex-shrink-0 px-2 flex items-center justify-center">
                 <CarouselItem
-                  key={displayItemData.id}
-                  itemData={displayItemData}
-                  width={itemWidth}
-                  isWinning={displayItemData.isWinning && animationPhase === 'complete'}
-                  animationPhase={animationPhase}
+                  itemData={itemData}
+                  width={skinWidth}
+                  isWinning={index === safeWinningIndex && !isAnimating}
+                  animationPhase={isAnimating ? 'spinning' : 'complete'}
                 />
-              )
-            })}
-          </motion.div>
-        )}
-
-        {/* Enhanced Gradient Fade Edges */}
-        <div className="absolute top-0 left-0 w-12 h-full bg-gradient-to-r from-tarkov-dark via-tarkov-dark/60 to-transparent z-15 pointer-events-none" />
-        <div className="absolute top-0 right-0 w-12 h-full bg-gradient-to-l from-tarkov-dark via-tarkov-dark/60 to-transparent z-15 pointer-events-none" />
-
-        {/* Spinning animation effects */}
-        {animationPhase === 'spinning' && (
-          <>
-            {/* Speed lines effect */}
-            <motion.div
-              className="absolute inset-0 pointer-events-none overflow-hidden"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.3 }}
-              exit={{ opacity: 0 }}
-            >
-              {[...Array(6)].map((_, i) => (
-                <motion.div
-                  key={`speed-line-${i}`}
-                  className="absolute h-0.5 bg-gradient-to-r from-transparent via-tarkov-accent/60 to-transparent"
-                  style={{
-                    top: `${20 + i * 25}%`,
-                    width: '100%',
-                    left: 0
-                  }}
-                  animate={{
-                    x: ['-100%', '100%']
-                  }}
-                  transition={{
-                    duration: 0.5,
-                    repeat: Infinity,
-                    delay: i * 0.1,
-                    ease: 'linear'
-                  }}
-                />
-              ))}
-            </motion.div>
-            
-            {/* Pulsing border during spin */}
-            <motion.div
-              className="absolute inset-0 border-2 border-tarkov-accent/60 rounded-xl pointer-events-none"
-              animate={{
-                opacity: [0.3, 0.8, 0.3],
-                scale: [1, 1.01, 1]
-              }}
-              transition={{
-                duration: 0.8,
-                repeat: Infinity,
-                ease: 'easeInOut'
-              }}
-            />
-          </>
-        )}
-
-        {/* Victory animation effects */}
-        {animationPhase === 'complete' && (
-          <>
-            {/* Falling emojis effect */}
-            {[...Array(12)].map((_, i) => (
-              <motion.div
-                key={`victory-emoji-${i}`}
-                className="absolute pointer-events-none text-2xl"
-                style={{
-                  left: `${10 + (i % 4) * 20}%`,
-                  top: '-20px'
-                }}
-                initial={{ y: -20, opacity: 0, rotate: 0 }}
-                animate={{
-                  y: '120vh',
-                  opacity: [0, 1, 1, 0],
-                  rotate: [0, 180, 360]
-                }}
-                transition={{
-                  duration: 3,
-                  delay: i * 0.2,
-                  ease: 'easeOut'
-                }}
-              >
-                {['🎉', '💎', '⭐', '🏆'][i % 4]}
-              </motion.div>
+              </div>
             ))}
+          </div>
 
-            {/* Golden particles effect */}
-            {[...Array(20)].map((_, i) => (
-              <motion.div
-                key={`particle-${i}`}
-                className="absolute w-1 h-1 bg-yellow-400 rounded-full pointer-events-none"
-                style={{
-                  left: `${20 + Math.random() * 60}%`,
-                  top: `${30 + Math.random() * 40}%`
-                }}
-                initial={{ scale: 0, opacity: 1 }}
-                animate={{
-                  scale: [0, 1, 0],
-                  opacity: [1, 1, 0],
-                  x: [0, (Math.random() - 0.5) * 100],
-                  y: [0, (Math.random() - 0.5) * 100]
-                }}
-                transition={{
-                  duration: 2,
-                  delay: Math.random() * 1,
-                  ease: 'easeOut'
-                }}
-              />
-            ))}
+          {/* Center pointer */}
+          <div className="absolute left-1/2 top-0 -translate-x-1/2 z-20">
+            <div className="w-0 h-0 border-l-4 border-r-4 border-b-8 border-l-transparent border-r-transparent border-b-tarkov-accent drop-shadow-lg" />
+          </div>
+          <div className="absolute left-1/2 bottom-0 -translate-x-1/2 z-20">
+            <div className="w-0 h-0 border-l-4 border-r-4 border-t-8 border-l-transparent border-r-transparent border-t-tarkov-accent drop-shadow-lg" />
+          </div>
 
-            {/* Win glow effect */}
-            <motion.div
-              className="absolute inset-0 pointer-events-none"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: [0, 0.3, 0] }}
-              transition={{ duration: 2, ease: 'easeOut' }}
-            >
-              <div className="w-full h-full bg-gradient-to-br from-yellow-400/20 via-yellow-500/10 to-yellow-600/5 rounded-lg" />
-            </motion.div>
-          </>
-        )}
-
-
-        {/* Deceleration glow effect */}
-        {animationPhase === 'decelerating' && (
-          <motion.div
-            className="absolute inset-0 border-2 border-tarkov-accent/40 rounded-xl pointer-events-none"
-            animate={{
-              boxShadow: [
-                '0 0 10px rgba(246, 173, 85, 0.3)',
-                '0 0 20px rgba(246, 173, 85, 0.5)',
-                '0 0 10px rgba(246, 173, 85, 0.3)'
-              ]
-            }}
-            transition={{
-              duration: 1.5,
-              repeat: Infinity,
-              ease: 'easeInOut'
+          {/* Center highlight area */}
+          <div
+            className="absolute top-0 bottom-0 bg-tarkov-accent/10 border-l-2 border-r-2 border-tarkov-accent/50 z-10"
+            style={{
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: `${skinWidth}px`
             }}
           />
-        )}
-
-        {/* Completion celebration */}
-        {animationPhase === 'complete' && (
-          <motion.div
-            className="absolute inset-0 pointer-events-none"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
-          >
-            {/* Confetti burst */}
-            {[...Array(20)].map((_, i) => (
-              <motion.div
-                key={`confetti-${i}`}
-                className="absolute w-2 h-2 rounded-full"
-                style={{
-                  backgroundColor: ['#F6AD55', '#48BB78', '#4299E1', '#9F7AEA', '#F56565'][i % 5],
-                  left: '50%',
-                  top: '50%'
-                }}
-                initial={{
-                  opacity: 0,
-                  scale: 0,
-                  x: 0,
-                  y: 0
-                }}
-                animate={{
-                  opacity: [0, 1, 0],
-                  scale: [0, 1, 0.5],
-                  x: (Math.random() - 0.5) * 200,
-                  y: (Math.random() - 0.5) * 200,
-                  rotate: Math.random() * 360
-                }}
-                transition={{
-                  duration: 2,
-                  delay: i * 0.05,
-                  ease: 'easeOut'
-                }}
-              />
-            ))}
-          </motion.div>
-        )}
+        </div>
       </div>
-
-      {/* Enhanced Animation Status Indicator */}
-      <motion.div 
-        className="text-center mt-6"
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-      >
-      </motion.div>
-    </motion.div>
     </div>
   )
+}
+
+// Simplified carousel styles
+const carouselStyles = `
+.fast-fade-scale-up {
+  animation: fadeScaleUp 0.15s ease-out forwards;
+}
+
+@keyframes fadeScaleUp {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+`
+
+// Inject styles into document head
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement('style')
+  styleSheet.textContent = carouselStyles
+  document.head.appendChild(styleSheet)
 }
 
 // Individual Carousel Item Component
@@ -602,7 +276,7 @@ const CarouselItem: React.FC<CarouselItemProps> = ({
   animationPhase
 }) => {
   const { item } = itemData
-  
+
   // Validate item object and provide fallbacks
   if (!item || !item.id || !item.name) {
     console.error('CarouselItem: invalid item data', itemData)

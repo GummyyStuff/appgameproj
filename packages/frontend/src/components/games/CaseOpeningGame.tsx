@@ -13,6 +13,7 @@ import { formatCurrency } from '../../utils/currency'
 import { useCaseOpeningGame } from '../../hooks/useCaseOpeningGame'
 import { getErrorStrategy, getUserFriendlyMessage, isRecoverableError } from '../../utils/errorHandling'
 import { animationVariants } from '../../styles/animationVariants'
+import { REVEAL_TIMING } from '../../utils/carousel'
 
 // Enhanced error display component
 const ErrorDisplay: React.FC<{
@@ -314,7 +315,7 @@ const CaseOpeningGame: React.FC = () => {
                   </motion.h3>
 
                   <CaseOpeningAnimation
-                    config={{ type: 'reveal', duration: 1500, easing: 'easeOut' }}
+                    config={{ type: 'reveal', duration: REVEAL_TIMING.DURATION, easing: 'easeOut' }}
                     result={gameState.result}
                     onComplete={handleRevealComplete}
                     soundEnabled={soundEnabled}

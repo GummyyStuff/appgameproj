@@ -5,7 +5,7 @@ import { useAdvancedFeatures } from './useAdvancedFeatures'
 import { useSoundEffects, useSoundPreferences } from './useSoundEffects'
 import { useToastContext } from '../components/providers/ToastProvider'
 import { formatCurrency } from '../utils/currency'
-import { generateCarouselSequence, calculateWinningPosition, CAROUSEL_TIMING } from '../utils/carousel'
+import { generateCarouselSequence, calculateWinningPosition, CAROUSEL_TIMING, REVEAL_TIMING } from '../utils/carousel'
 import { SimplifiedGameState, StateTransitionLogger, CaseType, CaseOpeningResult, AnimationConfig } from '../types/caseOpening'
 import { useCaseData } from './useCaseData'
 import { useCaseAnimation } from './useCaseAnimation'
@@ -259,7 +259,7 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
 
       const animationConfig: AnimationConfig = {
         type: 'carousel',
-        duration: Math.min(CAROUSEL_TIMING.TOTAL_DURATION, 3000), // Shorter duration for smaller sequences
+        duration: CAROUSEL_TIMING.TOTAL_DURATION, // Full duration for maximum anticipation
         easing: [0.25, 0.46, 0.45, 0.94], // Smooth deceleration easing
         items: caseItems
       }
@@ -301,10 +301,9 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
       recordFlowStep(flowId, 'item_pool_filtered', true, `${itemPool.length} valid items`)
 
       // Check if we have enough items for a proper carousel animation
-      const MIN_CAROUSEL_ITEMS = 1 // Temporarily lowered to allow carousel with fallback items
-      if (itemPool.length < MIN_CAROUSEL_ITEMS) {
+      if (itemPool.length < CAROUSEL_TIMING.MIN_SEQUENCE_LENGTH) {
         // Not enough items for carousel - use reveal animation instead
-        recordFlowStep(flowId, 'insufficient_items_for_carousel', false, `Only ${itemPool.length} items, need ${MIN_CAROUSEL_ITEMS}`)
+        recordFlowStep(flowId, 'insufficient_items_for_carousel', false, `Only ${itemPool.length} items, need ${CAROUSEL_TIMING.MIN_SEQUENCE_LENGTH}`)
 
         // Transition to revealing phase for simple reveal animation
         transitionToPhase('revealing', 'Insufficient items for carousel, using reveal animation')
@@ -334,7 +333,7 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
             history: [caseResult, ...prev.history.slice(0, 9)],
             pendingCompletion: undefined
           }))
-        }, 1500)
+        }, REVEAL_TIMING.DURATION) // Match reveal animation duration
 
         animationSetupTiming()
         recordFlowStep(flowId, 'animation_setup_completed', true)
@@ -343,7 +342,7 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
 
       // Generate the sequence with winning item at the correct position
       // Use a smaller sequence length based on available items
-      const sequenceLength = Math.min(CAROUSEL_TIMING.SEQUENCE_LENGTH, itemPool.length * 3) // Max 3x the item pool size
+      const sequenceLength = Math.min(CAROUSEL_TIMING.SEQUENCE_LENGTH, itemPool.length * CAROUSEL_TIMING.MAX_SEQUENCE_MULTIPLIER)
       const winningPosition = calculateWinningPosition(sequenceLength)
       const sequenceGenerationTiming = startTiming('sequence_generation')
       const carouselSequence = generateCarouselSequence(itemPool, winningItem, sequenceLength, winningPosition)

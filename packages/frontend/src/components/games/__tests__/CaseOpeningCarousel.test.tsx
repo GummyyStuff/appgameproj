@@ -1,34 +1,7 @@
-import { describe, test, expect } from 'bun:test'
+import { describe, test, expect, mock, beforeEach } from 'bun:test'
 import React from 'react'
-import CaseOpeningCarousel, { CarouselItemData } from '../CaseOpeningCarousel'
+import CaseOpeningCarousel from '../CaseOpeningCarousel'
 import { TarkovItem } from '../ItemReveal'
-import { CaseType } from '../CaseSelector'
-
-// Mock framer-motion
-const mockMotion = {
-  div: ({ children, ...props }: any) => React.createElement('div', props, children),
-  span: ({ children, ...props }: any) => React.createElement('span', props, children)
-}
-
-const mockUseAnimation = () => ({
-  start: mock().mockResolvedValue(undefined),
-  stop: mock(),
-  set: mock()
-})
-
-// Mock sound effects
-const mockUseSoundEffects = () => ({
-  playCaseOpen: mock(),
-  playCaseReveal: mock()
-})
-
-const mockUseSoundPreferences = () => ({
-  soundEnabled: true,
-  toggleSound: mock()
-})
-
-// Mock currency utility
-const mockFormatCurrency = (amount: number) => `${amount} ₽`
 
 // Mock data
 const mockTarkovItem: TarkovItem = {
@@ -42,33 +15,13 @@ const mockTarkovItem: TarkovItem = {
   updated_at: '2024-01-01'
 }
 
-const mockCaseType: CaseType = {
-  id: '1',
-  name: 'Test Case',
-  price: 500,
-  description: 'Test case description',
-  rarity_distribution: {
-    common: 60,
-    uncommon: 25,
-    rare: 10,
-    epic: 4,
-    legendary: 1
-  },
-  is_active: true,
-  created_at: '2024-01-01',
-  updated_at: '2024-01-01'
-}
-
-const mockCarouselItems: CarouselItemData[] = Array.from({ length: 50 }, (_, i) => ({
-  item: {
-    ...mockTarkovItem,
-    id: `item-${i}`,
-    name: `Item ${i}`,
-    rarity: i === 30 ? 'legendary' : 'common'
-  } as TarkovItem,
-  id: `carousel-item-${i}`,
-  isWinning: i === 30
-}))
+// Create mock carousel items array - the carousel now takes TarkovItem[] directly
+const mockCarouselItems: TarkovItem[] = Array.from({ length: 50 }, (_, i) => ({
+  ...mockTarkovItem,
+  id: `item-${i}`,
+  name: `Item ${i}`,
+  rarity: i === 30 ? 'legendary' : 'common'
+} as TarkovItem))
 
 describe('CaseOpeningCarousel', () => {
   const defaultProps = {
@@ -76,7 +29,7 @@ describe('CaseOpeningCarousel', () => {
     winningIndex: 30,
     isSpinning: false,
     onSpinComplete: mock(),
-    caseType: mockCaseType
+    soundEnabled: true
   }
 
   beforeEach(() => {
@@ -102,11 +55,10 @@ describe('CaseOpeningCarousel', () => {
         winningIndex: 30,
         isSpinning: true,
         onSpinComplete: mock(),
-        caseType: mockCaseType,
-        itemWidth: 150,
-        visibleItems: 7
+        soundEnabled: false,
+        duration: 4000
       }
-      
+
       expect(() => {
         React.createElement(CaseOpeningCarousel, props)
       }).not.toThrow()
@@ -166,60 +118,39 @@ describe('CaseOpeningCarousel', () => {
     test('should handle different item rarities', () => {
       const mixedRarityItems = mockCarouselItems.map((item, i) => ({
         ...item,
-        item: {
-          ...item.item,
-          rarity: ['common', 'uncommon', 'rare', 'epic', 'legendary'][i % 5] as any
-        }
+        rarity: ['common', 'uncommon', 'rare', 'epic', 'legendary'][i % 5] as any
       }))
-      
+
       const props = {
         ...defaultProps,
         items: mixedRarityItems
       }
-      
+
       expect(() => {
         React.createElement(CaseOpeningCarousel, props)
       }).not.toThrow()
     })
 
-    test('should handle different case types', () => {
-      const differentCaseType = {
-        ...mockCaseType,
-        name: 'Premium Case',
-        price: 2000
-      }
-      
+    test('should validate winning index bounds', () => {
       const props = {
         ...defaultProps,
-        caseType: differentCaseType
+        winningIndex: 30
       }
-      
-      expect(() => {
-        React.createElement(CaseOpeningCarousel, props)
-      }).not.toThrow()
-    })
 
-    test('should validate winning item exists in sequence', () => {
-      const winningIndex = 30
-      const items = mockCarouselItems
-      
-      expect(items[winningIndex]).toBeDefined()
-      expect(items[winningIndex].isWinning).toBe(true)
+      // Should handle valid winning index
+      expect(props.winningIndex).toBe(30)
+      expect(props.items[props.winningIndex]).toBeDefined()
     })
   })
 
   describe('Performance Considerations', () => {
     test('should handle large item arrays', () => {
       const largeItemArray = Array.from({ length: 1000 }, (_, i) => ({
-        item: {
-          ...mockTarkovItem,
-          id: `item-${i}`,
-          name: `Item ${i}`
-        } as TarkovItem,
-        id: `carousel-item-${i}`,
-        isWinning: i === 500
-      }))
-      
+        ...mockTarkovItem,
+        id: `item-${i}`,
+        name: `Item ${i}`
+      } as TarkovItem))
+
       const startTime = performance.now()
       const component = React.createElement(CaseOpeningCarousel, {
         ...defaultProps,
@@ -227,7 +158,7 @@ describe('CaseOpeningCarousel', () => {
         winningIndex: 500
       })
       const endTime = performance.now()
-      
+
       expect(component).toBeDefined()
       expect(endTime - startTime).toBeLessThan(100) // Should create quickly
     })

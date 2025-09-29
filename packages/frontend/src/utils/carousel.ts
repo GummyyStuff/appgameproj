@@ -187,18 +187,45 @@ export function getWeightedRandomItem(
 }
 
 /**
- * Animation timing constants for carousel
+ * Animation timing constants for carousel - multi-phase smooth flow
  */
 export const CAROUSEL_TIMING = {
-  FAST_SPIN_DURATION: 2000, // 2 seconds
-  DECELERATION_DURATION: 3000, // 3 seconds
-  SETTLE_DURATION: 500, // 0.5 seconds
-  TOTAL_DURATION: 5500, // Total animation time
+  // Multi-phase animation for natural deceleration feel
+  TOTAL_DURATION: 4800, // Total animation time (slightly increased for better flow)
+
+  // Phase durations - optimized for smooth transitions
+  FAST_SPIN_DURATION: 2400, // Initial fast spinning (50% of total)
+  DECELERATION_DURATION: 1920, // Smooth deceleration (40% of total)
+  SETTLE_DURATION: 480, // Final settling (10% of total)
+
+  // Phase timing ratios for programmatic use
+  FAST_SPIN_RATIO: 0.5, // 50% of total duration
+  DECELERATION_RATIO: 0.4, // 40% of total duration
+  SETTLE_RATIO: 0.1, // 10% of total duration
+
+  // Blur intensity progression for natural feel
+  INITIAL_BLUR: 3, // Starting blur for fast spin
+  DECELERATION_BLUR: 0.8, // Reduced blur during deceleration
+  FINAL_BLUR: 0, // No blur when settled
+
+  // Display and layout constants
   ITEM_WIDTH: 120, // Width of each carousel item
   VISIBLE_ITEMS: 5, // Number of items visible at once
-  SEQUENCE_LENGTH: 75, // Total items in carousel
-  WINNING_POSITION_MIN: 55, // Minimum position for winning item
-  WINNING_POSITION_MAX: 65 // Maximum position for winning item
+  SEQUENCE_LENGTH: 75, // Total items in carousel (for full sequences)
+
+  // Winning item positioning - optimized for smooth animation
+  WINNING_POSITION_MIN: 50, // Position for winning item
+  WINNING_POSITION_MAX: 60, // Position for winning item
+
+  // Adaptive sequence sizing (for smaller item pools)
+  MIN_SEQUENCE_LENGTH: 20, // Minimum sequence length for smooth animation
+  MAX_SEQUENCE_MULTIPLIER: 3, // Max multiplier of item pool size for sequence
+} as const
+
+// Reveal animation timing (separate from carousel)
+export const REVEAL_TIMING = {
+  DURATION: 3000, // 3 seconds for reveal animation
+  DELAY_RATIO: 1.0, // Complete after full animation duration
 } as const
 
 /**

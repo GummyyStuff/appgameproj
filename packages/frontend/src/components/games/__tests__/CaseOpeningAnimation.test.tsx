@@ -3,7 +3,7 @@
  * Tests animations, user experience, and cross-device compatibility
  */
 
-import { describe, test, expect } from 'bun:test'
+import { describe, test, expect, mock, beforeEach } from 'bun:test'
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import CaseOpeningGame from '../CaseOpeningGame'
@@ -20,7 +20,12 @@ mock.module('framer-motion', () => ({
     button: ({ children, ...props }: any) => <button {...props}>{children}</button>,
     span: ({ children, ...props }: any) => <span {...props}>{children}</span>
   },
-  AnimatePresence: ({ children }: any) => children
+  AnimatePresence: ({ children }: any) => children,
+  useAnimation: () => ({
+    start: mock(),
+    stop: mock(),
+    set: mock()
+  })
 }))
 
 // Mock hooks
