@@ -16,8 +16,6 @@ interface CaseOpeningCarouselProps {
   isSpinning: boolean
   onSpinComplete: () => void
   finalItem?: TarkovItem | null
-  itemWidth?: number
-  soundEnabled?: boolean
   duration?: number
 }
 
@@ -64,11 +62,9 @@ const CaseOpeningCarousel: React.FC<CaseOpeningCarouselProps> = ({
   isSpinning,
   onSpinComplete,
   finalItem,
-  itemWidth = 160,
-  soundEnabled = true,
   duration = 6000
 }) => {
-  const { playCaseOpen, playCaseReveal } = useSoundEffects(soundEnabled)
+  const { playCaseOpen, playCaseReveal } = useSoundEffects()
 
   // Single layer carousel system
   const carouselRef = useRef<HTMLDivElement>(null)
@@ -144,14 +140,12 @@ const CaseOpeningCarousel: React.FC<CaseOpeningCarouselProps> = ({
       }
 
       // Play audio feedback as items pass through center
-      if (soundEnabled) {
-        thresholds.forEach((threshold, index) => {
-          if (!playedIndices.has(index) && currentScroll >= threshold) {
-            playedIndices.add(index)
-            playCaseReveal()
-          }
-        })
-      }
+      thresholds.forEach((threshold, index) => {
+        if (!playedIndices.has(index) && currentScroll >= threshold) {
+          playedIndices.add(index)
+          playCaseReveal()
+        }
+      })
 
       if (Date.now() - startTime < duration) {
         requestAnimationFrame(checkPosition)

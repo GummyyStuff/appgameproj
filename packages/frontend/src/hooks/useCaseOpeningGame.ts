@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useAuth } from './useAuth'
 import { useBalance } from './useBalance'
 import { useAdvancedFeatures } from './useAdvancedFeatures'
@@ -24,6 +24,7 @@ export interface UseCaseOpeningGameReturn {
   openCase: (caseType?: CaseType) => Promise<void>
   resetGame: () => void
   completeAnimation: (result: CaseOpeningResult) => void
+  creditWinnings: (result: CaseOpeningResult, transactionId: string) => Promise<void>
   loadCaseTypes: () => Promise<void>
 }
 
@@ -55,8 +56,7 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
   const { user } = useAuth()
   const { balance, refetch: refreshBalance } = useBalance()
   const { trackGamePlayed } = useAdvancedFeatures()
-  const { soundEnabled } = useSoundPreferences()
-  const { playWinSound, playLoseSound, playCaseOpen, playCaseReveal, playRarityReveal } = useSoundEffects(soundEnabled)
+  const { playWinSound, playLoseSound, playCaseOpen, playCaseReveal, playRarityReveal } = useSoundEffects()
   const toast = useToastContext()
 
   // Performance monitoring hooks
@@ -84,8 +84,22 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
     selectedCase: null,
     result: null,
     history: [],
-    error: null
+    error: null,
+    transactionId: null
   })
+
+  // Track credited openings to prevent duplicate credit calls
+  const creditedOpeningsRef = useRef<Set<string>>(new Set())
+
+  // Cleanup old credited openings periodically to prevent memory leaks
+  const cleanupCreditedOpenings = useCallback(() => {
+    // Keep only the last 50 credited openings to prevent unbounded growth
+    if (creditedOpeningsRef.current.size > 50) {
+      const openingsArray = Array.from(creditedOpeningsRef.current)
+      const keepOpenings = openingsArray.slice(-25) // Keep the most recent 25
+      creditedOpeningsRef.current = new Set(keepOpenings)
+    }
+  }, [])
 
   const transitionToPhase = useCallback((phase: SimplifiedGameState['phase'], context?: string) => {
     StateTransitionLogger.logTransition(gameState.phase, phase, context)
@@ -179,14 +193,15 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
     monitorGameAction('case_opening_started', { caseType: selectedCase.name, price: selectedCase.price })
 
     try {
-      // Use optimistic case opening with caching and API monitoring
+      // Use optimistic case opening with caching and API monitoring (delay credit for suspense)
       const openingResponse = await monitorAPICall(
         '/api/games/cases/open',
         'POST',
         () => optimisticCaseOpening.mutateAsync({
           caseType: selectedCase,
           currentBalance: balance,
-          userId: user.id
+          userId: user.id,
+          delayCredit: true
         })
       )
 
@@ -198,6 +213,12 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
       })
 
       recordFlowStep(flowId, 'balance_deducted', true)
+
+      // Store transaction ID for later winnings credit
+      setGameState(prev => ({
+        ...prev,
+        transactionId: openingResponse.transaction_id
+      }))
 
       // Setup animation after a brief delay
       setTimeout(async () => {
@@ -501,6 +522,53 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
   }, [gameState.pendingCompletion, gameState.selectedCase, caseOpening, errorHandling, transitionToPhase, toast])
 
   /**
+   * Credits winnings during the congratulations screen with animation
+   */
+  const creditWinnings = useCallback(async (result: CaseOpeningResult, transactionId: string) => {
+    // Prevent duplicate credit calls for the same opening
+    if (creditedOpeningsRef.current.has(result.opening_id)) {
+      console.warn(`Skipping duplicate credit attempt for opening ${result.opening_id}`)
+      return
+    }
+
+    try {
+      // Mark this opening as being credited
+      creditedOpeningsRef.current.add(result.opening_id)
+
+      // Import dynamically to avoid circular dependency issues
+      const { caseOpeningApi } = await import('../services/caseOpeningApi')
+
+      // Call the credit API
+      const creditResult = await caseOpeningApi.creditWinnings(
+        result.opening_id,
+        transactionId,
+        result.currency_awarded,
+        result.case_type,
+        result.item_won
+      )
+
+      // The balance will be updated automatically via real-time subscription
+      toast.success('Winnings Credited!', `+${formatCurrency(result.currency_awarded, 'roubles')} added to balance`, {
+        duration: 3000
+      })
+
+      // Periodic cleanup of old credited openings
+      cleanupCreditedOpenings()
+
+      return creditResult
+    } catch (error) {
+      // Remove from credited set on failure so it can be retried
+      creditedOpeningsRef.current.delete(result.opening_id)
+      console.error('Failed to credit winnings:', error)
+      const recovered = await errorHandling.handleError(error instanceof Error ? error : new Error('Failed to credit winnings'), 'winnings credit')
+      if (!recovered) {
+        toast.error('Failed to credit winnings')
+      }
+      throw error
+    }
+  }, [toast, errorHandling, formatCurrency])
+
+  /**
    * Resets the game to idle state while preserving opening history.
    * 
    * This function:
@@ -527,6 +595,7 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
       result: null,
       history: prev.history, // Keep history
       error: null,
+      transactionId: null,
       animationConfig: undefined
     }))
     caseAnimation.resetAnimation()
@@ -548,6 +617,7 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
     openCase,
     resetGame,
     completeAnimation,
+    creditWinnings,
     loadCaseTypes: caseData.loadCaseTypes
   }
 }

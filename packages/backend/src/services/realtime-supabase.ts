@@ -158,7 +158,7 @@ export class SupabaseRealtimeService {
         }
       })
 
-      console.log(`📡 Game update broadcasted for user ${update.userId}:`, update.gameType, update.status)
+      console.log(`📡 [BROADCAST] Game update broadcasted for user ${update.userId}: ${update.gameType} ${update.status} (gameId: ${update.gameId})`)
     } catch (error) {
       console.error('❌ Failed to broadcast game update:', error)
     }
@@ -310,7 +310,17 @@ export class SupabaseRealtimeService {
     // Check if it's a big win (win amount > 5x bet amount)
     const winAmount = parseFloat(gameRecord.win_amount)
     const betAmount = parseFloat(gameRecord.bet_amount)
-    const isBigWin = winAmount > betAmount * 5
+
+    // Special handling for case opening: only consider big wins if bet amount > 0
+    // This prevents case winnings credit transactions (bet=0, win>0) from being flagged as big wins
+    let isBigWin = false
+    if (gameRecord.game_type === 'case_opening') {
+      // For case opening, only consider it a big win if there was an actual bet and win > 5x bet
+      isBigWin = betAmount > 0 && winAmount > betAmount * 5
+    } else {
+      // For other games, use the standard logic
+      isBigWin = winAmount > betAmount * 5
+    }
 
     if (isBigWin) {
       // Get user info for big win announcement
@@ -331,22 +341,40 @@ export class SupabaseRealtimeService {
       }
     }
 
-    // Broadcast game completion
-    const gameUpdate: GameStateUpdate = {
-      userId: gameRecord.user_id,
-      gameType: gameRecord.game_type,
-      gameId: gameRecord.id,
-      status: 'completed',
-      data: {
-        betAmount,
-        winAmount,
-        netResult: winAmount - betAmount,
-        resultData: gameRecord.result_data
-      },
-      timestamp: Date.now()
-    }
+    // Broadcast game completion - but only for actual game completions, not intermediate transactions
+    // For case opening, only broadcast completion when winnings are credited (winAmount > 0)
+    const shouldBroadcastCompletion = gameRecord.game_type !== 'case_opening' ||
+      (gameRecord.game_type === 'case_opening' && winAmount > 0)
 
-    await this.broadcastGameUpdate(gameUpdate)
+    console.log(`🔍 [DEBUG] Game completion check:`, {
+      gameId: gameRecord.id,
+      gameType: gameRecord.game_type,
+      betAmount,
+      winAmount,
+      transactionType: gameRecord.result_data?.transaction_type,
+      shouldBroadcastCompletion
+    })
+
+    if (shouldBroadcastCompletion) {
+      const gameUpdate: GameStateUpdate = {
+        userId: gameRecord.user_id,
+        gameType: gameRecord.game_type,
+        gameId: gameRecord.id,
+        status: 'completed',
+        data: {
+          betAmount,
+          winAmount,
+          netResult: winAmount - betAmount,
+          resultData: gameRecord.result_data
+        },
+        timestamp: Date.now()
+      }
+
+      console.log(`📡 [DEBUG] Broadcasting game completion:`, gameUpdate)
+      await this.broadcastGameUpdate(gameUpdate)
+    } else {
+      console.log(`🚫 [DEBUG] Skipping broadcast for game ${gameRecord.id} (${gameRecord.game_type}) - not a completion event`)
+    }
   }
 
   /**

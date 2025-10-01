@@ -1,7 +1,6 @@
 import React from 'react'
 import { motion } from 'framer-motion'
 import { TarkovCard } from '../ui/TarkovCard'
-import { TarkovButton } from '../ui/TarkovButton'
 import { formatCurrency } from '../../utils/currency'
 import CaseConfirmation from './CaseConfirmation'
 import { animationVariants, createStaggeredAnimation } from '../../styles/animationVariants'
@@ -106,7 +105,7 @@ const CaseSelector: React.FC<CaseSelectorProps> = ({
         className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6"
         {...staggeredAnimation.container}
       >
-        {caseTypes.map((caseType, index) => {
+        {caseTypes.map((caseType, _index) => {
           const canAfford = balance >= caseType.price
           const cardClasses = [
             'case-card',

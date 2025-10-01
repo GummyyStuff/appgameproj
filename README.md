@@ -6,9 +6,11 @@ A Tarkov-themed casino gaming website offering classic casino games with virtual
 
 - **Roulette**: Classic casino roulette with Tarkov theming
 - **Blackjack**: Strategic card gameplay
-
+- **Case Opening**: Tarkov-themed loot cases with provably fair algorithms
 - **Virtual Currency**: Safe gaming with no real money risk
 - **Tarkov Theming**: Immersive design with game assets and aesthetics
+- **Real-time Statistics**: Comprehensive game analytics and history
+- **Provably Fair Gaming**: Cryptographically secure random number generation
 
 ## 🏗️ Architecture
 
@@ -18,6 +20,9 @@ This is a monorepo containing:
 - **Backend**: Bun + Hono + TypeScript
 - **Database**: Supabase (PostgreSQL)
 - **Real-time**: Socket.io + Supabase Realtime
+- **Testing**: Bun Test with comprehensive test suites
+- **Security**: Provably fair algorithms with secure random generation
+- **Monitoring**: Performance metrics, health checks, and fairness validation
 - **Deployment**: Docker + Coolify
 
 ## 📁 Project Structure
@@ -98,6 +103,8 @@ tarkov-casino/
    - Frontend: http://localhost:5173
    - Backend API: http://localhost:3000
    - API Health: http://localhost:3000/api/health
+   - Detailed Health: http://localhost:3000/api/health/detailed
+   - API Metrics: http://localhost:3000/api/metrics
 
 ### Building for Production
 
@@ -196,6 +203,10 @@ JWT_SECRET=your_jwt_secret
 # Game Settings
 STARTING_BALANCE=10000
 DAILY_BONUS=1000
+
+# Case Opening Configuration
+CASE_OPENING_ENABLED=true
+FAIRNESS_VERIFICATION=true
 ```
 
 #### Frontend (Vite)
@@ -219,17 +230,55 @@ bun run test
 
 ## 📚 API Documentation
 
-### Health Check
-- **GET** `/api/health` - Service health status
+### Health & Monitoring
+- **GET** `/api/health` - Basic service health status
+- **GET** `/api/health/detailed` - Detailed system information
+- **GET** `/api/ready` - Kubernetes-style readiness probe
+- **GET** `/api/live` - Kubernetes-style liveness probe
+- **GET** `/api/metrics` - Prometheus-compatible metrics
 
 ### Authentication
 - **POST** `/api/auth/register` - User registration
 - **POST** `/api/auth/login` - User login
 - **POST** `/api/auth/logout` - User logout
+- **POST** `/api/auth/reset-password` - Password reset
+- **POST** `/api/auth/refresh` - Refresh authentication token
+
+### User
+- **GET** `/api/user/profile` - Get user profile
+- **GET** `/api/user/balance` - Get current balance
+- **GET** `/api/user/history` - Get user game history
+- **GET** `/api/user/stats` - Get user statistics
+- **GET** `/api/user/transactions` - Get transaction history
+- **PUT** `/api/user/profile` - Update user profile
+- **POST** `/api/user/validate-balance` - Validate sufficient balance
+- **POST** `/api/user/daily-bonus` - Claim daily bonus
 
 ### Games
+- **GET** `/api/games` - List all available games
+- **GET** `/api/games/roulette` - Get roulette game information
 - **POST** `/api/games/roulette/bet` - Place roulette bet
+- **GET** `/api/games/blackjack` - Get blackjack game information
 - **POST** `/api/games/blackjack/start` - Start blackjack hand
+- **POST** `/api/games/blackjack/action` - Perform blackjack action (hit, stand, double, split)
+- **GET** `/api/games/cases` - Get available case types
+- **GET** `/api/games/cases/:caseTypeId` - Get specific case details
+- **POST** `/api/games/cases/start` - Start case opening (deduct price)
+- **POST** `/api/games/cases/complete` - Complete case opening (credit winnings)
+- **POST** `/api/games/cases/open` - One-step case opening
+- **GET** `/api/games/cases/stats/:userId?` - Get case opening statistics
+
+### Statistics
+- **GET** `/api/statistics/basic` - Get basic game statistics
+- **GET** `/api/statistics/advanced` - Get comprehensive game statistics
+- **GET** `/api/statistics/history` - Get filtered game history
+- **GET** `/api/statistics/time-series` - Get time series data for charts
+- **GET** `/api/statistics/game-breakdown` - Get statistics by game type
+- **GET** `/api/statistics/streaks` - Get winning/losing streak data
+- **GET** `/api/statistics/betting-patterns` - Get betting pattern analysis
+- **GET** `/api/statistics/playing-habits` - Get playing habit statistics
+- **GET** `/api/statistics/global` - Get global platform statistics
+- **GET** `/api/statistics/export` - Export user statistics
 
 
 ## 🎨 Theming
@@ -248,6 +297,9 @@ The application uses a custom Tarkov-inspired theme with:
 - Input validation and sanitization
 - Rate limiting on API endpoints
 - Secure random number generation for games
+- Provably fair gaming algorithms
+- Cryptographic verification for case opening results
+- Comprehensive audit logging for all game transactions
 
 ## 📈 Monitoring
 
@@ -303,9 +355,14 @@ This project is for educational and entertainment purposes only. No real money g
 
 ## 🎯 Roadmap
 
-- [ ] Complete game implementations
-- [ ] Real-time multiplayer features
-- [ ] Advanced statistics and analytics
+- [x] Roulette game implementation
+- [x] Blackjack game implementation  
+- [x] Case opening game with fairness algorithms
+- [x] Comprehensive statistics and analytics
+- [x] Real-time features via Socket.io
+- [x] Performance monitoring and health checks
 - [ ] Mobile app development
 - [ ] Additional casino games
 - [ ] Tournament system
+- [ ] Advanced leaderboards
+- [ ] Social features and chat

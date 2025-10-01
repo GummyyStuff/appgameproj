@@ -7,6 +7,7 @@ export interface SimplifiedGameState {
   result: CaseOpeningResult | null
   history: CaseOpeningResult[]
   error: string | null
+  transactionId?: string | null
   animationConfig?: AnimationConfig
   pendingCompletion?: {
     caseTypeId: string

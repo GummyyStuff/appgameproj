@@ -59,7 +59,7 @@ const RoulettePage: React.FC = () => {
   const { updateBalance } = useBalanceUpdates()
   const { isConnected, broadcastGameStart } = useRouletteRealtime()
   const { soundEnabled, toggleSound } = useSoundPreferences()
-  const { playSpinSound, playWinSound, playLoseSound, playBetSound } = useSoundEffects(soundEnabled)
+  const { playSpinSound, playWinSound, playLoseSound, playBetSound } = useSoundEffects()
   const { trackGamePlayed, updateAchievementProgress } = useAdvancedFeatures()
   const toast = useToastContext()
   const [isInitialLoading, setIsInitialLoading] = useState(true)

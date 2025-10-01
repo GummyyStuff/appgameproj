@@ -177,7 +177,7 @@ export class CaseCacheService {
    * Optimistically update case opening result
    * This provides immediate UI feedback while the API call completes
    */
-  async openCaseOptimistic(caseType: CaseType, currentBalance: number, userId: string): Promise<CaseOpeningResponse> {
+  async openCaseOptimistic(caseType: CaseType, currentBalance: number, userId: string, delayCredit: boolean = false): Promise<CaseOpeningResponse> {
     const caseTypesQueryKey = caseQueryKeys.lists()
     const balanceQueryKey = ['balance', userId]
 
@@ -195,7 +195,7 @@ export class CaseCacheService {
 
     try {
       const result = await authenticatedApiCall(
-        () => this.apiService.openCase(caseType),
+        () => this.apiService.openCase(caseType, delayCredit),
         `openCase:${caseType.id}:${Date.now()}`
       )
 
@@ -203,7 +203,7 @@ export class CaseCacheService {
       this.updateOpeningHistoryOptimistic(result.opening_result)
 
       // Update balance with actual result (should match optimistic update for successful cases)
-      const actualBalance = result.new_balance
+      const actualBalance = delayCredit ? result.balance_after_deduction : result.new_balance
       if (actualBalance !== undefined) {
         this.queryClient.setQueryData(balanceQueryKey, actualBalance)
       }
@@ -334,11 +334,12 @@ export function useOptimisticCaseOpening() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ caseType, currentBalance, userId }: {
+    mutationFn: ({ caseType, currentBalance, userId, delayCredit }: {
       caseType: CaseType
       currentBalance: number
       userId: string
-    }) => caseCacheService.openCaseOptimistic(caseType, currentBalance, userId),
+      delayCredit?: boolean
+    }) => caseCacheService.openCaseOptimistic(caseType, currentBalance, userId, delayCredit),
     onSuccess: (data) => {
       // Update relevant caches after successful opening
       queryClient.invalidateQueries({ queryKey: caseQueryKeys.openings() })

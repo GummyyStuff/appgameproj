@@ -143,13 +143,14 @@ const ErrorDisplay: React.FC<{
  */
 const CaseOpeningGame: React.FC = () => {
   const { balance } = useBalance()
-  const { soundEnabled, toggleSound } = useSoundPreferences()
+  const { soundEnabled } = useSoundPreferences()
   const {
     gameState,
     caseTypes,
     isLoadingCases,
     openCase,
-    completeAnimation
+    completeAnimation,
+    creditWinnings
   } = useCaseOpeningGame()
 
   // Handle case selection (move to case_selected phase)
@@ -168,7 +169,6 @@ const CaseOpeningGame: React.FC = () => {
   const [showConfirmation, setShowConfirmation] = React.useState(false)
   const [selectedCase, setSelectedCase] = React.useState<any>(null)
 
-
   const handleRevealComplete = () => {
     if (gameState.result) {
       completeAnimation(gameState.result)
@@ -180,9 +180,6 @@ const CaseOpeningGame: React.FC = () => {
       completeAnimation(gameState.result)
     }
   }
-
-
-
 
   return (
     <CaseOpeningErrorBoundary gameType="case opening">
@@ -210,37 +207,17 @@ const CaseOpeningGame: React.FC = () => {
               📦 Case Opening
             </motion.h1>
             
-            <div className="flex space-x-3">
-              <motion.button
-                onClick={toggleSound}
-                className={`
-                  p-3 md:p-4 rounded-full transition-all duration-300 border-2
-                  hover:scale-110 active:scale-95 ${
-                  soundEnabled 
-                    ? 'bg-tarkov-accent/20 text-tarkov-accent border-tarkov-accent/50 shadow-lg shadow-tarkov-accent/30' 
-                    : 'bg-gray-600/20 text-gray-400 border-gray-600/50'
-                }`}
-                title={soundEnabled ? 'Disable sound' : 'Enable sound'}
-                whileHover={{ rotate: [0, -10, 10, 0] }}
-                transition={{ duration: 0.3 }}
-              >
-                <span className="text-xl md:text-2xl">
-                  {soundEnabled ? '🔊' : '🔇'}
-                </span>
-              </motion.button>
-
-              <motion.button
-                onClick={() => {/* Carousel toggle disabled for now - always use carousel */}}
-                className="p-3 md:p-4 rounded-full transition-all duration-300 border-2 bg-tarkov-accent/20 text-tarkov-accent border-tarkov-accent/50 shadow-lg shadow-tarkov-accent/30 hover:scale-110 active:scale-95"
-                title="Carousel animation enabled"
-                whileHover={{ rotate: [0, -10, 10, 0] }}
-                transition={{ duration: 0.3 }}
-              >
-                <span className="text-xl md:text-2xl">
-                  🎰
-                </span>
-              </motion.button>
-            </div>
+            <motion.button
+              onClick={() => {/* Carousel toggle disabled for now - always use carousel */}}
+              className="p-3 md:p-4 rounded-full transition-all duration-300 border-2 bg-tarkov-accent/20 text-tarkov-accent border-tarkov-accent/50 shadow-lg shadow-tarkov-accent/30 hover:scale-110 active:scale-95"
+              title="Carousel animation enabled"
+              whileHover={{ rotate: [0, -10, 10, 0] }}
+              transition={{ duration: 0.3 }}
+            >
+              <span className="text-xl md:text-2xl">
+                🎰
+              </span>
+            </motion.button>
           </div>
           
           <motion.p 
@@ -301,7 +278,6 @@ const CaseOpeningGame: React.FC = () => {
                     config={gameState.animationConfig}
                     result={gameState.result}
                     onComplete={handleCarouselSpinComplete}
-                    soundEnabled={soundEnabled}
                   />
                 </>
               ) : gameState.phase === 'revealing' && gameState.result ? (
@@ -318,11 +294,14 @@ const CaseOpeningGame: React.FC = () => {
                     config={{ type: 'reveal', duration: REVEAL_TIMING.DURATION, easing: 'easeOut' }}
                     result={gameState.result}
                     onComplete={handleRevealComplete}
-                    soundEnabled={soundEnabled}
                   />
                 </>
               ) : gameState.phase === 'complete' && gameState.result ? (
-                <CaseResult result={gameState.result} />
+                <CaseResult
+                  result={gameState.result}
+                  onCreditWinnings={creditWinnings}
+                  transactionId={gameState.transactionId || undefined}
+                />
               ) : gameState.phase === 'error' ? (
                 <ErrorDisplay
                   error={gameState.error || 'An unexpected error occurred'}

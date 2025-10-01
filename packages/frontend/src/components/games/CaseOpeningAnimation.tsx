@@ -10,7 +10,6 @@ interface CaseOpeningAnimationProps {
   config: AnimationConfig
   result?: CaseOpeningResult | null
   onComplete: () => void
-  soundEnabled?: boolean
 }
 
 /**
@@ -25,7 +24,6 @@ interface CaseOpeningAnimationProps {
  * @param config - Animation configuration specifying type, duration, and easing
  * @param result - The case opening result to display
  * @param onComplete - Callback fired when animation completes
- * @param soundEnabled - Whether to play sound effects during animation
  * @example
  * ```tsx
  * <CaseOpeningAnimation
@@ -38,15 +36,13 @@ interface CaseOpeningAnimationProps {
  *   }}
  *   result={openingResult}
  *   onComplete={handleAnimationComplete}
- *   soundEnabled={true}
  * />
  * ```
  */
 const CaseOpeningAnimation: React.FC<CaseOpeningAnimationProps> = ({
   config,
   result,
-  onComplete,
-  soundEnabled = true
+  onComplete
 }) => {
   const [animationPhase, setAnimationPhase] = useState<'idle' | 'running' | 'complete'>('idle')
 
@@ -86,8 +82,6 @@ const CaseOpeningAnimation: React.FC<CaseOpeningAnimationProps> = ({
           onSpinComplete={handleCarouselComplete}
           finalItem={result?.item_won}
           duration={config.duration}
-          easing={config.easing}
-          soundEnabled={soundEnabled}
         />
       )}
 

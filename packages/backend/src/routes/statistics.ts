@@ -3,7 +3,7 @@
  * Provides comprehensive statistics endpoints with filtering and data visualization support
  */
 
-import { Hono } from 'hono'
+import { Hono, type Context } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { z } from 'zod'
 import { authMiddleware } from '../middleware/auth'
@@ -54,7 +54,7 @@ const gameHistorySchema = z.object({
 statisticsRoutes.use('*', authMiddleware)
 
 // Get comprehensive user statistics with advanced analytics
-statisticsRoutes.get('/advanced', asyncHandler(async (c) => {
+statisticsRoutes.get('/advanced', asyncHandler(async (c: Context) => {
   const user = c.get('user')
   const query = c.req.query()
 
@@ -86,7 +86,7 @@ statisticsRoutes.get('/advanced', asyncHandler(async (c) => {
     if (error instanceof z.ZodError) {
       throw new HTTPException(400, { 
         message: 'Invalid filters', 
-        cause: error.errors 
+        cause: error.issues 
       })
     }
     
@@ -96,7 +96,7 @@ statisticsRoutes.get('/advanced', asyncHandler(async (c) => {
 }))
 
 // Get basic user statistics (existing endpoint enhanced)
-statisticsRoutes.get('/basic', asyncHandler(async (c) => {
+statisticsRoutes.get('/basic', asyncHandler(async (c: Context) => {
   const user = c.get('user')
 
   try {
@@ -115,7 +115,7 @@ statisticsRoutes.get('/basic', asyncHandler(async (c) => {
 }))
 
 // Get paginated game history with enhanced filtering
-statisticsRoutes.get('/history', asyncHandler(async (c) => {
+statisticsRoutes.get('/history', asyncHandler(async (c: Context) => {
   const user = c.get('user')
   const query = c.req.query()
 
@@ -143,7 +143,7 @@ statisticsRoutes.get('/history', asyncHandler(async (c) => {
     if (error instanceof z.ZodError) {
       throw new HTTPException(400, { 
         message: 'Invalid parameters', 
-        cause: error.errors 
+        cause: error.issues 
       })
     }
     
@@ -153,7 +153,7 @@ statisticsRoutes.get('/history', asyncHandler(async (c) => {
 }))
 
 // Get time series data for charts
-statisticsRoutes.get('/time-series', asyncHandler(async (c) => {
+statisticsRoutes.get('/time-series', asyncHandler(async (c: Context) => {
   const user = c.get('user')
   const query = c.req.query()
 
@@ -180,7 +180,7 @@ statisticsRoutes.get('/time-series', asyncHandler(async (c) => {
     if (error instanceof z.ZodError) {
       throw new HTTPException(400, { 
         message: 'Invalid filters', 
-        cause: error.errors 
+        cause: error.issues 
       })
     }
     
@@ -190,7 +190,7 @@ statisticsRoutes.get('/time-series', asyncHandler(async (c) => {
 }))
 
 // Get game type breakdown statistics
-statisticsRoutes.get('/game-breakdown', asyncHandler(async (c) => {
+statisticsRoutes.get('/game-breakdown', asyncHandler(async (c: Context) => {
   const user = c.get('user')
   const query = c.req.query()
 
@@ -217,7 +217,7 @@ statisticsRoutes.get('/game-breakdown', asyncHandler(async (c) => {
 }))
 
 // Get win/loss streaks and patterns
-statisticsRoutes.get('/streaks', asyncHandler(async (c) => {
+statisticsRoutes.get('/streaks', asyncHandler(async (c: Context) => {
   const user = c.get('user')
   const query = c.req.query()
 
@@ -245,7 +245,7 @@ statisticsRoutes.get('/streaks', asyncHandler(async (c) => {
 }))
 
 // Get betting patterns analysis
-statisticsRoutes.get('/betting-patterns', asyncHandler(async (c) => {
+statisticsRoutes.get('/betting-patterns', asyncHandler(async (c: Context) => {
   const user = c.get('user')
   const query = c.req.query()
 
@@ -273,7 +273,7 @@ statisticsRoutes.get('/betting-patterns', asyncHandler(async (c) => {
 }))
 
 // Get playing habits and session analysis
-statisticsRoutes.get('/playing-habits', asyncHandler(async (c) => {
+statisticsRoutes.get('/playing-habits', asyncHandler(async (c: Context) => {
   const user = c.get('user')
   const query = c.req.query()
 
@@ -302,7 +302,7 @@ statisticsRoutes.get('/playing-habits', asyncHandler(async (c) => {
 
 
 // Get global statistics (for admin/analytics)
-statisticsRoutes.get('/global', asyncHandler(async (c) => {
+statisticsRoutes.get('/global', asyncHandler(async (c: Context) => {
   const query = c.req.query()
   const days = query.days ? parseInt(query.days) : 30
 
@@ -327,7 +327,7 @@ statisticsRoutes.get('/global', asyncHandler(async (c) => {
 }))
 
 // Export statistics data (CSV format preparation)
-statisticsRoutes.get('/export', asyncHandler(async (c) => {
+statisticsRoutes.get('/export', asyncHandler(async (c: Context) => {
   const user = c.get('user')
   const query = c.req.query()
 

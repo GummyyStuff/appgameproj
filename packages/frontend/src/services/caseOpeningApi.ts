@@ -9,6 +9,7 @@ import { CaseType, CaseOpeningResult } from '../types/caseOpening'
 export interface CaseOpeningRequest {
   caseTypeId: string
   previewOnly?: boolean
+  delayCredit?: boolean
   requestId?: string
 }
 
@@ -25,8 +26,9 @@ export interface CaseOpeningResponse {
 }
 
 export interface CaseOpeningApiService {
-  openCase(caseType: CaseType): Promise<CaseOpeningResponse>
+  openCase(caseType: CaseType, delayCredit?: boolean): Promise<CaseOpeningResponse>
   previewCase(caseType: CaseType): Promise<CaseOpeningResponse>
+  creditWinnings(openingId: string, originalTransactionId: string, currencyAwarded: number, caseType: CaseType, itemWon: any): Promise<any>
   getCaseTypes(): Promise<CaseType[]>
   getCaseType(caseTypeId: string): Promise<CaseType | null>
   getItemPool(caseTypeId: string): Promise<any[]>
@@ -48,7 +50,7 @@ export class CaseOpeningApiServiceImpl implements CaseOpeningApiService {
   /**
    * Open a case using the simplified API
    */
-  async openCase(caseType: CaseType): Promise<CaseOpeningResponse> {
+  async openCase(caseType: CaseType, delayCredit: boolean = false): Promise<CaseOpeningResponse> {
     const requestId = generateRequestId()
 
     try {
@@ -67,6 +69,7 @@ export class CaseOpeningApiServiceImpl implements CaseOpeningApiService {
         },
         body: JSON.stringify({
           caseTypeId: caseType.id,
+          delayCredit,
           requestId
         })
       })
@@ -91,6 +94,57 @@ export class CaseOpeningApiServiceImpl implements CaseOpeningApiService {
       return result
     } catch (error) {
       console.error('Case opening error:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Credit winnings after delayed credit case opening
+   */
+  async creditWinnings(openingId: string, originalTransactionId: string, currencyAwarded: number, caseType: CaseType, itemWon: any): Promise<any> {
+    try {
+      const session = await supabase.auth.getSession()
+      const token = session.data.session?.access_token
+
+      if (!token) {
+        throw new Error('Authentication required')
+      }
+
+      const response = await fetch('/api/games/cases/credit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          openingId,
+          originalTransactionId,
+          currencyAwarded,
+          caseType,
+          itemWon
+        })
+      })
+
+      if (!response.ok) {
+        let errorMessage = 'Failed to credit winnings'
+        try {
+          const errorData = await response.json()
+          errorMessage = errorData.error || errorMessage
+        } catch {
+          errorMessage = `Server error: ${response.status} ${response.statusText}`
+        }
+        throw new Error(errorMessage)
+      }
+
+      const result = await response.json()
+
+      if (!result.success) {
+        throw new Error(result.error || 'Credit failed')
+      }
+
+      return result
+    } catch (error) {
+      console.error('Credit winnings error:', error)
       throw error
     }
   }

@@ -76,6 +76,7 @@ export function useSupabaseRealtime(callbacks: RealtimeCallbacks = {}) {
 
     channel
       .on('broadcast', { event: 'game-update' }, (payload) => {
+        console.log(`🎮 [FRONTEND] Game update received:`, payload.payload)
         if (onGameUpdate) {
           onGameUpdate(payload.payload as GameStateUpdate)
         }
@@ -116,7 +117,8 @@ export function useSupabaseRealtime(callbacks: RealtimeCallbacks = {}) {
     channel
       .on('broadcast', { event: 'balance-update' }, (payload) => {
         const update = payload.payload as BalanceUpdate
-        
+        console.log(`💰 [FRONTEND] Balance update received:`, update)
+
         // Only process updates for current user
         if (user && update.userId === user.id && onBalanceUpdate) {
           onBalanceUpdate(update)
@@ -148,7 +150,8 @@ export function useSupabaseRealtime(callbacks: RealtimeCallbacks = {}) {
     channel
       .on('broadcast', { event: 'notification' }, (payload) => {
         const notification = payload.payload as GameNotification
-        
+        console.log(`🔔 [FRONTEND] Notification received:`, notification)
+
         // Process global notifications or user-specific ones
         if (!notification.userId || (user && notification.userId === user.id)) {
           if (onNotification) {
@@ -191,11 +194,7 @@ export function useSupabaseRealtime(callbacks: RealtimeCallbacks = {}) {
           onBalanceUpdate(payload.payload as BalanceUpdate)
         }
       })
-      .on('broadcast', { event: 'game-update' }, (payload) => {
-        if (onGameUpdate) {
-          onGameUpdate(payload.payload as GameStateUpdate)
-        }
-      })
+      // Removed game-update listener from user channel to prevent duplicates with global channel
       .on('broadcast', { event: 'notification' }, (payload) => {
         if (onNotification) {
           onNotification(payload.payload as GameNotification)

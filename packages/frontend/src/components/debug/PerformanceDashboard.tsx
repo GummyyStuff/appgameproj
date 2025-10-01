@@ -6,7 +6,8 @@
 import React, { useState, useEffect } from 'react'
 import { usePerformanceMonitor } from '../../utils/performance-monitor'
 import { useMemoryMonitor } from '../../utils/memory-monitor'
-import type { PerformanceMetrics, MemoryLeak } from '../../utils/performance-monitor'
+import type { PerformanceMetrics } from '../../utils/performance-monitor'
+import type { MemoryLeak } from '../../utils/memory-monitor'
 
 interface PerformanceDashboardProps {
   isVisible?: boolean
@@ -30,7 +31,6 @@ export const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
     leaks,
     trend,
     forceGC,
-    exportData,
     runCleanup
   } = useMemoryMonitor()
 

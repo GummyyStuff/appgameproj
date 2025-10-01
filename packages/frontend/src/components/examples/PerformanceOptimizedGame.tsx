@@ -1,11 +1,10 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { usePerformance, useGamePerformanceTracking } from '../providers/PerformanceProvider';
 import { useCache } from '@/hooks/useCache';
 import { useABTest } from '@/utils/ab-testing';
 import { useErrorTracking } from '@/utils/error-tracking';
 import { measurePerformance } from '@/utils/performance';
-import { TarkovButton } from '../ui/TarkovButton';
 import { TarkovCard } from '../ui/TarkovCard';
 
 /**
@@ -17,13 +16,13 @@ export function PerformanceOptimizedGame() {
   const [error, setError] = useState<string | null>(null);
 
   // Performance tracking
-  const { trackGamePerformance, reportError } = usePerformance();
+  const { reportError } = usePerformance();
   const { trackLoadTime, trackRenderTime, trackGameAction } = useGamePerformanceTracking('demo');
 
   // A/B Testing
   const { variant, getConfig, track: trackABTest } = useABTest('game_ui_style');
-  const buttonStyle = getConfig('buttonStyle', 'classic');
-  const animations = getConfig('animations', 'standard');
+  const buttonStyle = getConfig('buttonStyle', 'modern'); // Changed default to match comparison
+  const animations = getConfig('animations', 'enhanced'); // Changed default to match comparison
 
   // Caching
   const { data: gameData, loading: gameDataLoading, refresh: refreshGameData } = useCache(
@@ -67,7 +66,7 @@ export function PerformanceOptimizedGame() {
       setGameState('playing');
       
       // Track A/B test engagement
-      trackABTest({ game_started: 1, variant_used: variant?.id });
+      trackABTest({ game_started: 1, variant_used: variant?.id || 'unknown' });
       
     } catch (error) {
       const gameError = error instanceof Error ? error : new Error('Game start failed');
@@ -136,10 +135,10 @@ export function PerformanceOptimizedGame() {
       return {
         initial: { scale: 0.9, opacity: 0 },
         animate: { scale: 1, opacity: 1 },
-        transition: { type: 'spring', stiffness: 300 },
+        transition: { type: 'spring' as const, stiffness: 300 },
       };
     }
-    
+
     return {
       initial: { opacity: 0 },
       animate: { opacity: 1 },

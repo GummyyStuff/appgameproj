@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from 'react'
+import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react'
 import { useSoundEffects, useSoundPreferences } from '../../hooks/useSoundEffects'
 import TarkovButton from './TarkovButton'
 
@@ -30,7 +30,12 @@ interface SoundProviderProps {
 
 export const SoundProvider: React.FC<SoundProviderProps> = ({ children }) => {
   const { soundEnabled, toggleSound } = useSoundPreferences()
-  const soundEffects = useSoundEffects(soundEnabled)
+  const soundEnabledRef = useRef(soundEnabled)
+
+  // Keep soundEnabledRef in sync
+  React.useEffect(() => {
+    soundEnabledRef.current = soundEnabled
+  }, [soundEnabled])
   
   const [masterVolume, setMasterVolume] = useState(() => {
     const saved = localStorage.getItem('tarkov-casino-master-volume')
@@ -62,52 +67,266 @@ export const SoundProvider: React.FC<SoundProviderProps> = ({ children }) => {
     localStorage.setItem('tarkov-casino-music-volume', volume.toString())
   }, [])
 
-  const playGameSound = useCallback((soundType: string, _gameType?: string) => {
-    if (!soundEnabled) return
+  // Audio context for sound generation
+  const audioContextRef = useRef<AudioContext | null>(null)
+
+  const getAudioContext = useCallback(async () => {
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
+    }
+
+    const audioContext = audioContextRef.current
+
+    // Resume audio context if it's suspended and we want sound enabled
+    if (soundEnabled && audioContext.state === 'suspended') {
+      try {
+        await audioContext.resume()
+      } catch (error) {
+        console.warn('Failed to resume AudioContext:', error)
+      }
+    }
+
+    return audioContext
+  }, [soundEnabled])
+
+  // Handle suspend/resume based on enabled state
+  React.useEffect(() => {
+    const handleAudioState = async () => {
+      if (!audioContextRef.current) return
+
+      const audioContext = audioContextRef.current
+
+      try {
+        if (soundEnabled && audioContext.state === 'suspended') {
+          await audioContext.resume()
+        } else if (!soundEnabled && audioContext.state === 'running') {
+          await audioContext.suspend()
+        }
+      } catch (error) {
+        console.warn('Failed to change AudioContext state:', error)
+      }
+    }
+
+    handleAudioState()
+  }, [soundEnabled])
+
+  // Generate different tones for different actions
+  const playTone = useCallback(async (frequency: number, duration: number, type: OscillatorType = 'sine') => {
+    // Always check current sound state at call time using ref
+    if (!soundEnabledRef.current) {
+      return
+    }
+
+    try {
+      const audioContext = await getAudioContext()
+      // Double check AudioContext state
+      if (audioContext.state !== 'running') {
+        return
+      }
+
+      const oscillator = audioContext.createOscillator()
+      const gainNode = audioContext.createGain()
+
+      oscillator.connect(gainNode)
+      gainNode.connect(audioContext.destination)
+
+      oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime)
+      oscillator.type = type
+
+      gainNode.gain.setValueAtTime(0.1, audioContext.currentTime)
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration)
+
+      oscillator.start(audioContext.currentTime)
+      oscillator.stop(audioContext.currentTime + duration)
+    } catch (error) {
+      console.warn('Sound effect failed:', error)
+    }
+  }, [getAudioContext])
+
+  // Individual sound functions
+  const playSpinSound = useCallback(async () => {
+    // Spinning wheel sound - ascending tone
+    await playTone(200, 0.1, 'sawtooth')
+    setTimeout(async () => await playTone(300, 0.1, 'sawtooth'), 100)
+    setTimeout(async () => await playTone(400, 0.1, 'sawtooth'), 200)
+  }, [playTone])
+
+  const playWinSound = useCallback(async () => {
+    // Victory sound - major chord progression
+    await playTone(523, 0.2, 'sine') // C
+    setTimeout(async () => await playTone(659, 0.2, 'sine'), 100) // E
+    setTimeout(async () => await playTone(784, 0.3, 'sine'), 200) // G
+  }, [playTone])
+
+  const playLoseSound = useCallback(async () => {
+    // Loss sound - descending minor tone
+    await playTone(400, 0.2, 'triangle')
+    setTimeout(async () => await playTone(300, 0.2, 'triangle'), 150)
+    setTimeout(async () => await playTone(200, 0.3, 'triangle'), 300)
+  }, [playTone])
+
+  const playBetSound = useCallback(async () => {
+    // Bet placed sound - quick beep
+    await playTone(800, 0.1, 'square')
+  }, [playTone])
+
+  const playClickSound = useCallback(async () => {
+    // UI click sound - short tick
+    await playTone(1000, 0.05, 'square')
+  }, [playTone])
+
+  const playCardFlip = useCallback(async () => {
+    // Card flip sound - quick swoosh
+    await playTone(600, 0.08, 'sawtooth')
+    setTimeout(async () => await playTone(800, 0.05, 'sawtooth'), 50)
+  }, [playTone])
+
+  const playCardDeal = useCallback(async () => {
+    // Card dealing sound - soft thud
+    await playTone(300, 0.1, 'triangle')
+    setTimeout(async () => await playTone(250, 0.08, 'triangle'), 60)
+  }, [playTone])
+
+  const playChipStack = useCallback(async () => {
+    // Chip stacking sound - multiple clicks
+    await playTone(800, 0.05, 'square')
+    setTimeout(async () => await playTone(900, 0.05, 'square'), 50)
+    setTimeout(async () => await playTone(1000, 0.05, 'square'), 100)
+  }, [playTone])
+
+  const playJackpot = useCallback(async () => {
+    // Big win sound - celebration
+    await playTone(523, 0.3, 'sine') // C
+    setTimeout(async () => await playTone(659, 0.3, 'sine'), 100) // E
+    setTimeout(async () => await playTone(784, 0.3, 'sine'), 200) // G
+    setTimeout(async () => await playTone(1047, 0.4, 'sine'), 300) // C (octave)
+    setTimeout(async () => await playTone(1319, 0.5, 'sine'), 400) // E (octave)
+  }, [playTone])
+
+  const playError = useCallback(async () => {
+    // Error sound - harsh buzz
+    await playTone(200, 0.2, 'sawtooth')
+    setTimeout(async () => await playTone(150, 0.3, 'sawtooth'), 100)
+  }, [playTone])
+
+  const playNotification = useCallback(async () => {
+    // Notification sound - gentle chime
+    await playTone(800, 0.15, 'sine')
+    setTimeout(async () => await playTone(1000, 0.2, 'sine'), 150)
+  }, [playTone])
+
+  const playAmbient = useCallback(async () => {
+    // Ambient casino sound - low rumble
+    await playTone(100, 2, 'triangle')
+    setTimeout(async () => await playTone(120, 1.5, 'triangle'), 500)
+  }, [playTone])
+
+  // Case opening sounds
+  const playCaseOpen = useCallback(async () => {
+    // Case opening sound - mechanical click and whoosh
+    await playTone(400, 0.1, 'square')
+    setTimeout(async () => await playTone(600, 0.2, 'sawtooth'), 100)
+    setTimeout(async () => await playTone(800, 0.3, 'sine'), 300)
+  }, [playTone])
+
+  const playCaseReveal = useCallback(async () => {
+    // Item reveal sound - magical chime
+    await playTone(800, 0.2, 'sine')
+    setTimeout(async () => await playTone(1000, 0.2, 'sine'), 100)
+    setTimeout(async () => await playTone(1200, 0.3, 'sine'), 200)
+  }, [playTone])
+
+  const playRarityReveal = useCallback(async (rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary') => {
+    // Different sounds based on rarity
+    switch (rarity) {
+      case 'common':
+        await playTone(400, 0.3, 'sine')
+        break
+      case 'uncommon':
+        await playTone(500, 0.4, 'sine')
+        setTimeout(async () => await playTone(600, 0.2, 'sine'), 200)
+        break
+      case 'rare':
+        await playTone(600, 0.4, 'sine')
+        setTimeout(async () => await playTone(800, 0.3, 'sine'), 150)
+        setTimeout(async () => await playTone(1000, 0.2, 'sine'), 300)
+        break
+      case 'epic':
+        await playTone(700, 0.5, 'sine')
+        setTimeout(async () => await playTone(900, 0.4, 'sine'), 100)
+        setTimeout(async () => await playTone(1100, 0.3, 'sine'), 200)
+        setTimeout(async () => await playTone(1300, 0.2, 'sine'), 300)
+        break
+      case 'legendary':
+        // Epic legendary sound sequence
+        await playTone(800, 0.6, 'sine')
+        setTimeout(async () => await playTone(1000, 0.5, 'sine'), 100)
+        setTimeout(async () => await playTone(1200, 0.4, 'sine'), 200)
+        setTimeout(async () => await playTone(1400, 0.3, 'sine'), 300)
+        setTimeout(async () => await playTone(1600, 0.4, 'sine'), 400)
+        setTimeout(async () => await playTone(1800, 0.5, 'sine'), 500)
+        break
+    }
+  }, [playTone])
+
+  const playGameSound = useCallback(async (soundType: string, _gameType?: string) => {
+    if (!soundEnabledRef.current) return
 
     // Map sound types to appropriate sound effects
     switch (soundType) {
       case 'bet':
-        soundEffects.playBetSound()
+        await playBetSound()
         break
       case 'win':
-        soundEffects.playWinSound()
+        await playWinSound()
         break
       case 'lose':
-        soundEffects.playLoseSound()
+        await playLoseSound()
         break
       case 'click':
-        soundEffects.playClickSound()
+        await playClickSound()
         break
       case 'spin':
-        soundEffects.playSpinSound()
+        await playSpinSound()
         break
       case 'card-flip':
-        soundEffects.playCardFlip()
+        await playCardFlip()
         break
       case 'card-deal':
-        soundEffects.playCardDeal()
+        await playCardDeal()
         break
       case 'chip-stack':
-        soundEffects.playChipStack()
+        await playChipStack()
         break
 
       case 'jackpot':
-        soundEffects.playJackpot()
+        await playJackpot()
         break
       case 'error':
-        soundEffects.playError()
+        await playError()
         break
       case 'notification':
-        soundEffects.playNotification()
+        await playNotification()
         break
       case 'ambient':
-        soundEffects.playAmbient()
+        await playAmbient()
+        break
+      case 'case-open':
+        await playCaseOpen()
+        break
+      case 'case-reveal':
+        await playCaseReveal()
         break
       default:
-        console.warn(`Unknown sound type: ${soundType}`)
+        // Handle rarity sounds like 'rarity-common', 'rarity-rare', etc.
+        if (soundType.startsWith('rarity-')) {
+          const rarity = soundType.split('-')[1] as 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary'
+          await playRarityReveal(rarity)
+        } else {
+          console.warn(`Unknown sound type: ${soundType}`)
+        }
     }
-  }, [soundEnabled, soundEffects])
+  }, [soundEnabled, playBetSound, playWinSound, playLoseSound, playClickSound, playSpinSound, playCardFlip, playCardDeal, playChipStack, playJackpot, playError, playNotification, playAmbient, playCaseOpen, playCaseReveal, playRarityReveal])
 
   const value: SoundContextType = {
     soundEnabled,
@@ -171,25 +390,15 @@ export const SoundControlPanel: React.FC<{
 
   if (compact) {
     return (
-      <div className={`flex items-center space-x-2 ${className}`}>
+      <div className={`flex items-center ${className}`}>
         <TarkovButton
           variant="ghost"
           size="sm"
           onClick={toggleSound}
           icon={soundEnabled ? '🔊' : '🔇'}
           className="px-2"
+          title={soundEnabled ? 'Disable sound' : 'Enable sound'}
         />
-        {soundEnabled && (
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.1"
-            value={masterVolume}
-            onChange={(e) => setMasterVolume(parseFloat(e.target.value))}
-            className="w-16 h-1 bg-tarkov-dark rounded-lg appearance-none cursor-pointer slider-tarkov"
-          />
-        )}
       </div>
     )
   }

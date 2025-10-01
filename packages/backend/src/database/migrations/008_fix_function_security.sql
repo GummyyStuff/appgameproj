@@ -704,7 +704,13 @@ BEGIN
     WHERE id = NEW.user_id;
     
     -- Determine if this is a big win (5x bet or more)
-    is_big_win := (NEW.win_amount >= NEW.bet_amount * 5);
+    -- Special handling for case opening: only consider big wins if bet amount > 0
+    -- This prevents case winnings credit transactions (bet=0, win>0) from being flagged as big wins
+    IF NEW.game_type = 'case_opening' THEN
+        is_big_win := (NEW.bet_amount > 0) AND (NEW.win_amount >= NEW.bet_amount * 5);
+    ELSE
+        is_big_win := (NEW.win_amount >= NEW.bet_amount * 5);
+    END IF;
     
     payload := jsonb_build_object(
         'game_id', NEW.id,

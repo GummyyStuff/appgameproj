@@ -9,14 +9,14 @@ export const animationVariants = {
     initial: { opacity: 0, y: 20 },
     animate: { opacity: 1, y: 0 },
     exit: { opacity: 0, y: -20 },
-    transition: { duration: 0.6, ease: "easeOut" }
+    transition: { duration: 0.6, ease: [0.4, 0, 0.2, 1] }
   },
 
   // Card animations
   card: {
     initial: { opacity: 0, scale: 0.95 },
     animate: { opacity: 1, scale: 1 },
-    transition: { duration: 0.4, type: "spring", stiffness: 200 }
+    transition: { duration: 0.4, type: "spring" as const, stiffness: 200 }
   },
 
   // Component stagger animations
@@ -31,7 +31,7 @@ export const animationVariants = {
     item: {
       initial: { opacity: 0, y: 20 },
       animate: { opacity: 1, y: 0 },
-      transition: { duration: 0.4, ease: "easeOut" }
+      transition: { duration: 0.4, ease: [0.4, 0, 0.2, 1] }
     }
   },
 
@@ -77,7 +77,7 @@ export const animationVariants = {
     prize: {
       initial: { scale: 0.8, opacity: 0 },
       animate: { scale: 1, opacity: 1 },
-      transition: { delay: 0.2, type: "spring", stiffness: 200 }
+      transition: { delay: 0.2, type: "spring" as const, stiffness: 200 }
     }
   },
 
@@ -85,11 +85,11 @@ export const animationVariants = {
   caseCard: {
     initial: { opacity: 0, y: 20, scale: 0.9 },
     animate: { opacity: 1, y: 0, scale: 1 },
-    transition: { type: "spring", stiffness: 200 },
+    transition: { type: "spring" as const, stiffness: 200 },
     hover: {
       scale: 1.03,
       y: -5,
-      transition: { type: "spring", stiffness: 400, damping: 25 }
+      transition: { type: "spring" as const, stiffness: 400, damping: 25 }
     },
     tap: { scale: 0.97 }
   },
@@ -135,7 +135,7 @@ export const animationVariants = {
     fadeInUp: {
       initial: { opacity: 0, y: 10 },
       animate: { opacity: 1, y: 0 },
-      transition: { duration: 0.4, ease: "easeOut" }
+      transition: { duration: 0.4, ease: [0.4, 0, 0.2, 1] }
     },
     highlight: {
       animate: {
@@ -179,7 +179,7 @@ export const createStaggeredAnimation = (items: number, delay: number = 0.1) => 
   item: {
     initial: { opacity: 0, y: 20 },
     animate: { opacity: 1, y: 0 },
-    transition: { duration: 0.4, ease: "easeOut" }
+    transition: { duration: 0.4, ease: [0.4, 0, 0.2, 1] }
   }
 })
 
