@@ -4,8 +4,8 @@ import ToastProvider from './components/providers/ToastProvider'
 import { PerformanceProvider } from './components/providers/PerformanceProvider'
 import AppRouter from './router/AppRouter'
 import ErrorBoundary from './components/ui/ErrorBoundary'
-import { FeedbackButton } from './components/ui/FeedbackWidget'
 import { PerformanceToggle } from './components/ui/PerformanceMonitor'
+import { ChatDock } from './components/chat/ChatDock'
 import { useAuth } from './hooks/useAuth'
 import './index.css'
 
@@ -15,8 +15,8 @@ function AppContent() {
   return (
     <PerformanceProvider userId={user?.id}>
       <AppRouter />
-      <FeedbackButton />
       <PerformanceToggle />
+      <ChatDock />
     </PerformanceProvider>
   )
 }

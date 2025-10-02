@@ -33,8 +33,8 @@ Blackjack is a strategic card game where the goal is to get cards totaling close
 
 ### Step 1: Place Your Bet
 - Choose bet amount before cards are dealt
-- Minimum bet: 10 virtual currency
-- Maximum bet: 1,000 virtual currency
+- Minimum bet: 1 virtual currency
+- Maximum bet: 10,000 virtual currency
 - Must have sufficient balance
 
 ### Step 2: Initial Deal

@@ -51,7 +51,6 @@ tarkov-casino/
 
 - [Bun](https://bun.sh/) (latest version)
 - [Docker](https://docker.com/) (for local Supabase)
-- [Node.js](https://nodejs.org/) 18+ (for frontend tooling)
 
 ### Installation
 
@@ -140,7 +139,7 @@ docker run -p 3000:3000 tarkov-casino
 
 ### Production Deployment
 
-For detailed production deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md).
+For detailed production deployment instructions, see [DEPLOYMENT.md](./docs/deployment/deployment.md).
 
 #### Quick Deployment with Coolify
 

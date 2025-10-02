@@ -42,4 +42,9 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
 })
 
+// Debug: Log auth state changes
+supabase.auth.onAuthStateChange((event, session) => {
+  console.log('Auth state change:', { event, session: session ? 'authenticated' : 'not authenticated' });
+});
+
 export default supabase

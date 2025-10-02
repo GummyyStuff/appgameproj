@@ -1,6 +1,5 @@
 import React from 'react'
 import { motion } from 'framer-motion'
-import { useBalance } from '../../hooks/useBalance'
 import { TarkovCard } from '../ui/TarkovCard'
 import CaseSelector from './CaseSelector'
 import ItemReveal from './ItemReveal'
@@ -139,11 +138,11 @@ const ErrorDisplay: React.FC<{
  * ```
  */
 const CaseOpeningGame: React.FC = () => {
-  const { balance } = useBalance()
   const {
     gameState,
     caseTypes,
     isLoadingCases,
+    displayBalance,
     openCase,
     completeAnimation
   } = useCaseOpeningGame()
@@ -306,7 +305,7 @@ Case Opening Carousel
                 setSelectedCase(null)
                 openCase(caseType)
               }}
-              balance={balance}
+              balance={displayBalance}
               isLoading={isLoadingCases}
               selectedCase={selectedCase}
               showConfirmation={showConfirmation}

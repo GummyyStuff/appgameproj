@@ -3,143 +3,115 @@
 /**
  * Apply Chat System Migration
  * 
- * This script applies the chat system migration using the existing
- * project configuration and follows the established patterns.
+ * This script applies the complete chat system migration including:
+ * - chat_messages table with constraints and indexes
+ * - user_profiles extensions
+ * - Row Level Security policies
+ * - Real-time triggers and functions
+ * - Helper functions for common operations
  */
 
-import { supabaseAdmin } from '../config/supabase';
+import { createClient } from '@supabase/supabase-js';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
-async function testTableExists(tableName: string): Promise<boolean> {
-  try {
-    const { error } = await supabaseAdmin
-      .from(tableName)
-      .select('*')
-      .limit(0);
-    
-    return !error;
-  } catch (error) {
-    return false;
-  }
+// Load environment variables
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl || !supabaseServiceKey) {
+  console.error('❌ Missing required environment variables:');
+  console.error('   - SUPABASE_URL');
+  console.error('   - SUPABASE_SERVICE_ROLE_KEY');
+  process.exit(1);
 }
+
+// Create Supabase client with service role key for admin operations
+const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false
+  }
+});
 
 async function applyChatMigration() {
   try {
-    console.log('🚀 Setting up chat system database schema...');
-    console.log('');
+    console.log('🚀 Applying chat system migration...');
 
-    // Check if tables already exist
-    console.log('🔍 Checking existing tables...');
-    const messagesExists = await testTableExists('chat_messages');
-    const presenceExists = await testTableExists('chat_presence');
+    // Read the migration file
+    const migrationPath = join(__dirname, '../database/migrations/013_chat_system_complete.sql');
+    const migrationSQL = readFileSync(migrationPath, 'utf8');
 
-    if (messagesExists && presenceExists) {
-      console.log('✅ Chat tables already exist!');
-      console.log('');
-    } else {
-      console.log('📋 Chat tables need to be created');
-      console.log('');
-      console.log('⚠️  This script cannot automatically create the database schema.');
-      console.log('📝 Please manually apply the migration using the Supabase dashboard:');
-      console.log('');
-      console.log('1. Go to your Supabase dashboard');
-      console.log('2. Navigate to SQL Editor');
-      console.log('3. Copy and paste the contents of:');
-      console.log('   packages/backend/src/database/migrations/012_chat_system_complete.sql');
-      console.log('4. Execute the SQL');
-      console.log('');
-      console.log('📄 Migration file location:');
-      
-      const migrationPath = join(__dirname, '../database/migrations/012_chat_system_complete.sql');
-      console.log(`   ${migrationPath}`);
-      
-      console.log('');
-      console.log('🔄 After applying the migration, run this script again to verify.');
-      return false;
+    console.log('📄 Executing migration SQL...');
+
+    // Split the SQL into individual statements and execute them
+    const statements = migrationSQL
+      .split(';')
+      .map(stmt => stmt.trim())
+      .filter(stmt => stmt.length > 0 && !stmt.startsWith('--'));
+
+    for (const statement of statements) {
+      if (statement.trim()) {
+        console.log(`Executing: ${statement.substring(0, 100)}...`);
+        
+        const { error } = await supabase.rpc('exec_sql', { 
+          sql: statement + ';' 
+        });
+
+        if (error) {
+          console.error(`❌ Error executing statement: ${statement.substring(0, 100)}...`);
+          console.error(error);
+          throw error;
+        }
+      }
     }
 
-    // Verify the setup works
-    console.log('🧪 Testing chat system functionality...');
+    console.log('✅ Chat system migration applied successfully!');
 
-    // Test table access
-    const { error: messagesError } = await supabaseAdmin
+    // Verify the tables were created
+    console.log('🔍 Verifying table creation...');
+
+    const { data: messagesTable, error: messagesError } = await supabase
       .from('chat_messages')
       .select('*')
-      .limit(1);
+      .limit(0);
 
     if (messagesError) {
-      console.error('❌ chat_messages table access failed:', messagesError.message);
-      return false;
+      console.error('❌ Failed to verify chat_messages table:', messagesError);
+      throw messagesError;
     }
 
-    const { error: presenceError } = await supabaseAdmin
-      .from('chat_presence')
-      .select('*')
-      .limit(1);
+    console.log('✅ Tables verified successfully!');
 
-    if (presenceError) {
-      console.error('❌ chat_presence table access failed:', presenceError.message);
-      return false;
+    // Test helper functions
+    console.log('🧪 Testing helper functions...');
+
+    const { data: recentMessages, error: recentError } = await supabase
+      .rpc('get_recent_chat_messages', { message_limit: 10 });
+
+    if (recentError) {
+      console.error('❌ Failed to test get_recent_chat_messages function:', recentError);
+      throw recentError;
     }
 
-    console.log('✅ Tables are accessible!');
+    console.log('✅ Helper functions working correctly!');
+    console.log(`📊 Current state: ${recentMessages?.length || 0} messages`);
 
-    // Test RPC functions
-    try {
-      const { data: recentMessages, error: rpcError } = await supabaseAdmin
-        .rpc('get_recent_chat_messages', { message_limit: 5 });
-
-      if (rpcError) {
-        console.warn('⚠️  get_recent_chat_messages function issue:', rpcError.message);
-      } else {
-        console.log('✅ get_recent_chat_messages function working');
-      }
-
-      const { data: onlineUsers, error: onlineError } = await supabaseAdmin
-        .rpc('get_online_users');
-
-      if (onlineError) {
-        console.warn('⚠️  get_online_users function issue:', onlineError.message);
-      } else {
-        console.log('✅ get_online_users function working');
-      }
-    } catch (rpcError) {
-      console.warn('⚠️  RPC function test had issues (this may be expected)');
-    }
-
-    console.log('');
-    console.log('🎉 Chat system verification completed successfully!');
-    console.log('');
-    console.log('📋 What is ready:');
-    console.log('   ✅ chat_messages table with RLS policies');
-    console.log('   ✅ chat_presence table with RLS policies');
-    console.log('   ✅ Indexes for performance optimization');
-    console.log('   ✅ Real-time triggers for message broadcasting');
+    console.log('\n🎉 Chat system migration completed successfully!');
+    console.log('\n📋 Summary:');
+    console.log('   ✅ chat_messages table created with constraints and indexes');
+    console.log('   ✅ user_profiles extended with chat-related fields');
+    console.log('   ✅ Row Level Security policies configured');
+    console.log('   ✅ Real-time triggers and functions created');
     console.log('   ✅ Helper functions for common operations');
-    console.log('   ✅ Automatic presence tracking');
-    console.log('');
-    console.log('🔄 Real-time features enabled:');
-    console.log('   📡 Message broadcasting via pg_notify');
-    console.log('   👥 Presence change notifications');
-    console.log('   🔒 Secure access with Row Level Security');
-    console.log('');
-    console.log('🚀 The chat system database is ready for use!');
-
-    return true;
+    console.log('   ✅ Real-time subscriptions enabled');
+    console.log('\n🚀 The chat system is ready for use!');
 
   } catch (error) {
-    console.error('❌ Setup verification failed:', error);
-    return false;
+    console.error('❌ Failed to apply chat migration:', error);
+    process.exit(1);
   }
 }
 
 // Run the migration
-applyChatMigration()
-  .then(success => {
-    process.exit(success ? 0 : 1);
-  })
-  .catch(error => {
-    console.error('❌ Script failed:', error);
-    process.exit(1);
-  });
+applyChatMigration();

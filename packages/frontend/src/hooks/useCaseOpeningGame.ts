@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from './useAuth'
 import { useBalance } from './useBalance'
 import { useAdvancedFeatures } from './useAdvancedFeatures'
@@ -21,6 +22,7 @@ export interface UseCaseOpeningGameReturn {
   caseTypes: CaseType[]
   isLoadingCases: boolean
   error: string | null
+  displayBalance: number
   openCase: (caseType?: CaseType) => Promise<void>
   resetGame: () => void
   completeAnimation: (result: CaseOpeningResult) => void
@@ -57,6 +59,7 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
   const { trackGamePlayed } = useAdvancedFeatures()
   const { playWinSound, playLoseSound, playCaseOpen, playCaseReveal, playRarityReveal } = useSoundEffects()
   const toast = useToastContext()
+  const queryClient = useQueryClient()
 
   // Performance monitoring hooks
   const { monitorAPICall, monitorGameAction, startTiming } = usePerformanceMonitoring()
@@ -86,6 +89,12 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
     error: null,
     transactionId: null
   })
+
+  // Track pending winnings to delay balance update until congratulations
+  const [pendingWinnings, setPendingWinnings] = useState<number>(0)
+
+  // Calculate display balance (subtract pending winnings to show only deduction)
+  const displayBalance = balance - pendingWinnings
 
   // Track credited openings to prevent duplicate credit calls
   const creditedOpeningsRef = useRef<Set<string>>(new Set())
@@ -218,6 +227,9 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
         ...prev,
         transactionId: openingResponse.transaction_id
       }))
+
+      // Store winnings amount to be credited when congratulations appears
+      setPendingWinnings(openingResponse.opening_result.currency_awarded)
 
       // Setup animation after a brief delay
       setTimeout(async () => {
@@ -488,6 +500,16 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
         throw new Error('Failed to complete case opening')
       }
 
+      // Clear pending winnings and show congratulations toast
+      if (pendingWinnings > 0) {
+        setPendingWinnings(0)
+        
+        // Show winnings toast
+        toast.success('Congratulations!', `+${formatCurrency(pendingWinnings, 'roubles')} won!`, {
+          duration: 3000
+        })
+      }
+
       // Animation is complete - transition to complete phase with final result
       transitionToPhase('complete', 'Case opening animation completed')
       // recordCaseOpening(finalResult) // TODO: Fix function signature
@@ -518,7 +540,7 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
         }))
       }
     }
-  }, [gameState.pendingCompletion, gameState.selectedCase, caseOpening, errorHandling, transitionToPhase, toast])
+  }, [gameState.pendingCompletion, gameState.selectedCase, caseOpening, errorHandling, transitionToPhase, toast, user?.id, balance, queryClient, pendingWinnings])
 
 
   /**
@@ -567,6 +589,7 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
     caseTypes: caseData.caseTypes,
     isLoadingCases: caseData.isLoadingCases,
     error: combinedError,
+    displayBalance,
     openCase,
     resetGame,
     completeAnimation,

@@ -203,9 +203,17 @@ export class CaseCacheService {
       this.updateOpeningHistoryOptimistic(result.opening_result)
 
       // Update balance with actual result (should match optimistic update for successful cases)
-      const actualBalance = delayCredit ? result.balance_after_deduction : result.new_balance
-      if (actualBalance !== undefined) {
-        this.queryClient.setQueryData(balanceQueryKey, actualBalance)
+      // When delayCredit is true, we only show the deduction immediately, winnings will be added later
+      if (delayCredit) {
+        // Keep the optimistic balance (current - case price) for now
+        // The winnings will be added when the animation completes
+        this.queryClient.setQueryData(balanceQueryKey, optimisticBalance)
+      } else {
+        // Normal flow - update with full result
+        const actualBalance = result.new_balance
+        if (actualBalance !== undefined) {
+          this.queryClient.setQueryData(balanceQueryKey, actualBalance)
+        }
       }
 
       return result

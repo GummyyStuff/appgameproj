@@ -103,8 +103,8 @@ Roulette is a classic casino game where players bet on where a ball will land on
 
 ## Betting Limits
 
-- **Minimum Bet**: 10 virtual currency per bet
-- **Maximum Bet**: 1,000 virtual currency per bet
+- **Minimum Bet**: 1 virtual currency per bet
+- **Maximum Bet**: 10,000 virtual currency per bet
 - **Table Maximum**: 5,000 virtual currency total per spin
 - **Balance Requirement**: Must have sufficient balance for all bets
 

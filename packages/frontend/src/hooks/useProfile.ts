@@ -7,6 +7,11 @@ interface UserProfile {
   username: string
   display_name: string
   balance: number
+  is_moderator: boolean
+  avatar_path: string | null
+  chat_rules_version: number
+  chat_rules_accepted_at: string | null
+  is_active: boolean
 }
 
 export const useProfile = () => {
@@ -19,7 +24,7 @@ export const useProfile = () => {
       
       const { data, error } = await supabase
         .from('user_profiles')
-        .select('id, username, display_name, balance')
+        .select('id, username, display_name, balance, is_moderator, avatar_path, chat_rules_version, chat_rules_accepted_at, is_active')
         .eq('id', user.id)
         .single()
       

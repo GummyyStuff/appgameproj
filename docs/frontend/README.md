@@ -17,14 +17,14 @@ A React-based frontend application for the Tarkov Casino gaming platform, featur
 
 ### Prerequisites
 
-- Node.js 18+ 
-- npm or yarn
+- [Bun](https://bun.sh/) (latest version)
+- Node.js 18+ (for frontend tooling)
 
 ### Installation
 
 ```bash
 # Install dependencies
-npm install
+bun install
 
 # Copy environment variables
 cp .env.example .env
@@ -36,16 +36,16 @@ cp .env.example .env
 
 ```bash
 # Start development server
-npm run dev
+bun run dev
 
 # Run tests
-npm run test
+bun test
 
 # Build for production
-npm run build
+bun run build
 
 # Preview production build
-npm run preview
+bun run preview
 ```
 
 ## Project Structure
@@ -113,24 +113,24 @@ Authentication is handled via Supabase Auth with the following features:
 
 ## Testing
 
-Tests are written using Vitest and React Testing Library:
+Tests are written using Bun Test and React Testing Library:
 
 ```bash
 # Run tests
-npm run test
+bun test
 
 # Run tests in watch mode
-npm run test:watch
+bun test --watch
 
 # Run tests with coverage
-npm run test:coverage
+bun test --coverage
 ```
 
 ## Building
 
 ```bash
 # Build for production
-npm run build
+bun run build
 
 # The built files will be in the `dist/` directory
 ```
@@ -139,7 +139,7 @@ npm run build
 
 The application can be deployed to any static hosting service:
 
-1. Build the application: `npm run build`
+1. Build the application: `bun run build`
 2. Upload the `dist/` directory to your hosting service
 3. Configure environment variables on your hosting platform
 4. Ensure your hosting service supports client-side routing

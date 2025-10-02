@@ -60,7 +60,7 @@ cd tarkov-casino-website
 
 # Install dependencies
 cd packages/backend && bun install
-cd ../frontend && npm install
+cd ../frontend && bun install
 
 # Setup environment variables
 cp packages/backend/.env.example packages/backend/.env
@@ -75,7 +75,7 @@ bun run db:migrate
 
 # Start development servers
 bun run dev  # Backend on port 3000
-cd ../frontend && npm run dev  # Frontend on port 5173
+cd ../frontend && bun run dev  # Frontend on port 5173
 ```
 
 ### Production Environment
@@ -133,17 +133,17 @@ VITE_ANALYTICS_ID=your_analytics_id
 ```bash
 # Run all tests
 cd packages/backend && bun test
-cd packages/frontend && npm run test
+cd packages/frontend && bun test
 
 # Run linting
-cd packages/frontend && npm run lint
+cd packages/frontend && bun run lint
 
 # Type checking
-cd packages/frontend && npm run type-check
+cd packages/frontend && bun run type-check
 
 # Security audit
 cd packages/backend && bun audit
-cd packages/frontend && npm audit
+cd packages/frontend && bun audit
 ```
 
 #### Database Preparation
@@ -402,7 +402,7 @@ sudo apt update && sudo apt upgrade -y
 
 # Update Node.js dependencies
 cd packages/frontend
-npm audit fix
+bun update
 
 # Update Bun dependencies
 cd ../backend
@@ -726,7 +726,7 @@ openssl x509 -noout -dates
 
 # Check for outdated dependencies
 echo "Dependency Security Check:"
-cd packages/frontend && npm audit --audit-level=high
+cd packages/frontend && bun audit --audit-level=high
 cd ../backend && bun audit
 ```
 

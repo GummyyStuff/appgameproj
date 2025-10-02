@@ -736,6 +736,7 @@ a:focus-visible {
   font-weight: 700;
   color: #10b981;
   margin-bottom: 1.5rem;
+  text-align: center;
 }
 
 .result-prize-name {
