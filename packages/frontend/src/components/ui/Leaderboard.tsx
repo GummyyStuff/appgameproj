@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { TarkovIcons, TarkovButton, TarkovCard } from './index'
+import { TarkovButton, TarkovCard, FontAwesomeSVGIcons } from './index'
 
 interface LeaderboardEntry {
   rank: number
@@ -24,10 +24,10 @@ interface LeaderboardProps {
 }
 
 const leaderboardCategories = [
-  { id: 'winnings', label: 'Total Winnings', icon: TarkovIcons.Roubles },
-  { id: 'winrate', label: 'Win Rate', icon: TarkovIcons.Health },
-  { id: 'games', label: 'Games Played', icon: TarkovIcons.Weapon },
-  { id: 'biggest', label: 'Biggest Win', icon: TarkovIcons.Energy }
+  { id: 'winnings', label: 'Total Winnings', icon: FontAwesomeSVGIcons.RubleSign },
+  { id: 'winrate', label: 'Win Rate', icon: FontAwesomeSVGIcons.Heart },
+  { id: 'games', label: 'Games Played', icon: FontAwesomeSVGIcons.Sword },
+  { id: 'biggest', label: 'Biggest Win', icon: FontAwesomeSVGIcons.Bolt }
 ]
 
 const timeFilters = [
@@ -109,9 +109,9 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ isOpen, onClose, currentUser 
 
   const getRankIcon = (rank: number) => {
     switch (rank) {
-      case 1: return '🥇'
-      case 2: return '🥈'
-      case 3: return '🥉'
+      case 1: return <FontAwesomeSVGIcons.Medal className="text-yellow-400" size={20} />
+      case 2: return <FontAwesomeSVGIcons.Medal className="text-gray-300" size={20} />
+      case 3: return <FontAwesomeSVGIcons.Medal className="text-amber-600" size={20} />
       default: return `#${rank}`
     }
   }
@@ -127,10 +127,10 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ isOpen, onClose, currentUser 
 
   const getFavoriteGameIcon = (game: string) => {
     switch (game.toLowerCase()) {
-      case 'roulette': return <TarkovIcons.Roulette size={16} />
-      case 'blackjack': return <TarkovIcons.Blackjack size={16} />
+      case 'roulette': return <FontAwesomeSVGIcons.Circle size={16} />
+      case 'blackjack': return <FontAwesomeSVGIcons.Spade size={16} />
 
-      default: return <TarkovIcons.Weapon size={16} />
+      default: return <FontAwesomeSVGIcons.Sword size={16} />
     }
   }
 
@@ -166,7 +166,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ isOpen, onClose, currentUser 
 
       {/* Avatar */}
       <div className="w-12 h-12 rounded-full bg-tarkov-dark border-2 border-tarkov-accent/50 flex items-center justify-center">
-        <TarkovIcons.Helmet className="text-tarkov-accent" size={20} />
+        <FontAwesomeSVGIcons.Shield className="text-tarkov-accent" size={20} />
       </div>
 
       {/* Player Info */}
@@ -250,7 +250,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ isOpen, onClose, currentUser 
               {/* Header */}
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center space-x-3">
-                  <TarkovIcons.Weapon className="text-tarkov-accent" size={32} />
+                  <FontAwesomeSVGIcons.Sword className="text-tarkov-accent" size={32} />
                   <h2 className="text-2xl font-tarkov font-bold text-tarkov-accent uppercase">
                     Leaderboard
                   </h2>
@@ -259,7 +259,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ isOpen, onClose, currentUser 
                   onClick={onClose}
                   className="text-gray-400 hover:text-white transition-colors"
                 >
-                  <TarkovIcons.Close size={24} />
+                  <FontAwesomeSVGIcons.Times size={24} />
                 </button>
               </div>
 
@@ -269,7 +269,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ isOpen, onClose, currentUser 
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
                       <div className="w-10 h-10 rounded-full bg-tarkov-accent/20 border border-tarkov-accent flex items-center justify-center">
-                        <TarkovIcons.Helmet className="text-tarkov-accent" size={20} />
+                        <FontAwesomeSVGIcons.Shield className="text-tarkov-accent" size={20} />
                       </div>
                       <div>
                         <div className="font-tarkov font-bold text-tarkov-accent">Your Rank</div>
@@ -359,7 +359,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ isOpen, onClose, currentUser 
                       <TarkovCard className="p-6" glow>
                         <div className="text-center mb-6">
                           <div className="w-20 h-20 rounded-full bg-tarkov-dark border-4 border-tarkov-accent/50 flex items-center justify-center mx-auto mb-4">
-                            <TarkovIcons.Helmet className="text-tarkov-accent" size={32} />
+                            <FontAwesomeSVGIcons.Shield className="text-tarkov-accent" size={32} />
                           </div>
                           
                           <div className="flex items-center justify-center space-x-2 mb-2">
@@ -381,25 +381,25 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ isOpen, onClose, currentUser 
                         {/* Detailed Stats */}
                         <div className="grid grid-cols-2 gap-4 mb-6">
                           <TarkovCard className="p-4 text-center">
-                            <TarkovIcons.Roubles className="text-green-500 mx-auto mb-2" size={24} />
+                            <FontAwesomeSVGIcons.RubleSign className="text-green-500 mx-auto mb-2" size={24} />
                             <div className="text-lg font-bold text-white">₽{selectedPlayer.stats.totalWinnings.toLocaleString()}</div>
                             <div className="text-xs text-gray-400">Total Winnings</div>
                           </TarkovCard>
                           
                           <TarkovCard className="p-4 text-center">
-                            <TarkovIcons.Health className="text-green-500 mx-auto mb-2" size={24} />
+                            <FontAwesomeSVGIcons.Heart className="text-green-500 mx-auto mb-2" size={24} />
                             <div className="text-lg font-bold text-white">{selectedPlayer.stats.winRate}%</div>
                             <div className="text-xs text-gray-400">Win Rate</div>
                           </TarkovCard>
                           
                           <TarkovCard className="p-4 text-center">
-                            <TarkovIcons.Weapon className="text-tarkov-accent mx-auto mb-2" size={24} />
+                            <FontAwesomeSVGIcons.Sword className="text-tarkov-accent mx-auto mb-2" size={24} />
                             <div className="text-lg font-bold text-white">{selectedPlayer.stats.gamesPlayed}</div>
                             <div className="text-xs text-gray-400">Games Played</div>
                           </TarkovCard>
                           
                           <TarkovCard className="p-4 text-center">
-                            <TarkovIcons.Energy className="text-yellow-500 mx-auto mb-2" size={24} />
+                            <FontAwesomeSVGIcons.Bolt className="text-yellow-500 mx-auto mb-2" size={24} />
                             <div className="text-lg font-bold text-white">₽{selectedPlayer.stats.biggestWin.toLocaleString()}</div>
                             <div className="text-xs text-gray-400">Biggest Win</div>
                           </TarkovCard>
@@ -439,7 +439,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ isOpen, onClose, currentUser 
                             <TarkovButton
                               variant="primary"
                               size="sm"
-                              icon={<TarkovIcons.Ammo size={16} />}
+                              icon={<FontAwesomeSVGIcons.Axe size={16} />}
                               onClick={() => {
                                 // In real app, this would open a challenge/friend request
                                 alert(`Challenge ${selectedPlayer.username} to a game!`)

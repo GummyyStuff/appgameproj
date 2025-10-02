@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../../hooks/useAuth'
 import { supabase } from '../../lib/supabase'
+import { FontAwesomeSVGIcons } from './FontAwesomeSVG'
 
 interface Transaction {
   id: string
@@ -81,11 +82,10 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
 
   const getGameIcon = (gameType: string) => {
     switch (gameType) {
-      case 'roulette': return '🎰'
-      case 'blackjack': return '🃏'
-
-      case 'admin': return '⚙️'
-      default: return '🎮'
+      case 'roulette': return <FontAwesomeSVGIcons.Circle size={16} />
+      case 'blackjack': return <FontAwesomeSVGIcons.Spade size={16} />
+      case 'admin': return <FontAwesomeSVGIcons.Shield size={16} />
+      default: return <FontAwesomeSVGIcons.Gamepad size={16} />
     }
   }
 
@@ -105,7 +105,7 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
     return (
       <div className="bg-tarkov-dark rounded-lg p-6">
         <div className="text-center py-8">
-          <div className="text-4xl mb-4 animate-spin">📊</div>
+          <FontAwesomeSVGIcons.AlarmClock className="text-tarkov-accent mx-auto mb-4 animate-spin" size={48} />
           <p className="text-gray-400">Loading transaction history...</p>
         </div>
       </div>
@@ -116,7 +116,7 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
     return (
       <div className="bg-tarkov-dark rounded-lg p-6">
         <div className="text-center py-8">
-          <div className="text-4xl mb-4">❌</div>
+          <FontAwesomeSVGIcons.Times className="text-tarkov-danger mx-auto mb-4" size={48} />
           <p className="text-tarkov-danger">Failed to load transaction history</p>
         </div>
       </div>
@@ -127,7 +127,7 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
     <div className="bg-tarkov-dark rounded-lg p-6">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-xl font-tarkov font-bold text-white flex items-center space-x-2">
-          <span className="text-2xl">📊</span>
+          <FontAwesomeSVGIcons.AlarmClock className="text-tarkov-accent" size={24} />
           <span>Transaction History</span>
         </h3>
         
@@ -156,7 +156,7 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
 
       {!transactions || transactions.length === 0 ? (
         <div className="text-center py-8">
-          <div className="text-4xl mb-4">🎮</div>
+          <FontAwesomeSVGIcons.Gamepad className="text-gray-400 mx-auto mb-4" size={48} />
           <p className="text-gray-400">No transactions found. Start playing to see your history!</p>
         </div>
       ) : (

@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 import CurrencyManager from '../components/ui/CurrencyManager'
 import TransactionHistory from '../components/ui/TransactionHistory'
-import { AchievementSystem, TarkovIcons, TarkovButton, TarkovCard, ProfileLeaderboard } from '../components/ui'
+import { AchievementSystem, TarkovButton, TarkovCard, ProfileLeaderboard, FontAwesomeSVGIcons } from '../components/ui'
 import { useAdvancedFeatures } from '../hooks/useAdvancedFeatures'
 import { formatCurrency } from '../utils/currency'
 
@@ -148,7 +148,7 @@ const ProfilePage: React.FC = () => {
     return (
       <div className="flex items-center justify-center min-h-64">
         <div className="text-center">
-          <div className="text-4xl mb-4 animate-spin">🎰</div>
+          <FontAwesomeSVGIcons.Clock className="text-tarkov-accent mx-auto mb-4 animate-spin" size={48} />
           <p className="text-gray-400">Loading your profile...</p>
         </div>
       </div>
@@ -158,7 +158,7 @@ const ProfilePage: React.FC = () => {
   if (profileError || !profile) {
     return (
       <div className="text-center py-12">
-        <div className="text-6xl mb-4">❌</div>
+        <FontAwesomeSVGIcons.Times className="text-tarkov-danger mx-auto mb-4" size={64} />
         <h2 className="text-2xl font-tarkov text-tarkov-danger mb-4">Profile Not Found</h2>
         <p className="text-gray-400">Unable to load your profile information.</p>
         <button 
@@ -263,7 +263,7 @@ const ProfilePage: React.FC = () => {
         
         {statsLoading ? (
           <div className="text-center py-8">
-            <div className="text-4xl mb-4 animate-spin">📊</div>
+            <FontAwesomeSVGIcons.AlarmClock className="text-tarkov-accent mx-auto mb-4 animate-pulse" size={48} />
             <p className="text-gray-400">Loading game statistics...</p>
           </div>
         ) : gameStats && gameStats.length > 0 ? (
@@ -271,11 +271,7 @@ const ProfilePage: React.FC = () => {
             {gameStats.map((stat) => (
               <div key={stat.game_type} className="bg-tarkov-secondary rounded-lg p-4">
                 <div className="flex items-center space-x-2 mb-3">
-                  <span className="text-2xl">
-                    {stat.game_type === 'roulette' && '🎰'}
-                    {stat.game_type === 'blackjack' && '🃏'}
-                    {stat.game_type === 'case_opening' && '📦'}
-                  </span>
+                  <FontAwesomeSVGIcons.Gamepad className="text-tarkov-accent" size={24} />
                   <h3 className="text-lg font-medium text-white capitalize">
                     {stat.game_type}
                   </h3>
@@ -314,7 +310,7 @@ const ProfilePage: React.FC = () => {
           </div>
         ) : (
           <div className="text-center py-8">
-            <div className="text-4xl mb-4">🎮</div>
+            <FontAwesomeSVGIcons.Gamepad className="text-gray-400 mx-auto mb-4" size={48} />
             <p className="text-gray-400">No games played yet. Start playing to see your statistics!</p>
           </div>
         )}
@@ -324,7 +320,7 @@ const ProfilePage: React.FC = () => {
       <div className="bg-tarkov-dark rounded-lg p-6 shadow-lg">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-3">
-            <TarkovIcons.Helmet className="text-tarkov-accent" size={24} />
+            <FontAwesomeSVGIcons.Shield className="text-tarkov-accent" size={24} />
             <h2 className="text-xl font-tarkov font-bold text-white uppercase tracking-wide">
               Achievements
             </h2>
@@ -333,7 +329,7 @@ const ProfilePage: React.FC = () => {
             variant="secondary"
             size="sm"
             onClick={openAchievements}
-            icon={<TarkovIcons.Energy size={16} />}
+            icon={<FontAwesomeSVGIcons.Bolt size={16} />}
           >
             View All
           </TarkovButton>
@@ -361,13 +357,13 @@ const ProfilePage: React.FC = () => {
             .map((achievement) => {
               const getAchievementIcon = (achievementId: string) => {
                 const iconMap: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
-                  'first-win': TarkovIcons.Health,
-                  'high-roller': TarkovIcons.Roubles,
-                  'lucky-seven': TarkovIcons.Energy,
-                  'roulette-master': TarkovIcons.Roulette,
-                  'blackjack-ace': TarkovIcons.Blackjack
+                  'first-win': FontAwesomeSVGIcons.Heart,
+                  'high-roller': FontAwesomeSVGIcons.RubleSign,
+                  'lucky-seven': FontAwesomeSVGIcons.Bolt,
+                  'roulette-master': FontAwesomeSVGIcons.Circle,
+                  'blackjack-ace': FontAwesomeSVGIcons.Spade
                 }
-                return iconMap[achievementId] || TarkovIcons.Helmet
+                return iconMap[achievementId] || FontAwesomeSVGIcons.Shield
               }
               
               const IconComponent = getAchievementIcon(achievement.id)
@@ -411,7 +407,7 @@ const ProfilePage: React.FC = () => {
         {/* No achievements unlocked state */}
         {achievements.filter(a => a.unlocked).length === 0 && (
           <div className="text-center py-8">
-            <TarkovIcons.Helmet className="text-gray-600 mx-auto mb-4" size={48} />
+            <FontAwesomeSVGIcons.Shield className="text-gray-600 mx-auto mb-4" size={48} />
             <p className="text-gray-400 mb-4">No achievements unlocked yet</p>
             <p className="text-sm text-gray-500">Start playing games to earn your first achievements!</p>
           </div>
@@ -430,13 +426,13 @@ const ProfilePage: React.FC = () => {
                 .map((achievement) => {
                   const getAchievementIcon = (achievementId: string) => {
                     const iconMap: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
-                      'first-win': TarkovIcons.Health,
-                      'high-roller': TarkovIcons.Roubles,
-                      'lucky-seven': TarkovIcons.Energy,
-                      'roulette-master': TarkovIcons.Roulette,
-                      'blackjack-ace': TarkovIcons.Blackjack
+                      'first-win': FontAwesomeSVGIcons.Heart,
+                      'high-roller': FontAwesomeSVGIcons.RubleSign,
+                      'lucky-seven': FontAwesomeSVGIcons.Bolt,
+                      'roulette-master': FontAwesomeSVGIcons.Circle,
+                      'blackjack-ace': FontAwesomeSVGIcons.Spade
                     }
-                    return iconMap[achievementId] || TarkovIcons.Helmet
+                    return iconMap[achievementId] || FontAwesomeSVGIcons.Shield
                   }
                   
                   const IconComponent = getAchievementIcon(achievement.id)
@@ -475,7 +471,7 @@ const ProfilePage: React.FC = () => {
       <div className="bg-tarkov-dark rounded-lg p-6 shadow-lg">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-3">
-            <TarkovIcons.Weapon className="text-tarkov-accent" size={24} />
+            <FontAwesomeSVGIcons.Sword className="text-tarkov-accent" size={24} />
             <h2 className="text-xl font-tarkov font-bold text-white uppercase tracking-wide">
               Leaderboards
             </h2>

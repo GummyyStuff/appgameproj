@@ -122,11 +122,15 @@ export class CurrencyService {
   }
 
   /**
-   * Deduct case price for case opening (first step)
+   * Process case opening as a single atomic transaction
    */
-  static async deductCasePrice(userId: string, casePrice: number, caseTypeData: any) {
+  static async processCaseOpening(userId: string, casePrice: number, winAmount: number, caseData: any) {
     if (casePrice <= 0) {
       throw new Error('Case price must be positive')
+    }
+
+    if (winAmount < 0) {
+      throw new Error('Win amount cannot be negative')
     }
 
     // Validate balance before processing
@@ -140,49 +144,10 @@ export class CurrencyService {
         userId,
         'case_opening',
         casePrice, // bet amount (deducted)
-        0, // no winnings yet
-        {
-          ...caseTypeData,
-          transaction_type: 'case_price_deduction',
-          timestamp: new Date().toISOString()
-        }
-      )
-
-      if (!result.success) {
-        throw new Error(result.error || 'Transaction failed')
-      }
-
-      return {
-        success: true,
-        gameId: result.game_id,
-        previousBalance: result.previous_balance,
-        newBalance: result.new_balance,
-        deductedAmount: casePrice
-      }
-    } catch (error) {
-      console.error('Error deducting case price:', error)
-      throw new Error('Failed to deduct case price')
-    }
-  }
-
-  /**
-   * Credit case winnings (second step)
-   */
-  static async creditCaseWinnings(userId: string, winAmount: number, caseResultData: any, originalGameId?: string) {
-    if (winAmount < 0) {
-      throw new Error('Win amount cannot be negative')
-    }
-
-    try {
-      const result = await DatabaseService.processGameTransaction(
-        userId,
-        'case_opening',
-        0, // no additional bet
         winAmount, // winnings credited
         {
-          ...caseResultData,
-          transaction_type: 'case_winnings_credit',
-          original_game_id: originalGameId,
+          ...caseData,
+          transaction_type: 'case_opening_complete',
           timestamp: new Date().toISOString()
         }
       )
@@ -196,12 +161,13 @@ export class CurrencyService {
         gameId: result.game_id,
         previousBalance: result.previous_balance,
         newBalance: result.new_balance,
-        creditedAmount: winAmount,
-        netResult: winAmount // since no additional bet in this transaction
+        betAmount: result.bet_amount,
+        winAmount: result.win_amount,
+        netResult: result.win_amount - result.bet_amount
       }
     } catch (error) {
-      console.error('Error crediting case winnings:', error)
-      throw new Error('Failed to credit case winnings')
+      console.error('Error processing case opening:', error)
+      throw new Error('Failed to process case opening')
     }
   }
 
@@ -366,7 +332,7 @@ export class CurrencyService {
     try {
       const history = await DatabaseService.getGameHistory(userId, limit, offset, gameTypeFilter)
       
-      if (!history.success) {
+      if (!(history as any).success) {
         throw new Error('Failed to fetch transaction history')
       }
 
@@ -405,7 +371,7 @@ export class CurrencyService {
     try {
       const stats = await DatabaseService.getUserStatistics(userId)
       
-      if (!stats.success) {
+      if (!(stats as any).success) {
         throw new Error('Failed to fetch currency statistics')
       }
 

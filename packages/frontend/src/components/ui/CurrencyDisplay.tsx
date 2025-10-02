@@ -2,6 +2,7 @@ import React from 'react'
 import { useBalance } from '../../hooks/useBalance'
 import BalanceAnimation from './BalanceAnimation'
 import { TarkovIcons, TarkovSpinner } from './TarkovIcons'
+import { FontAwesomeSVGIcons } from './FontAwesomeSVG'
 
 interface CurrencyDisplayProps {
   size?: 'small' | 'medium' | 'large'
@@ -77,7 +78,7 @@ const CurrencyDisplay: React.FC<CurrencyDisplayProps> = ({
         ${sizeClasses.container}
         ${className}
       `}>
-        <TarkovIcons.Roubles className="text-roubles flex-shrink-0" size={size === 'small' ? 16 : size === 'large' ? 24 : 20} />
+        <FontAwesomeSVGIcons.RubleSign className="text-roubles flex-shrink-0 flex items-center justify-center" size={size === 'small' ? 16 : size === 'large' ? 24 : 20} />
         <BalanceAnimation
           currentBalance={balance}
           previousBalance={previousBalance}
@@ -101,8 +102,8 @@ const CurrencyDisplay: React.FC<CurrencyDisplayProps> = ({
       ${className}
     `}>
       {showIcon && (
-        <TarkovIcons.Roubles 
-          className="text-roubles flex-shrink-0" 
+        <FontAwesomeSVGIcons.RubleSign 
+          className="text-roubles flex-shrink-0 flex items-center justify-center" 
           size={size === 'small' ? 16 : size === 'large' ? 24 : 20} 
         />
       )}

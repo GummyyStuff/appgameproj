@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { TarkovIcons, TarkovButton } from './index'
+import { TarkovButton, FontAwesomeSVGIcons } from './index'
 import { useCache } from '../../hooks/useCache'
 import { CACHE_KEYS, CACHE_TTL } from '../../utils/cache'
 
@@ -25,10 +25,10 @@ interface ProfileLeaderboardProps {
 }
 
 const leaderboardCategories = [
-  { id: 'winnings', label: 'Total Winnings', icon: TarkovIcons.Roubles },
-  { id: 'winrate', label: 'Win Rate', icon: TarkovIcons.Health },
-  { id: 'games', label: 'Games Played', icon: TarkovIcons.Weapon },
-  { id: 'biggest', label: 'Biggest Win', icon: TarkovIcons.Energy }
+  { id: 'winnings', label: 'Total Winnings', icon: FontAwesomeSVGIcons.RubleSign },
+  { id: 'winrate', label: 'Win Rate', icon: FontAwesomeSVGIcons.Heart },
+  { id: 'games', label: 'Games Played', icon: FontAwesomeSVGIcons.Sword },
+  { id: 'biggest', label: 'Biggest Win', icon: FontAwesomeSVGIcons.Bolt }
 ]
 
 // Mock leaderboard data - in real app this would come from API
@@ -166,9 +166,9 @@ const ProfileLeaderboard: React.FC<ProfileLeaderboardProps> = ({
 
   const getRankIcon = (rank: number) => {
     switch (rank) {
-      case 1: return '🥇'
-      case 2: return '🥈'
-      case 3: return '🥉'
+      case 1: return <FontAwesomeSVGIcons.Medal className="text-yellow-400" size={20} />
+      case 2: return <FontAwesomeSVGIcons.Medal className="text-gray-300" size={20} />
+      case 3: return <FontAwesomeSVGIcons.Medal className="text-amber-600" size={20} />
       default: return `#${rank}`
     }
   }
@@ -215,7 +215,7 @@ const ProfileLeaderboard: React.FC<ProfileLeaderboardProps> = ({
 
       {/* Avatar */}
       <div className="w-8 h-8 rounded-full bg-tarkov-dark border border-tarkov-accent/50 flex items-center justify-center">
-        <TarkovIcons.Helmet className="text-tarkov-accent" size={14} />
+        <FontAwesomeSVGIcons.Shield className="text-tarkov-accent" size={14} />
       </div>
 
       {/* Player Info */}
@@ -255,7 +255,7 @@ const ProfileLeaderboard: React.FC<ProfileLeaderboardProps> = ({
   if (isLoading) {
     return (
       <div className="text-center py-8">
-        <div className="text-4xl mb-4 animate-spin">🏆</div>
+        <FontAwesomeSVGIcons.Trophy className="text-tarkov-accent mx-auto mb-4 animate-spin" size={48} />
         <p className="text-gray-400">Loading leaderboard...</p>
       </div>
     )
@@ -264,7 +264,7 @@ const ProfileLeaderboard: React.FC<ProfileLeaderboardProps> = ({
   if (error) {
     return (
       <div className="text-center py-8">
-        <div className="text-4xl mb-4">❌</div>
+        <FontAwesomeSVGIcons.Times className="text-tarkov-danger mx-auto mb-4" size={48} />
         <p className="text-gray-400">Failed to load leaderboard</p>
       </div>
     )
@@ -278,7 +278,7 @@ const ProfileLeaderboard: React.FC<ProfileLeaderboardProps> = ({
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 rounded-full bg-tarkov-accent/20 border border-tarkov-accent flex items-center justify-center">
-                <TarkovIcons.Helmet className="text-tarkov-accent" size={20} />
+                <FontAwesomeSVGIcons.Shield className="text-tarkov-accent" size={20} />
               </div>
               <div>
                 <div className="font-tarkov font-bold text-tarkov-accent">Your Rank</div>

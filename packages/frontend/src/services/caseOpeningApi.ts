@@ -28,7 +28,6 @@ export interface CaseOpeningResponse {
 export interface CaseOpeningApiService {
   openCase(caseType: CaseType, delayCredit?: boolean): Promise<CaseOpeningResponse>
   previewCase(caseType: CaseType): Promise<CaseOpeningResponse>
-  creditWinnings(openingId: string, originalTransactionId: string, currencyAwarded: number, caseType: CaseType, itemWon: any): Promise<any>
   getCaseTypes(): Promise<CaseType[]>
   getCaseType(caseTypeId: string): Promise<CaseType | null>
   getItemPool(caseTypeId: string): Promise<any[]>
@@ -98,56 +97,6 @@ export class CaseOpeningApiServiceImpl implements CaseOpeningApiService {
     }
   }
 
-  /**
-   * Credit winnings after delayed credit case opening
-   */
-  async creditWinnings(openingId: string, originalTransactionId: string, currencyAwarded: number, caseType: CaseType, itemWon: any): Promise<any> {
-    try {
-      const session = await supabase.auth.getSession()
-      const token = session.data.session?.access_token
-
-      if (!token) {
-        throw new Error('Authentication required')
-      }
-
-      const response = await fetch('/api/games/cases/credit', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          openingId,
-          originalTransactionId,
-          currencyAwarded,
-          caseType,
-          itemWon
-        })
-      })
-
-      if (!response.ok) {
-        let errorMessage = 'Failed to credit winnings'
-        try {
-          const errorData = await response.json()
-          errorMessage = errorData.error || errorMessage
-        } catch {
-          errorMessage = `Server error: ${response.status} ${response.statusText}`
-        }
-        throw new Error(errorMessage)
-      }
-
-      const result = await response.json()
-
-      if (!result.success) {
-        throw new Error(result.error || 'Credit failed')
-      }
-
-      return result
-    } catch (error) {
-      console.error('Credit winnings error:', error)
-      throw error
-    }
-  }
 
   /**
    * Preview a case opening for animation setup
@@ -280,14 +229,16 @@ export class CaseOpeningApiServiceImpl implements CaseOpeningApiService {
 
       if (response.ok) {
         const data = await response.json()
-        let items = data.item_pool || []
+        console.log('API Response:', data) // Debug log
+        let weightedItems = data.item_pool || []
 
-        // Ensure we have valid items
-        items = items.filter((item: any) =>
+        // Extract items from WeightedItem structure
+        let items = weightedItems.map((weightedItem: any) => weightedItem.item).filter((item: any) =>
           item && item.id && item.name && item.rarity && typeof item.base_value === 'number'
         )
 
         console.log(`Loaded ${items.length} valid items for case ${caseTypeId}`)
+        console.log('Sample items:', items.slice(0, 3)) // Debug log
         return items
       } else {
         console.warn('Failed to load case items from API')

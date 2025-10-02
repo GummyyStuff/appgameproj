@@ -1,8 +1,10 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { useGlobalStats } from '../hooks/useGlobalStats'
+import { GlobalStatsApiService } from '../services/globalStatsApi'
 import { 
-  TarkovIcons, 
+  FontAwesomeSVGIcons,
   TarkovButton, 
   TarkovCard, 
   StatsCard,
@@ -13,25 +15,29 @@ import {
 const HomePage: React.FC = () => {
   const { user } = useAuth()
   const { playGameSound } = useSoundManager()
+  const { data: globalStats, isLoading: statsLoading, error: statsError } = useGlobalStats({
+    days: 30, // Last 30 days
+    enabled: true,
+  })
 
   const games = [
     {
       name: 'Roulette',
-      icon: TarkovIcons.Roulette,
+      icon: FontAwesomeSVGIcons.DiceD6,
       description: 'Classic casino roulette with Tarkov theming',
       path: '/roulette',
       color: 'from-red-900 to-red-700',
     },
     {
       name: 'Blackjack',
-      icon: TarkovIcons.Blackjack,
+      icon: FontAwesomeSVGIcons.Spade,
       description: 'Strategic card game with dealer AI',
       path: '/blackjack',
       color: 'from-green-900 to-green-700',
     },
     {
       name: 'Case Opening',
-      icon: TarkovIcons.Weapon,
+      icon: FontAwesomeSVGIcons.Gem,
       description: 'Open Tarkov-themed cases for valuable items',
       path: '/cases',
       color: 'from-purple-900 to-purple-700',
@@ -47,11 +53,11 @@ const HomePage: React.FC = () => {
         
         <div className="relative z-10">
           <div className="flex items-center justify-center space-x-4 mb-6">
-            <TarkovIcons.Skull className="text-tarkov-accent animate-pulse" size={48} />
+            <FontAwesomeSVGIcons.Skull className="text-tarkov-accent animate-pulse" size={48} />
             <h1 className="text-4xl md:text-6xl font-tarkov font-bold text-tarkov-accent uppercase tracking-wider">
               Tarkov Casino
             </h1>
-            <TarkovIcons.Skull className="text-tarkov-accent animate-pulse" size={48} />
+            <FontAwesomeSVGIcons.Skull className="text-tarkov-accent animate-pulse" size={48} />
           </div>
           
           <p className="text-xl text-gray-300 mb-2 max-w-2xl mx-auto font-tarkov">
@@ -67,7 +73,7 @@ const HomePage: React.FC = () => {
                 variant="primary"
                 size="lg"
                 onClick={() => playGameSound('click')}
-                icon={<TarkovIcons.Weapon size={20} />}
+                icon={<FontAwesomeSVGIcons.Play size={20} color="white" />}
               >
                 <Link to="/register">Enter the Raid</Link>
               </TarkovButton>
@@ -75,7 +81,7 @@ const HomePage: React.FC = () => {
                 variant="secondary"
                 size="lg"
                 onClick={() => playGameSound('click')}
-                icon={<TarkovIcons.Helmet size={20} />}
+                icon={<FontAwesomeSVGIcons.Key size={20} color="white" />}
               >
                 <Link to="/login">Return to Base</Link>
               </TarkovButton>
@@ -88,9 +94,9 @@ const HomePage: React.FC = () => {
                 variant="success"
                 size="lg"
                 onClick={() => playGameSound('notification')}
-                icon={<TarkovIcons.Health size={20} />}
+                icon={<FontAwesomeSVGIcons.Star size={20} color="white" />}
               >
-                Welcome back, Survivor!
+                <Link to="/profile">Welcome back, Survivor!</Link>
               </TarkovButton>
             </div>
           )}
@@ -113,7 +119,7 @@ const HomePage: React.FC = () => {
                 className="block text-center group"
               >
                 <div className="mb-4 transform group-hover:scale-110 transition-transform duration-300">
-                  <IconComponent className="text-tarkov-accent mx-auto" size={64} />
+                  <IconComponent className="mx-auto" size={120} color="#F6AD55" />
                 </div>
                 <h3 className="text-2xl font-tarkov font-bold mb-3 text-white uppercase tracking-wide">
                   {game.name}
@@ -125,6 +131,7 @@ const HomePage: React.FC = () => {
                   variant="ghost"
                   size="sm"
                   className="group-hover:bg-tarkov-accent group-hover:text-tarkov-dark"
+                  icon={<FontAwesomeSVGIcons.Play size={16} color="currentColor" />}
                 >
                   Play Now
                 </TarkovButton>
@@ -137,7 +144,7 @@ const HomePage: React.FC = () => {
       {/* Features Section */}
       <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mt-12">
         <TarkovCard className="text-center p-6" hover>
-          <TarkovIcons.Helmet className="text-tarkov-accent mx-auto mb-3" size={48} />
+          <FontAwesomeSVGIcons.Shield className="mx-auto mb-3" size={80} color="#F6AD55" variant="solid" />
           <h4 className="font-tarkov font-bold text-tarkov-accent mb-2 uppercase tracking-wide">
             Tarkov Themed
           </h4>
@@ -147,7 +154,7 @@ const HomePage: React.FC = () => {
         </TarkovCard>
         
         <TarkovCard className="text-center p-6" hover>
-          <TarkovIcons.Roubles className="text-roubles mx-auto mb-3" size={48} />
+          <FontAwesomeSVGIcons.Coins className="mx-auto mb-3" size={80} color="#F6AD55" variant="solid" />
           <h4 className="font-tarkov font-bold text-tarkov-accent mb-2 uppercase tracking-wide">
             Virtual Currency
           </h4>
@@ -157,7 +164,7 @@ const HomePage: React.FC = () => {
         </TarkovCard>
         
         <TarkovCard className="text-center p-6" hover>
-          <TarkovIcons.Energy className="text-yellow-500 mx-auto mb-3" size={48} />
+          <FontAwesomeSVGIcons.Wifi className="mx-auto mb-3" size={80} color="#F6AD55" variant="solid" />
           <h4 className="font-tarkov font-bold text-tarkov-accent mb-2 uppercase tracking-wide">
             Real-time
           </h4>
@@ -167,7 +174,7 @@ const HomePage: React.FC = () => {
         </TarkovCard>
         
         <TarkovCard className="text-center p-6" hover>
-          <TarkovIcons.Weapon className="text-tarkov-steel mx-auto mb-3" size={48} />
+          <FontAwesomeSVGIcons.Desktop className="mx-auto mb-3" size={80} color="#F6AD55" variant="solid" />
           <h4 className="font-tarkov font-bold text-tarkov-accent mb-2 uppercase tracking-wide">
             Responsive
           </h4>
@@ -181,38 +188,61 @@ const HomePage: React.FC = () => {
       {user && (
         <TarkovCard className="p-6">
           <div className="flex items-center space-x-3 mb-6">
-            <TarkovIcons.Ammo className="text-tarkov-accent" size={24} />
+            <FontAwesomeSVGIcons.Axe className="text-tarkov-accent" size={24} />
             <h3 className="text-2xl font-tarkov font-bold text-tarkov-accent uppercase tracking-wide">
               Combat Statistics
             </h3>
           </div>
           
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <StatsCard
-              title="Raids Completed"
-              value="0"
-              icon={<TarkovIcons.Helmet size={20} />}
-              trend="neutral"
-            />
-            <StatsCard
-              title="Successful Extracts"
-              value="0"
-              icon={<TarkovIcons.Health size={20} />}
-              trend="neutral"
-            />
-            <StatsCard
-              title="Total Wagered"
-              value="₽0"
-              icon={<TarkovIcons.Roubles size={20} />}
-              trend="neutral"
-            />
-            <StatsCard
-              title="Biggest Haul"
-              value="₽0"
-              icon={<TarkovIcons.Weapon size={20} />}
-              trend="neutral"
-            />
-          </div>
+          {statsLoading ? (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="bg-tarkov-secondary rounded-lg p-4 animate-pulse">
+                  <div className="h-6 bg-gray-600 rounded mb-2"></div>
+                  <div className="h-8 bg-gray-600 rounded"></div>
+                </div>
+              ))}
+            </div>
+          ) : statsError ? (
+            <div className="text-center py-8">
+              <FontAwesomeSVGIcons.Times className="text-tarkov-danger mx-auto mb-4" size={48} />
+              <p className="text-gray-400">Failed to load statistics</p>
+            </div>
+          ) : globalStats ? (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <StatsCard
+                title="Raids Completed"
+                value={GlobalStatsApiService.formatCurrency(globalStats.overview.totalGames)}
+                icon={<FontAwesomeSVGIcons.Trophy size={24} color="#F6AD55" />}
+                trend="neutral"
+              />
+              <StatsCard
+                title="Successful Extracts"
+                value={GlobalStatsApiService.formatCurrency(
+                  GlobalStatsApiService.calculateWinsAndLosses(globalStats.overview).wins
+                )}
+                icon={<FontAwesomeSVGIcons.Check size={24} color="#10B981" />}
+                trend="neutral"
+              />
+              <StatsCard
+                title="Total Wagered"
+                value={GlobalStatsApiService.formatCurrencyWithSymbol(globalStats.overview.totalWagered)}
+                icon={<FontAwesomeSVGIcons.Coins size={24} color="#FCD34D" />}
+                trend="neutral"
+              />
+              <StatsCard
+                title="Biggest Haul"
+                value={GlobalStatsApiService.formatCurrencyWithSymbol(globalStats.overview.biggestWin)}
+                icon={<FontAwesomeSVGIcons.Gem size={24} color="#8B5CF6" />}
+                trend="neutral"
+              />
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <FontAwesomeSVGIcons.Gamepad className="text-gray-400 mx-auto mb-4" size={48} />
+              <p className="text-gray-400">No statistics available</p>
+            </div>
+          )}
         </TarkovCard>
       )}
     </div>

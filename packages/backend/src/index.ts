@@ -87,6 +87,44 @@ app.get('/api/statistics/leaderboard', async (c) => {
   }
 })
 
+// Public global statistics endpoint (no rate limiting)
+app.get('/api/statistics/global', async (c) => {
+  const { z } = await import('zod')
+  const { HTTPException } = await import('hono/http-exception')
+  const { StatisticsService } = await import('./services/statistics')
+  
+  const query = c.req.query()
+  
+  try {
+    const globalStatsSchema = z.object({
+      days: z.number().int().min(1).max(365).default(30)
+    })
+    
+    const params = globalStatsSchema.parse({
+      days: query.days ? parseInt(query.days) : undefined
+    })
+
+    const globalStats = await StatisticsService.getGlobalStatistics(params.days)
+
+    return c.json({
+      success: true,
+      global_statistics: globalStats,
+      generated_at: new Date().toISOString()
+    })
+
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      throw new HTTPException(400, { 
+        message: 'Invalid parameters', 
+        cause: error.errors 
+      })
+    }
+    
+    console.error('Global stats error:', error)
+    throw new HTTPException(500, { message: 'Failed to fetch global statistics' })
+  }
+})
+
 // API routes with rate limiting and authentication middleware
 app.use('/api/*', apiRateLimit())
 app.route('/api', apiRoutes)

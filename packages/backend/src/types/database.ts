@@ -95,6 +95,7 @@ export interface DailyBonusResult {
 }
 
 export interface UserStatistics {
+  success: boolean
   balance: number
   total_wagered: number
   total_won: number
@@ -112,14 +113,17 @@ export interface UserStatistics {
       win_rate: number
     }
   }
+  error?: string
 }
 
 export interface GameHistoryResponse {
+  success: boolean
   games: GameHistory[]
   total_count: number
   limit: number
   offset: number
   has_more: boolean
+  error?: string
 }
 
 // Database table names for type safety

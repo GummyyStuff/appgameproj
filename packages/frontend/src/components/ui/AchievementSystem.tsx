@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { TarkovIcons, TarkovButton, TarkovCard } from './index'
+import { TarkovButton, TarkovCard, FontAwesomeSVGIcons } from './index'
 
 interface Achievement {
   id: string
@@ -27,11 +27,11 @@ interface AchievementSystemProps {
 }
 
 const achievementCategories = [
-  { id: 'all', label: 'All Achievements', icon: TarkovIcons.Helmet },
-  { id: 'gameplay', label: 'Combat', icon: TarkovIcons.Weapon },
-  { id: 'progression', label: 'Progression', icon: TarkovIcons.Energy },
-  { id: 'special', label: 'Special', icon: TarkovIcons.Health },
-  { id: 'social', label: 'Social', icon: TarkovIcons.Ammo }
+  { id: 'all', label: 'All Achievements', icon: FontAwesomeSVGIcons.Shield },
+  { id: 'gameplay', label: 'Combat', icon: FontAwesomeSVGIcons.Sword },
+  { id: 'progression', label: 'Progression', icon: FontAwesomeSVGIcons.Bolt },
+  { id: 'special', label: 'Special', icon: FontAwesomeSVGIcons.Heart },
+  { id: 'social', label: 'Social', icon: FontAwesomeSVGIcons.Axe }
 ]
 
 const rarityColors = {
@@ -117,14 +117,14 @@ const AchievementSystem: React.FC<AchievementSystemProps> = ({
   // Function to get icon based on achievement ID
   const getAchievementIcon = (achievementId: string) => {
     const iconMap: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
-      'first-win': TarkovIcons.Health,
-      'high-roller': TarkovIcons.Roubles,
-      'lucky-seven': TarkovIcons.Energy,
-      'roulette-master': TarkovIcons.Roulette,
-      'blackjack-ace': TarkovIcons.Blackjack,
+      'first-win': FontAwesomeSVGIcons.Heart,
+      'high-roller': FontAwesomeSVGIcons.RubleSign,
+      'lucky-seven': FontAwesomeSVGIcons.Bolt,
+      'roulette-master': FontAwesomeSVGIcons.Circle,
+      'blackjack-ace': FontAwesomeSVGIcons.Spade,
 
     }
-    return iconMap[achievementId] || TarkovIcons.Helmet
+    return iconMap[achievementId] || FontAwesomeSVGIcons.Shield
   }
 
   const filteredAchievements = achievements.filter(achievement => 
@@ -210,7 +210,7 @@ const AchievementSystem: React.FC<AchievementSystemProps> = ({
         {achievement.unlocked && (
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2 text-green-400 text-xs">
-              <TarkovIcons.Health size={12} />
+              <FontAwesomeSVGIcons.Heart size={12} />
               <span>Unlocked</span>
             </div>
             {achievement.unlockedAt && (
@@ -252,7 +252,7 @@ const AchievementSystem: React.FC<AchievementSystemProps> = ({
               {/* Header */}
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center space-x-3">
-                  <TarkovIcons.Helmet className="text-tarkov-accent" size={32} />
+                  <FontAwesomeSVGIcons.Shield className="text-tarkov-accent" size={32} />
                   <div>
                     <h2 className="text-2xl font-tarkov font-bold text-tarkov-accent uppercase">
                       Achievements
@@ -266,7 +266,7 @@ const AchievementSystem: React.FC<AchievementSystemProps> = ({
                   onClick={onClose}
                   className="text-gray-400 hover:text-white transition-colors"
                 >
-                  <TarkovIcons.Close size={24} />
+                  <FontAwesomeSVGIcons.Times size={24} />
                 </button>
               </div>
 

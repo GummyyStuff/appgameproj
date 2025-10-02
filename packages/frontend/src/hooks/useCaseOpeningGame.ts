@@ -24,7 +24,6 @@ export interface UseCaseOpeningGameReturn {
   openCase: (caseType?: CaseType) => Promise<void>
   resetGame: () => void
   completeAnimation: (result: CaseOpeningResult) => void
-  creditWinnings: (result: CaseOpeningResult, transactionId: string) => Promise<void>
   loadCaseTypes: () => Promise<void>
 }
 
@@ -521,52 +520,6 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
     }
   }, [gameState.pendingCompletion, gameState.selectedCase, caseOpening, errorHandling, transitionToPhase, toast])
 
-  /**
-   * Credits winnings during the congratulations screen with animation
-   */
-  const creditWinnings = useCallback(async (result: CaseOpeningResult, transactionId: string) => {
-    // Prevent duplicate credit calls for the same opening
-    if (creditedOpeningsRef.current.has(result.opening_id)) {
-      console.warn(`Skipping duplicate credit attempt for opening ${result.opening_id}`)
-      return
-    }
-
-    try {
-      // Mark this opening as being credited
-      creditedOpeningsRef.current.add(result.opening_id)
-
-      // Import dynamically to avoid circular dependency issues
-      const { caseOpeningApi } = await import('../services/caseOpeningApi')
-
-      // Call the credit API
-      const creditResult = await caseOpeningApi.creditWinnings(
-        result.opening_id,
-        transactionId,
-        result.currency_awarded,
-        result.case_type,
-        result.item_won
-      )
-
-      // The balance will be updated automatically via real-time subscription
-      toast.success('Winnings Credited!', `+${formatCurrency(result.currency_awarded, 'roubles')} added to balance`, {
-        duration: 3000
-      })
-
-      // Periodic cleanup of old credited openings
-      cleanupCreditedOpenings()
-
-      return creditResult
-    } catch (error) {
-      // Remove from credited set on failure so it can be retried
-      creditedOpeningsRef.current.delete(result.opening_id)
-      console.error('Failed to credit winnings:', error)
-      const recovered = await errorHandling.handleError(error instanceof Error ? error : new Error('Failed to credit winnings'), 'winnings credit')
-      if (!recovered) {
-        toast.error('Failed to credit winnings')
-      }
-      throw error
-    }
-  }, [toast, errorHandling, formatCurrency])
 
   /**
    * Resets the game to idle state while preserving opening history.
@@ -617,7 +570,6 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
     openCase,
     resetGame,
     completeAnimation,
-    creditWinnings,
     loadCaseTypes: caseData.loadCaseTypes
   }
 }

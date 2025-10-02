@@ -182,7 +182,7 @@ const CaseOpeningCarousel: React.FC<CaseOpeningCarouselProps> = ({
 
   return (
     <div className="flex justify-center w-full">
-      <div className="relative h-32 sm:h-48 select-none w-full max-w-5xl mx-auto">
+      <div className="relative h-40 sm:h-56 select-none w-full max-w-5xl mx-auto">
         {/* Simple single-layer carousel */}
         <div className="overflow-hidden relative w-full h-full bg-tarkov-dark/50 border-2 border-tarkov-accent/30 rounded-xl">
           {/* Gradient fade edges */}
@@ -196,7 +196,7 @@ const CaseOpeningCarousel: React.FC<CaseOpeningCarouselProps> = ({
             style={{ transform: carouselTransform }}
           >
             {items.map((itemData, index) => (
-              <div key={itemData.id} className="sm:w-64 w-40 h-32 sm:h-48 flex-shrink-0 px-2 flex items-center justify-center">
+              <div key={itemData.id} className="sm:w-64 w-40 h-40 sm:h-56 flex-shrink-0 px-2 flex items-center justify-center">
                 <CarouselItem
                   itemData={itemData}
                   width={skinWidth}
@@ -313,7 +313,7 @@ const CarouselItem: React.FC<CarouselItemProps> = ({
         `}
       >
         {/* Item Image */}
-        <div className="h-32 bg-gradient-to-br from-tarkov-secondary to-tarkov-dark flex items-center justify-center relative overflow-hidden">
+        <div className="h-24 sm:h-32 bg-gradient-to-br from-tarkov-secondary to-tarkov-dark flex items-center justify-center relative overflow-hidden">
           {item.image_url ? (
             <img
               src={item.image_url}
@@ -361,11 +361,11 @@ const CarouselItem: React.FC<CarouselItemProps> = ({
         </div>
 
         {/* Item Info */}
-        <div className="p-3 text-center">
-          <div className="text-sm font-semibold text-white truncate mb-2 leading-tight">
+        <div className="p-2 text-center flex-1 flex flex-col justify-center">
+          <div className="text-xs sm:text-sm font-semibold text-white truncate mb-1 leading-tight">
             {itemName}
           </div>
-          <div className="text-sm text-tarkov-accent font-bold">
+          <div className="text-xs sm:text-sm text-tarkov-accent font-bold">
             {formatCurrency(itemValue, 'roubles')}
           </div>
         </div>

@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase'
 import { motion } from 'framer-motion'
 import { SkeletonTable } from './Skeleton'
 import { useToastContext } from '../providers/ToastProvider'
+import { FontAwesomeSVGIcons } from './FontAwesomeSVG'
 
 interface GameHistory {
   id: string
@@ -131,8 +132,11 @@ const GameHistoryTable: React.FC<GameHistoryTableProps> = ({
           bValue = b.win_amount
           break
         case 'profit':
-          aValue = a.net_result
-          bValue = b.net_result
+          aValue = a.net_result ?? (a.win_amount - a.bet_amount)
+          bValue = b.net_result ?? (b.win_amount - b.bet_amount)
+          // Handle NaN values by treating them as 0
+          aValue = isNaN(aValue) ? 0 : aValue
+          bValue = isNaN(bValue) ? 0 : bValue
           break
         default:
           aValue = new Date(a.created_at).getTime()
@@ -175,10 +179,10 @@ const GameHistoryTable: React.FC<GameHistoryTableProps> = ({
 
   const getGameIcon = (gameType: string) => {
     switch (gameType) {
-      case 'roulette': return '🎰'
-      case 'blackjack': return '🃏'
-      case 'case_opening': return '📦'
-      default: return '🎮'
+      case 'roulette': return <FontAwesomeSVGIcons.Circle size={16} />
+      case 'blackjack': return <FontAwesomeSVGIcons.Spade size={16} />
+      case 'case_opening': return <FontAwesomeSVGIcons.Square size={16} />
+      default: return <FontAwesomeSVGIcons.Gamepad size={16} />
     }
   }
 
@@ -204,7 +208,7 @@ const GameHistoryTable: React.FC<GameHistoryTableProps> = ({
         getGameName(game.game_type),
         game.bet_amount,
         game.win_amount,
-        game.net_result,
+        game.net_result ?? (game.win_amount - game.bet_amount),
         JSON.stringify(game.result_data || {})
       ])
 
@@ -275,7 +279,7 @@ const GameHistoryTable: React.FC<GameHistoryTableProps> = ({
     return (
       <div className="bg-tarkov-dark rounded-lg p-6">
         <div className="text-center py-8">
-          <div className="text-4xl mb-4">❌</div>
+          <FontAwesomeSVGIcons.Times className="text-tarkov-danger mx-auto mb-4" size={48} />
           <p className="text-tarkov-danger">Failed to load game history</p>
         </div>
       </div>
@@ -287,7 +291,7 @@ const GameHistoryTable: React.FC<GameHistoryTableProps> = ({
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-xl font-tarkov font-bold text-white flex items-center space-x-2">
-          <span className="text-2xl">📋</span>
+          <FontAwesomeSVGIcons.History className="text-tarkov-accent" size={24} />
           <span>Game History</span>
           <span className="text-sm text-gray-400 font-normal">
             ({filteredData.length} {filteredData.length === 1 ? 'game' : 'games'})
@@ -300,14 +304,14 @@ const GameHistoryTable: React.FC<GameHistoryTableProps> = ({
               onClick={exportToCSV}
               className="bg-tarkov-secondary hover:bg-tarkov-primary border border-tarkov-primary rounded-md px-3 py-2 text-white text-sm transition-colors flex items-center space-x-1"
             >
-              <span>📊</span>
+              <FontAwesomeSVGIcons.AlarmClock className="mr-1" size={16} />
               <span>Export CSV</span>
             </button>
             <button
               onClick={exportToJSON}
               className="bg-tarkov-secondary hover:bg-tarkov-primary border border-tarkov-primary rounded-md px-3 py-2 text-white text-sm transition-colors flex items-center space-x-1"
             >
-              <span>📄</span>
+              <FontAwesomeSVGIcons.Square className="mr-1" size={16} />
               <span>Export JSON</span>
             </button>
           </div>
@@ -433,7 +437,7 @@ const GameHistoryTable: React.FC<GameHistoryTableProps> = ({
       {/* Table */}
       {filteredData.length === 0 ? (
         <div className="text-center py-8">
-          <div className="text-4xl mb-4">🎮</div>
+          <FontAwesomeSVGIcons.Gamepad className="text-gray-400 mx-auto mb-4" size={48} />
           <p className="text-gray-400">
             {allGameHistory?.length === 0 
               ? "No games played yet. Start playing to see your history!"
@@ -480,13 +484,20 @@ const GameHistoryTable: React.FC<GameHistoryTableProps> = ({
                       ₽{formatCurrency(game.win_amount)}
                     </td>
                     <td className={`py-3 px-2 text-right font-bold ${
-                      game.net_result > 0 
-                        ? 'text-tarkov-success' 
-                        : game.net_result < 0 
-                        ? 'text-tarkov-danger' 
-                        : 'text-gray-400'
+                      (() => {
+                        const netResult = game.net_result ?? (game.win_amount - game.bet_amount)
+                        return netResult > 0 
+                          ? 'text-tarkov-success' 
+                          : netResult < 0 
+                          ? 'text-tarkov-danger' 
+                          : 'text-gray-400'
+                      })()
                     }`}>
-                      {game.net_result > 0 ? '+' : ''}₽{formatCurrency(game.net_result)}
+                      {(() => {
+                        const netResult = game.net_result ?? (game.win_amount - game.bet_amount)
+                        const safeNetResult = isNaN(netResult) ? 0 : netResult
+                        return `${safeNetResult > 0 ? '+' : ''}₽${formatCurrency(safeNetResult)}`
+                      })()}
                     </td>
                     <td className="py-3 px-2 text-gray-400 text-sm">
                       {game.result_data && (

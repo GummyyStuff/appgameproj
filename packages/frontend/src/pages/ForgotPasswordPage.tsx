@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { FontAwesomeSVGIcons } from '../components/ui/FontAwesomeSVG'
 
 const ForgotPasswordPage: React.FC = () => {
   const [email, setEmail] = useState('')
@@ -31,7 +32,7 @@ const ForgotPasswordPage: React.FC = () => {
       <div className="max-w-md mx-auto mt-12">
         <div className="bg-tarkov-dark rounded-lg p-8 shadow-lg border border-tarkov-success">
           <div className="text-center">
-            <div className="text-6xl mb-4">📧</div>
+            <FontAwesomeSVGIcons.Envelope className="text-tarkov-accent mx-auto mb-4" size={64} />
             <h1 className="text-2xl font-tarkov font-bold text-tarkov-success mb-4">
               Check Your Email
             </h1>
@@ -57,7 +58,7 @@ const ForgotPasswordPage: React.FC = () => {
     <div className="max-w-md mx-auto mt-12">
       <div className="bg-tarkov-dark rounded-lg p-8 shadow-lg">
         <div className="text-center mb-8">
-          <div className="text-5xl mb-4">🔐</div>
+          <FontAwesomeSVGIcons.Lock className="text-tarkov-accent mx-auto mb-4" size={48} />
           <h1 className="text-3xl font-tarkov font-bold text-tarkov-accent">
             Reset Password
           </h1>

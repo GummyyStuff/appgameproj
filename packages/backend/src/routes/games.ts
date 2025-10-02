@@ -46,9 +46,6 @@ const blackjackActionSchema = z.object({
   handIndex: z.number().int().min(0).max(3).optional()
 })
 
-const caseOpeningSchema = z.object({
-  caseTypeId: z.string().min(1, 'Case type ID is required')
-})
 
 
 
@@ -363,160 +360,11 @@ gameRoutes.get('/cases/:caseTypeId', asyncHandler(async (c: Context) => {
   }
 }))
 
-// Step 1: Start case opening (deduct price)
-gameRoutes.post('/cases/start',
-  validationMiddleware(caseOpeningSchema),
-  auditGame('case_opening'),
-  asyncHandler(async (c: Context) => {
-  const user = c.get('user')
-  if (!user) {
-    return c.json({ error: 'Authentication required' }, 401)
-  }
-
-  const { caseTypeId } = c.get('validatedData')
-
-  try {
-    // Validate case opening request
-    const validation = await CaseOpeningService.validateCaseOpening(user.id, caseTypeId)
-    if (!validation.isValid) {
-      return c.json({ error: validation.error }, 400)
-    }
-
-    const caseType = validation.caseType!
-
-    // Log game start
-    const ip = c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP')
-    await auditLog.gamePlayStarted(user.id, 'case_opening', caseType.price, ip)
-
-    // Deduct case price
-    const deductionResult = await CurrencyService.deductCasePrice(
-      user.id,
-      caseType.price,
-      {
-        case_type_id: caseType.id,
-        case_name: caseType.name,
-        case_price: caseType.price,
-        transaction_type: 'case_price_deduction'
-      }
-    )
-
-    // Broadcast balance update (deduction)
-    await realtimeGameService.handleBalanceUpdate(
-      user.id,
-      deductionResult.newBalance,
-      deductionResult.previousBalance
-    )
-
-    return c.json({
-      success: true,
-      case_type: caseType,
-      case_price: caseType.price,
-      balance_after_deduction: deductionResult.newBalance,
-      transaction_id: deductionResult.gameId,
-      opening_id: `case_start_${Date.now()}_${user.id.slice(-8)}`
-    })
-  } catch (error) {
-    console.error('Case opening start error:', error)
-    return c.json({ error: 'Internal server error' }, 500)
-  }
-}))
-
-// Step 2: Complete case opening (determine winnings and credit)
-gameRoutes.post('/cases/complete',
-  asyncHandler(async (c: Context) => {
-  const user = c.get('user')
-  if (!user) {
-    return c.json({ error: 'Authentication required' }, 401)
-  }
-
-  const { caseTypeId, openingId, delayCredit, predeterminedWinner } = await c.req.json()
-
-  if (!caseTypeId) {
-    return c.json({ error: 'caseTypeId is required' }, 400)
-  }
-
-  try {
-    let openingResult
-
-    if (predeterminedWinner) {
-      // Use predetermined winner (for delayed credit scenario)
-      openingResult = {
-        case_type: predeterminedWinner.case_type,
-        item_won: predeterminedWinner.item_won,
-        currency_awarded: predeterminedWinner.currency_awarded,
-        opening_id: predeterminedWinner.opening_id,
-        timestamp: new Date().toISOString()
-      }
-    } else {
-      // Open the case (determine what item is won)
-      openingResult = await CaseOpeningService.openCase(user.id, caseTypeId)
-    }
-
-    let creditResult = null
-    if (!delayCredit) {
-      // Credit the winnings (only if not delaying)
-      creditResult = await CurrencyService.creditCaseWinnings(
-      user.id,
-      openingResult.currency_awarded,
-      {
-        case_type_id: openingResult.case_type.id,
-        case_name: openingResult.case_type.name,
-        case_price: openingResult.case_type.price,
-        item_id: openingResult.item_won.id,
-        item_name: openingResult.item_won.name,
-        item_rarity: openingResult.item_won.rarity,
-        item_category: openingResult.item_won.category,
-        item_value: openingResult.item_won.base_value,
-        currency_awarded: openingResult.currency_awarded,
-        opening_id: openingResult.opening_id,
-        original_opening_id: openingId
-      }
-      )
-
-      // Log game completion and broadcast balance update only if credit happened
-      const ip = c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP')
-      await auditLog.gameCompleted(
-        user.id,
-        'case_opening',
-        openingResult.case_type.price,
-        openingResult.currency_awarded,
-        ip
-      )
-
-      // Broadcast final balance update (winnings credited)
-      await realtimeGameService.handleBalanceUpdate(
-        user.id,
-        creditResult.newBalance,
-        creditResult.previousBalance
-      )
-    }
-
-    return c.json({
-      success: true,
-      opening_result: {
-        case_type: openingResult.case_type,
-        item_won: openingResult.item_won,
-        currency_awarded: openingResult.currency_awarded,
-        opening_id: openingResult.opening_id,
-        timestamp: openingResult.timestamp
-      },
-      currency_awarded: openingResult.currency_awarded,
-      balance_after_credit: delayCredit ? null : creditResult?.newBalance,
-      credit_transaction_id: delayCredit ? null : creditResult?.gameId,
-      net_result: openingResult.currency_awarded - openingResult.case_type.price,
-      credit_delayed: delayCredit || false
-    })
-  } catch (error) {
-    console.error('Case opening completion error:', error)
-    return c.json({ error: 'Internal server error' }, 500)
-  }
-}))
 
 // Simplified case opening endpoint (single transaction with optional preview)
 const simplifiedCaseOpeningSchema = z.object({
   caseTypeId: z.string().min(1, 'Case type ID is required'),
   previewOnly: z.boolean().optional().default(false),
-  delayCredit: z.boolean().optional().default(false), // Delay crediting winnings for suspense
   requestId: z.string().optional() // For request deduplication
 })
 
@@ -529,7 +377,7 @@ gameRoutes.post('/cases/open',
     return c.json({ error: 'Authentication required' }, 401)
   }
 
-  const { caseTypeId, previewOnly, delayCredit, requestId } = c.get('validatedData')
+  const { caseTypeId, previewOnly, requestId } = c.get('validatedData')
 
     // Request deduplication check
     if (requestId) {
@@ -584,92 +432,50 @@ gameRoutes.post('/cases/open',
     const openingResult = await CaseOpeningService.openCase(user.id, caseTypeId)
 
     let transactionResult
-    let creditTransactionId = null
     let finalBalance = null
 
-    if (delayCredit) {
-      // Step 1: Only deduct case price (delay winnings credit for suspense)
-      const deductionResult = await CurrencyService.deductCasePrice(
-        user.id,
-        caseType.price,
-        {
-          case_type_id: openingResult.case_type.id,
-          case_name: openingResult.case_type.name,
-          case_price: openingResult.case_type.price,
-          item_id: openingResult.item_won.id,
-          item_name: openingResult.item_won.name,
-          item_rarity: openingResult.item_won.rarity,
-          item_category: openingResult.item_won.category,
-          item_value: openingResult.item_won.base_value,
-          currency_awarded: openingResult.currency_awarded,
-          opening_id: openingResult.opening_id,
-          request_id: requestId,
-          transaction_type: 'case_price_deduction_delayed_credit'
-        }
-      )
-
-      // Log partial game completion (only deduction)
-      await auditLog.gameCompleted(
-        user.id,
-        'case_opening',
-        caseType.price,
-        0, // No winnings credited yet
-        ip
-      )
-
-      // Broadcast balance update (only deduction)
-      await realtimeGameService.handleBalanceUpdate(
-        user.id,
-        deductionResult.newBalance,
-        deductionResult.previousBalance
-      )
-
-      transactionResult = deductionResult
-    } else {
-      // Original behavior: atomic transaction
-      transactionResult = await CurrencyService.processGameTransaction(
-        user.id,
-        'case_opening',
-        caseType.price, // bet amount (case price)
-        openingResult.currency_awarded, // win amount
-        {
-          case_type_id: openingResult.case_type.id,
-          case_name: openingResult.case_type.name,
-          case_price: openingResult.case_type.price,
-          item_id: openingResult.item_won.id,
-          item_name: openingResult.item_won.name,
-          item_rarity: openingResult.item_won.rarity,
-          item_category: openingResult.item_won.category,
-          item_value: openingResult.item_won.base_value,
-          currency_awarded: openingResult.currency_awarded,
-          opening_id: openingResult.opening_id,
-          request_id: requestId
-        }
-      )
-
-      if (!transactionResult.success) {
-        return c.json({ error: 'Transaction failed' }, 500)
+    // Process case opening as a single atomic transaction
+    transactionResult = await CurrencyService.processCaseOpening(
+      user.id,
+      caseType.price,
+      openingResult.currency_awarded,
+      {
+        case_type_id: openingResult.case_type.id,
+        case_name: openingResult.case_type.name,
+        case_price: openingResult.case_type.price,
+        item_id: openingResult.item_won.id,
+        item_name: openingResult.item_won.name,
+        item_rarity: openingResult.item_won.rarity,
+        item_category: openingResult.item_won.category,
+        item_value: openingResult.item_won.base_value,
+        currency_awarded: openingResult.currency_awarded,
+        opening_id: openingResult.opening_id,
+        request_id: requestId,
+        transaction_type: 'case_opening_complete'
       }
+    )
 
-      // Log game completion
-      await auditLog.gameCompleted(
-        user.id,
-        'case_opening',
-        caseType.price,
-        openingResult.currency_awarded,
-        ip
-      )
-
-      // Broadcast balance update
-      await realtimeGameService.handleBalanceUpdate(
-        user.id,
-        transactionResult.newBalance,
-        transactionResult.previousBalance
-      )
-
-      finalBalance = transactionResult.newBalance
-      creditTransactionId = transactionResult.gameId
+    if (!transactionResult.success) {
+      return c.json({ error: 'Transaction failed' }, 500)
     }
+
+    // Log game completion
+    await auditLog.gameCompleted(
+      user.id,
+      'case_opening',
+      caseType.price,
+      openingResult.currency_awarded,
+      ip
+    )
+
+    // Broadcast balance update
+    await realtimeGameService.handleBalanceUpdate(
+      user.id,
+      transactionResult.newBalance,
+      transactionResult.previousBalance
+    )
+
+    finalBalance = transactionResult.newBalance
 
     return c.json({
       success: true,
@@ -682,89 +488,12 @@ gameRoutes.post('/cases/open',
       },
       case_price: caseType.price,
       currency_awarded: openingResult.currency_awarded,
-      net_result: openingResult.currency_awarded - caseType.price,
+      net_result: transactionResult.netResult,
       new_balance: finalBalance,
-      balance_after_deduction: delayCredit ? transactionResult.newBalance : finalBalance,
-      transaction_id: transactionResult.gameId,
-      credit_delayed: delayCredit,
-      credit_transaction_id: creditTransactionId
+      transaction_id: transactionResult.gameId
     })
   } catch (error) {
     console.error('Case opening error:', error)
-    return c.json({ error: 'Internal server error' }, 500)
-  }
-}))
-
-gameRoutes.post('/cases/credit',
-  authMiddleware,
-  auditGame('case_opening_credit'),
-  asyncHandler(async (c: Context) => {
-  const user = c.get('user')
-  if (!user) {
-    return c.json({ error: 'Authentication required' }, 401)
-  }
-
-  const { openingId, originalTransactionId } = await c.req.json()
-
-  if (!openingId) {
-    return c.json({ error: 'openingId is required' }, 400)
-  }
-
-  try {
-    // Get the case opening result from the database (you might need to implement this)
-    // For now, we'll need the frontend to pass the necessary data
-    const { currencyAwarded, caseType, itemWon } = await c.req.json()
-
-    if (!currencyAwarded || !caseType || !itemWon) {
-      return c.json({ error: 'Missing required data: currencyAwarded, caseType, itemWon' }, 400)
-    }
-
-    // Credit the winnings
-    const creditResult = await CurrencyService.creditCaseWinnings(
-      user.id,
-      currencyAwarded,
-      {
-        case_type_id: caseType.id,
-        case_name: caseType.name,
-        case_price: caseType.price,
-        item_id: itemWon.id,
-        item_name: itemWon.name,
-        item_rarity: itemWon.rarity,
-        item_category: itemWon.category,
-        item_value: itemWon.base_value,
-        currency_awarded: currencyAwarded,
-        opening_id: openingId,
-        original_transaction_id: originalTransactionId,
-        transaction_type: 'case_winnings_credit_delayed'
-      },
-      originalTransactionId
-    )
-
-    // Log final game completion
-    const ip = c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP')
-    await auditLog.gameCompleted(
-      user.id,
-      'case_opening',
-      0, // No additional bet in this transaction
-      currencyAwarded,
-      ip
-    )
-
-    // Broadcast final balance update (winnings credited)
-    await realtimeGameService.handleBalanceUpdate(
-      user.id,
-      creditResult.newBalance,
-      creditResult.previousBalance
-    )
-
-    return c.json({
-      success: true,
-      credit_transaction_id: creditResult.gameId,
-      new_balance: creditResult.newBalance,
-      credited_amount: currencyAwarded
-    })
-  } catch (error) {
-    console.error('Case winnings credit error:', error)
     return c.json({ error: 'Internal server error' }, 500)
   }
 }))

@@ -1,5 +1,6 @@
 import React from 'react'
 import { motion } from 'framer-motion'
+import { FontAwesomeSVGIcons } from './FontAwesomeSVG'
 
 interface GameResult {
   id: string
@@ -26,15 +27,6 @@ const WinLossPattern: React.FC<WinLossPatternProps> = ({
     if (game.win_amount > game.bet_amount) return 'win'
     if (game.win_amount < game.bet_amount) return 'loss'
     return 'break-even'
-  }
-
-  const getGameIcon = (gameType: string) => {
-    switch (gameType) {
-      case 'roulette': return '🎰'
-      case 'blackjack': return '🃏'
-
-      default: return '🎮'
-    }
   }
 
   const getResultColor = (resultType: 'win' | 'loss' | 'break-even') => {
@@ -100,11 +92,11 @@ const WinLossPattern: React.FC<WinLossPatternProps> = ({
     return (
       <div className="bg-tarkov-dark rounded-lg p-6">
         <h3 className="text-xl font-tarkov font-bold text-white mb-4 flex items-center space-x-2">
-          <span className="text-2xl">📈</span>
+          <FontAwesomeSVGIcons.ChartLine className="text-tarkov-accent" size={24} />
           <span>Win/Loss Pattern</span>
         </h3>
         <div className="text-center py-8">
-          <div className="text-4xl mb-4">🎮</div>
+          <FontAwesomeSVGIcons.Gamepad className="text-gray-400 mx-auto mb-4" size={48} />
           <p className="text-gray-400">No games played yet</p>
         </div>
       </div>
@@ -114,7 +106,7 @@ const WinLossPattern: React.FC<WinLossPatternProps> = ({
   return (
     <div className="bg-tarkov-dark rounded-lg p-6">
       <h3 className="text-xl font-tarkov font-bold text-white mb-6 flex items-center space-x-2">
-        <span className="text-2xl">📈</span>
+        <FontAwesomeSVGIcons.ChartLine className="text-tarkov-accent" size={24} />
         <span>Win/Loss Pattern</span>
         <span className="text-sm text-gray-400 font-normal">
           (Last {recentGames.length} games)
@@ -144,16 +136,12 @@ const WinLossPattern: React.FC<WinLossPatternProps> = ({
                 title={`
                   ${game.game_type.charAt(0).toUpperCase() + game.game_type.slice(1)} - 
                   ${resultType === 'win' ? 'Win' : resultType === 'loss' ? 'Loss' : 'Break Even'} - 
-                  Bet: ₽${game.bet_amount.toLocaleString()} - 
+                  Bet: ₽${(game.bet_amount || 0).toLocaleString()} - 
+                  Win: ₽${(game.win_amount || 0).toLocaleString()} - 
                   ${new Date(game.created_at).toLocaleDateString()}
                 `}
               >
                 {getResultIcon(resultType)}
-                
-                {/* Game type indicator */}
-                <div className="absolute -top-1 -right-1 text-xs opacity-75">
-                  {getGameIcon(game.game_type)}
-                </div>
               </motion.div>
             )
           })}
@@ -217,7 +205,10 @@ const WinLossPattern: React.FC<WinLossPatternProps> = ({
                       streak.type === 'win' ? 'text-tarkov-success' : 'text-tarkov-danger'
                     }`}>
                       {streak.type === 'win' ? '+' : ''}₽{
-                        streak.games.reduce((sum, game) => sum + game.net_result, 0).toLocaleString()
+                        streak.games.reduce((sum, game) => {
+                          const netResult = game.net_result ?? (game.win_amount - game.bet_amount)
+                          return sum + (isNaN(netResult) ? 0 : netResult)
+                        }, 0).toLocaleString()
                       }
                     </div>
                     <div className="text-sm text-gray-400">Total Impact</div>
@@ -233,7 +224,7 @@ const WinLossPattern: React.FC<WinLossPatternProps> = ({
                         w-3 h-3 rounded-full
                         ${streak.type === 'win' ? 'bg-tarkov-success' : 'bg-tarkov-danger'}
                       `}
-                      title={`${game.game_type} - ₽${game.bet_amount.toLocaleString()}`}
+                      title={`${game.game_type} - Bet: ₽${(game.bet_amount || 0).toLocaleString()} - Win: ₽${(game.win_amount || 0).toLocaleString()}`}
                     />
                   ))}
                 </div>

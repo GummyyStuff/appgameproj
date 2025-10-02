@@ -3,7 +3,9 @@ import { motion } from 'framer-motion'
 import { TarkovCard } from '../ui/TarkovCard'
 import { formatCurrency } from '../../utils/currency'
 import CaseConfirmation from './CaseConfirmation'
+import ItemsByRarityModal, { TarkovItem } from './ItemsByRarityModal'
 import { animationVariants, createStaggeredAnimation } from '../../styles/animationVariants'
+import { caseOpeningApi } from '../../services/caseOpeningApi'
 
 export interface CaseType {
   id: string
@@ -48,6 +50,52 @@ const CaseSelector: React.FC<CaseSelectorProps> = ({
   showConfirmation = false,
   onCancelConfirmation
 }) => {
+  const [itemsModal, setItemsModal] = React.useState<{
+    isOpen: boolean
+    rarity: string
+    items: TarkovItem[]
+    caseName: string
+  }>({
+    isOpen: false,
+    rarity: '',
+    items: [],
+    caseName: ''
+  })
+
+  // Handle rarity click to show items
+  const handleRarityClick = async (rarity: string, caseType: CaseType) => {
+    console.log(`Fetching ${rarity} items for case: ${caseType.name} (${caseType.id})`)
+    try {
+      // Fetch item pool for this case
+      const items = await caseOpeningApi.getItemPool(caseType.id)
+      console.log(`Total items fetched: ${items.length}`)
+      
+      // Filter items by rarity
+      const rarityItems = items.filter(item => item.rarity === rarity)
+      console.log(`${rarity} items found: ${rarityItems.length}`)
+      
+      setItemsModal({
+        isOpen: true,
+        rarity,
+        items: rarityItems,
+        caseName: caseType.name
+      })
+    } catch (error) {
+      console.error('Failed to load items:', error)
+      // Show empty modal if failed to load
+      setItemsModal({
+        isOpen: true,
+        rarity,
+        items: [],
+        caseName: caseType.name
+      })
+    }
+  }
+
+  const closeItemsModal = () => {
+    setItemsModal(prev => ({ ...prev, isOpen: false }))
+  }
+
   if (isLoading) {
     const staggeredAnimation = createStaggeredAnimation(3, 0.2)
 
@@ -196,13 +244,23 @@ const CaseSelector: React.FC<CaseSelectorProps> = ({
                     Drop Rates:
                   </div>
                   <div className="rarity-grid">
-                    {Object.entries(caseType.rarity_distribution).map(([rarity, percentage], rarityIndex) => (
+                    {Object.entries(caseType.rarity_distribution)
+                      .sort(([a], [b]) => {
+                        const rarityOrder = { common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4 }
+                        return rarityOrder[a as keyof typeof rarityOrder] - rarityOrder[b as keyof typeof rarityOrder]
+                      })
+                      .map(([rarity, percentage], rarityIndex) => (
                       <motion.span
                         key={rarity}
                         initial={{ opacity: 0, scale: 0.8 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: 0.6 + rarityIndex * 0.1 }}
-                        className={`rarity-item rarity-item-${rarity} hover:scale-105`}
+                        className={`rarity-item rarity-item-${rarity} hover:scale-105 cursor-pointer transition-all duration-200 hover:brightness-110`}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleRarityClick(rarity, caseType)
+                        }}
+                        title={`Click to see ${rarity} items`}
                       >
                         <div className="capitalize">{rarity}</div>
                         <div className="text-xs opacity-80">{percentage}%</div>
@@ -278,6 +336,15 @@ const CaseSelector: React.FC<CaseSelectorProps> = ({
         onConfirm={onOpenCase}
         onCancel={onCancelConfirmation || (() => {})}
         isVisible={showConfirmation && !!selectedCase}
+      />
+
+      {/* Items by Rarity Modal */}
+      <ItemsByRarityModal
+        isOpen={itemsModal.isOpen}
+        onClose={closeItemsModal}
+        rarity={itemsModal.rarity}
+        items={itemsModal.items}
+        caseName={itemsModal.caseName}
       />
     </TarkovCard>
   )

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { FontAwesomeSVGIcons } from '../components/ui/FontAwesomeSVG'
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('')
@@ -80,7 +81,7 @@ const LoginPage: React.FC = () => {
     <div className="max-w-md mx-auto mt-12 animate-fade-in">
       <div className="bg-tarkov-dark rounded-lg p-8 shadow-lg border border-tarkov-secondary hover:border-tarkov-accent transition-all duration-300">
         <div className="text-center mb-8">
-          <div className="text-5xl mb-4 animate-bounce">🎰</div>
+          <FontAwesomeSVGIcons.Gamepad className="text-tarkov-accent mx-auto mb-4 animate-bounce" size={48} />
           <h1 className="text-3xl font-tarkov font-bold text-tarkov-accent">Login</h1>
           <p className="text-gray-400 mt-2">Welcome back, Operator</p>
         </div>
@@ -133,7 +134,11 @@ const LoginPage: React.FC = () => {
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white transition-colors"
               >
-                {showPassword ? '👁️' : '👁️‍🗨️'}
+                {showPassword ? (
+                  <FontAwesomeSVGIcons.Eye className="text-gray-400" size={16} />
+                ) : (
+                  <FontAwesomeSVGIcons.EyeSlash className="text-gray-400" size={16} />
+                )}
               </button>
             </div>
             {passwordError && (

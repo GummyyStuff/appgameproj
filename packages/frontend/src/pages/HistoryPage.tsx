@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import CurrencyManager from '../components/ui/CurrencyManager'
 import StatisticsDashboard from '../components/ui/StatisticsDashboard'
 import GameHistoryTable from '../components/ui/GameHistoryTable'
+import { FontAwesomeSVGIcons } from '../components/ui'
 import { motion } from 'framer-motion'
 
 const HistoryPage: React.FC = () => {
@@ -10,7 +11,7 @@ const HistoryPage: React.FC = () => {
   return (
     <div className="py-8 space-y-8">
       <div className="text-center mb-8">
-        <div className="text-6xl mb-4">📊</div>
+        <FontAwesomeSVGIcons.AlarmClock className="text-tarkov-accent mx-auto mb-4" size={64} />
         <h1 className="text-4xl font-tarkov font-bold text-tarkov-accent mb-4">
           Game History & Statistics
         </h1>
@@ -33,7 +34,8 @@ const HistoryPage: React.FC = () => {
                 : 'text-gray-400 hover:text-white hover:bg-tarkov-primary'
             }`}
           >
-            📊 Statistics Dashboard
+            <FontAwesomeSVGIcons.AlarmClock className="mr-2" size={16} />
+            Statistics Dashboard
           </button>
           <button
             onClick={() => setActiveTab('history')}
@@ -43,7 +45,8 @@ const HistoryPage: React.FC = () => {
                 : 'text-gray-400 hover:text-white hover:bg-tarkov-primary'
             }`}
           >
-            📋 Game History
+            <FontAwesomeSVGIcons.History className="mr-2" size={16} />
+            Game History
           </button>
         </div>
       </div>

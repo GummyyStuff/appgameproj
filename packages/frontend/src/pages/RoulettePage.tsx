@@ -8,6 +8,7 @@ import { useGameShortcuts } from '../hooks/useKeyboardShortcuts'
 import { useAdvancedFeatures } from '../hooks/useAdvancedFeatures'
 import { supabase } from '../lib/supabase'
 import { formatCurrency } from '../utils/currency'
+import { FontAwesomeSVGIcons } from '../components/ui/FontAwesomeSVG'
 import { trackRoulettePerformance } from '../utils/roulette-performance'
 import RoulettePreloader from '../components/games/RoulettePreloader'
 import { 
@@ -317,7 +318,11 @@ const RoulettePage: React.FC = () => {
                 }`}
                 title={soundEnabled ? 'Disable sound (S)' : 'Enable sound (S)'}
               >
-                {soundEnabled ? '🔊' : '🔇'}
+                {soundEnabled ? (
+                  <FontAwesomeSVGIcons.VolumeUp className="text-tarkov-accent" size={20} />
+                ) : (
+                  <FontAwesomeSVGIcons.VolumeMute className="text-gray-400" size={20} />
+                )}
               </button>
             </div>
           </div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { TarkovSpinner, TarkovIcons } from './TarkovIcons'
+import { TarkovSpinner } from './TarkovIcons'
+import { FontAwesomeSVGIcons } from './FontAwesomeSVG'
 import TarkovBackground from './TarkovBackground'
 
 interface LoadingScreenProps {
@@ -85,17 +86,17 @@ export const TarkovLoadingScreen: React.FC<LoadingScreenProps> = ({
           {/* Main logo/title area */}
           <div className="space-y-4">
             <div className="flex items-center justify-center space-x-4">
-              <TarkovIcons.Skull className="text-tarkov-accent" size={48} />
+              <FontAwesomeSVGIcons.Skull className="text-tarkov-accent" size={48} />
               <h1 className="text-4xl font-bold text-tarkov-accent font-tarkov uppercase tracking-wider">
                 Tarkov Casino
               </h1>
-              <TarkovIcons.Skull className="text-tarkov-accent" size={48} />
+              <FontAwesomeSVGIcons.Skull className="text-tarkov-accent" size={48} />
             </div>
             
             <div className="flex items-center justify-center space-x-6 text-tarkov-steel">
-              <TarkovIcons.Weapon size={24} />
-              <TarkovIcons.Helmet size={24} />
-              <TarkovIcons.Ammo size={24} />
+              <FontAwesomeSVGIcons.Sword size={24} />
+              <FontAwesomeSVGIcons.Shield size={24} />
+              <FontAwesomeSVGIcons.Axe size={24} />
             </div>
           </div>
 
@@ -129,7 +130,7 @@ export const TarkovLoadingScreen: React.FC<LoadingScreenProps> = ({
           {showTips && currentTip && (
             <div className="bg-tarkov-dark/50 border border-tarkov-secondary rounded-lg p-6 backdrop-blur-sm">
               <div className="flex items-start space-x-3">
-                <TarkovIcons.Health className="text-tarkov-accent flex-shrink-0 mt-1" size={20} />
+                <FontAwesomeSVGIcons.Heart className="text-tarkov-accent flex-shrink-0 mt-1" size={20} />
                 <div className="text-left">
                   <h3 className="text-tarkov-accent font-bold uppercase text-sm mb-2 font-tarkov">
                     Survival Tip
@@ -145,9 +146,9 @@ export const TarkovLoadingScreen: React.FC<LoadingScreenProps> = ({
           {/* Decorative elements */}
           <div className="flex items-center justify-center space-x-8 text-tarkov-steel/50">
             <div className="w-16 h-px bg-gradient-to-r from-transparent to-tarkov-steel/50" />
-            <TarkovIcons.Roubles size={16} />
-            <TarkovIcons.Dollars size={16} />
-            <TarkovIcons.Euros size={16} />
+            <FontAwesomeSVGIcons.RubleSign size={16} />
+            <FontAwesomeSVGIcons.DollarSign size={16} />
+            <FontAwesomeSVGIcons.EuroSign size={16} />
             <div className="w-16 h-px bg-gradient-to-l from-transparent to-tarkov-steel/50" />
           </div>
         </div>
@@ -163,7 +164,7 @@ export const GameLoadingScreen: React.FC<{
 }> = ({ gameType, message }) => {
   const gameConfig = {
     roulette: {
-      icon: TarkovIcons.Roulette,
+      icon: FontAwesomeSVGIcons.Circle,
       title: 'Roulette Table',
       defaultMessage: 'Preparing the wheel...',
       tips: [
@@ -174,7 +175,7 @@ export const GameLoadingScreen: React.FC<{
       ]
     },
     blackjack: {
-      icon: TarkovIcons.Blackjack,
+      icon: FontAwesomeSVGIcons.Spade,
       title: 'Blackjack Table',
       defaultMessage: 'Shuffling the deck...',
       tips: [

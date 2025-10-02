@@ -1,7 +1,6 @@
 import React from 'react'
 import { motion } from 'framer-motion'
 import { useBalance } from '../../hooks/useBalance'
-import { useSoundPreferences } from '../../hooks/useSoundEffects'
 import { TarkovCard } from '../ui/TarkovCard'
 import CaseSelector from './CaseSelector'
 import ItemReveal from './ItemReveal'
@@ -9,10 +8,8 @@ import CaseOpeningAnimation from './CaseOpeningAnimation'
 import CaseOpeningErrorBoundary from './ErrorBoundary'
 import CaseResult from './CaseResult'
 import CaseHistory from './CaseHistory'
-import { formatCurrency } from '../../utils/currency'
 import { useCaseOpeningGame } from '../../hooks/useCaseOpeningGame'
 import { getErrorStrategy, getUserFriendlyMessage, isRecoverableError } from '../../utils/errorHandling'
-import { animationVariants } from '../../styles/animationVariants'
 import { REVEAL_TIMING } from '../../utils/carousel'
 
 // Enhanced error display component
@@ -143,14 +140,12 @@ const ErrorDisplay: React.FC<{
  */
 const CaseOpeningGame: React.FC = () => {
   const { balance } = useBalance()
-  const { soundEnabled } = useSoundPreferences()
   const {
     gameState,
     caseTypes,
     isLoadingCases,
     openCase,
-    completeAnimation,
-    creditWinnings
+    completeAnimation
   } = useCaseOpeningGame()
 
   // Handle case selection (move to case_selected phase)
@@ -194,7 +189,7 @@ const CaseOpeningGame: React.FC = () => {
         >
           <div className="flex flex-col sm:flex-row items-center justify-center mb-6">
             <motion.h1 
-              className="text-4xl md:text-5xl lg:text-6xl font-tarkov font-bold text-tarkov-accent mb-4 sm:mb-0 sm:mr-6"
+              className="text-4xl md:text-5xl lg:text-6xl font-tarkov font-bold text-tarkov-accent mb-4 sm:mb-0"
               animate={{ 
                 textShadow: [
                   "0 0 10px #F6AD55",
@@ -204,20 +199,8 @@ const CaseOpeningGame: React.FC = () => {
               }}
               transition={{ duration: 2, repeat: Infinity }}
             >
-              📦 Case Opening
+              Case Opening
             </motion.h1>
-            
-            <motion.button
-              onClick={() => {/* Carousel toggle disabled for now - always use carousel */}}
-              className="p-3 md:p-4 rounded-full transition-all duration-300 border-2 bg-tarkov-accent/20 text-tarkov-accent border-tarkov-accent/50 shadow-lg shadow-tarkov-accent/30 hover:scale-110 active:scale-95"
-              title="Carousel animation enabled"
-              whileHover={{ rotate: [0, -10, 10, 0] }}
-              transition={{ duration: 0.3 }}
-            >
-              <span className="text-xl md:text-2xl">
-                🎰
-              </span>
-            </motion.button>
           </div>
           
           <motion.p 
@@ -226,33 +209,9 @@ const CaseOpeningGame: React.FC = () => {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
           >
-            Open Tarkov-themed cases to win valuable items and currency
+            Open Tarkov-themed cases to win valuable items to sell for roubles
           </motion.p>
           
-          <motion.div
-            className="balance-display"
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.5, type: "spring", stiffness: 200 }}
-            whileHover={{ scale: 1.05 }}
-          >
-            <span className="balance-label">💰 Balance:</span>
-            <motion.span
-              className="balance-amount"
-              key={balance} // Re-animate when balance changes
-              initial={{ scale: 1 }}
-              animate={{ scale: [1, 1.1, 1] }}
-              transition={{ duration: 0.3 }}
-            >
-              {formatCurrency(balance, 'roubles')}
-            </motion.span>
-            {gameState.phase === 'loading' && (
-              <motion.div
-                className="ml-2 w-2 h-2 bg-tarkov-accent rounded-full"
-                {...animationVariants.loading.pulse}
-              />
-            )}
-          </motion.div>
         </motion.div>
 
         <div className="max-w-6xl mx-auto space-y-8">
@@ -271,7 +230,7 @@ const CaseOpeningGame: React.FC = () => {
                     animate={{ opacity: [0.7, 1, 0.7] }}
                     transition={{ duration: 2, repeat: Infinity }}
                   >
-                    {gameState.animationConfig.type === 'carousel' ? '🎰' : '✨'} Opening {gameState.selectedCase?.name}...
+Opening {gameState.selectedCase?.name}...
                   </motion.h3>
 
                   <CaseOpeningAnimation
@@ -287,7 +246,7 @@ const CaseOpeningGame: React.FC = () => {
                     animate={{ opacity: [0.7, 1, 0.7] }}
                     transition={{ duration: 2, repeat: Infinity }}
                   >
-                    ✨ Revealing your prize...
+Revealing your prize...
                   </motion.h3>
 
                   <CaseOpeningAnimation
@@ -299,8 +258,6 @@ const CaseOpeningGame: React.FC = () => {
               ) : gameState.phase === 'complete' && gameState.result ? (
                 <CaseResult
                   result={gameState.result}
-                  onCreditWinnings={creditWinnings}
-                  transactionId={gameState.transactionId || undefined}
                 />
               ) : gameState.phase === 'error' ? (
                 <ErrorDisplay
@@ -319,24 +276,10 @@ const CaseOpeningGame: React.FC = () => {
                     initial={{ opacity: 0.7 }}
                     animate={{ opacity: 1 }}
                   >
-                    🎰 Case Opening Carousel
+Case Opening Carousel
                   </motion.h3>
 
                   <div className="text-center py-12">
-                    <motion.div
-                      className="text-6xl mb-4 opacity-30"
-                      animate={{
-                        rotate: [0, 5, -5, 0],
-                        scale: [1, 1.05, 1]
-                      }}
-                      transition={{
-                        duration: 4,
-                        repeat: Infinity,
-                        ease: "easeInOut"
-                      }}
-                    >
-                      🎰
-                    </motion.div>
                     <div className="text-gray-400 text-lg mb-2">
                       Select a case below and click "Open Case" to see the carousel animation
                     </div>

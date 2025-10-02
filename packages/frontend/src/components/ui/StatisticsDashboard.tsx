@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../../hooks/useAuth'
 import { supabase } from '../../lib/supabase'
+import { FontAwesomeSVGIcons } from './FontAwesomeSVG'
 import {
   AreaChart,
   Area,
@@ -148,6 +149,8 @@ const StatisticsDashboard: React.FC = () => {
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
       .slice(-30) // Last 30 days
 
+    console.log('Time series data:', timeSeriesData) // Debug log
+
     // Win streaks calculation
     let currentStreak = 0
     let longestWinStreak = 0
@@ -219,10 +222,10 @@ const StatisticsDashboard: React.FC = () => {
 
   const getGameIcon = (gameType: string) => {
     switch (gameType) {
-      case 'roulette': return '🎰'
-      case 'blackjack': return '🃏'
-      case 'case_opening': return '📦'
-      default: return '🎮'
+      case 'roulette': return <FontAwesomeSVGIcons.Circle size={16} />
+      case 'blackjack': return <FontAwesomeSVGIcons.Spade size={16} />
+      case 'case_opening': return <FontAwesomeSVGIcons.Square size={16} />
+      default: return <FontAwesomeSVGIcons.Gamepad size={16} />
     }
   }
 
@@ -241,7 +244,7 @@ const StatisticsDashboard: React.FC = () => {
     return (
       <div className="bg-tarkov-dark rounded-lg p-6">
         <div className="text-center py-8">
-          <div className="text-4xl mb-4 animate-spin">📊</div>
+          <FontAwesomeSVGIcons.AlarmClock className="text-tarkov-accent mx-auto mb-4 animate-spin" size={48} />
           <p className="text-gray-400">Loading statistics...</p>
         </div>
       </div>
@@ -252,7 +255,7 @@ const StatisticsDashboard: React.FC = () => {
     return (
       <div className="bg-tarkov-dark rounded-lg p-6">
         <div className="text-center py-8">
-          <div className="text-4xl mb-4">🎮</div>
+          <FontAwesomeSVGIcons.Gamepad className="text-gray-400 mx-auto mb-4" size={48} />
           <p className="text-gray-400">Start playing to see your statistics!</p>
         </div>
       </div>
@@ -265,7 +268,7 @@ const StatisticsDashboard: React.FC = () => {
       <div className="bg-tarkov-dark rounded-lg p-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <h2 className="text-2xl font-tarkov font-bold text-tarkov-accent flex items-center space-x-2">
-            <span className="text-3xl">📊</span>
+            <FontAwesomeSVGIcons.ChartBar className="text-tarkov-accent" size={32} />
             <span>Statistics Dashboard</span>
           </h2>
           
@@ -359,39 +362,54 @@ const StatisticsDashboard: React.FC = () => {
           <h3 className="text-xl font-tarkov font-bold text-white mb-4">
             {selectedChart === 'profit' ? 'Daily Profit' : 
              selectedChart === 'volume' ? 'Daily Volume' : 'Daily Games'}
+            {statistics.timeSeriesData.length > 0 && (
+              <span className="text-sm text-gray-400 ml-2">
+                ({statistics.timeSeriesData.length} data points)
+              </span>
+            )}
           </h3>
           
           <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={statistics.timeSeriesData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis 
-                dataKey="date" 
-                stroke="#9ca3af"
-                fontSize={12}
-                tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-              />
-              <YAxis stroke="#9ca3af" fontSize={12} />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#1f2937',
-                  border: '1px solid #374151',
-                  borderRadius: '8px',
-                  color: '#ffffff'
-                }}
-                formatter={(value: any, name: string) => [
-                  selectedChart === 'games' ? value : `₽${formatCurrency(value)}`,
-                  name === 'profit' ? 'Profit' : name === 'wagered' ? 'Wagered' : name === 'won' ? 'Won' : 'Games'
-                ]}
-                labelFormatter={(value) => new Date(value).toLocaleDateString()}
-              />
-              <Area
-                type="monotone"
-                dataKey={selectedChart}
-                stroke="#f59e0b"
-                fill="#f59e0b"
-                fillOpacity={0.3}
-              />
-            </AreaChart>
+            {statistics.timeSeriesData.length > 0 ? (
+              <AreaChart data={statistics.timeSeriesData} key={selectedChart}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                <XAxis 
+                  dataKey="date" 
+                  stroke="#9ca3af"
+                  fontSize={12}
+                  tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                />
+                <YAxis stroke="#9ca3af" fontSize={12} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#1f2937',
+                    border: '1px solid #374151',
+                    borderRadius: '8px',
+                    color: '#ffffff'
+                  }}
+                  formatter={(value: any, name: string) => [
+                    selectedChart === 'games' ? value : `₽${formatCurrency(value)}`,
+                    name === 'profit' ? 'Profit' : name === 'wagered' ? 'Wagered' : name === 'won' ? 'Won' : 'Games'
+                  ]}
+                  labelFormatter={(value) => new Date(value).toLocaleDateString()}
+                />
+                <Area
+                  type="monotone"
+                  dataKey={selectedChart}
+                  stroke="#f59e0b"
+                  fill="#f59e0b"
+                  fillOpacity={0.3}
+                  connectNulls={false}
+                />
+              </AreaChart>
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                  <FontAwesomeSVGIcons.ChartBar className="text-gray-400 mx-auto mb-2" size={48} />
+                  <p className="text-gray-400">No data available for the selected time range</p>
+                </div>
+              </div>
+            )}
           </ResponsiveContainer>
         </motion.div>
 

@@ -1,5 +1,7 @@
 // Tarkov-themed UI components
 export { TarkovIcons, TarkovSpinner, TarkovBadge, TarkovProgressBar } from './TarkovIcons'
+export { FontAwesomeIcon, FontAwesomeIcons } from './FontAwesomeIcons'
+export { FontAwesomeSVG, FontAwesomeSVGIcons } from './FontAwesomeSVG'
 export { default as TarkovButton } from './TarkovButton'
 export { TarkovCard, GameTableCard, StatsCard } from './TarkovCard'
 export { default as TarkovBackground, TarkovParticles, TarkovDecorations } from './TarkovBackground'
