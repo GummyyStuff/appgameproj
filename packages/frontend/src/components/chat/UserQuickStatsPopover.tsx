@@ -78,12 +78,9 @@ export const UserQuickStatsPopover: React.FC<UserQuickStatsPopoverProps> = ({
           <div className="w-12 h-12 bg-gray-200 rounded-full animate-pulse" />
         ) : (
           <img
-            src={avatarUrl || '/default-avatar.svg'}
+            src={avatarUrl || ''}
             alt={`${username}'s avatar`}
             className="w-12 h-12 rounded-full object-cover"
-            onError={(e) => {
-              e.currentTarget.src = '/default-avatar.svg';
-            }}
           />
         )}
         <div>

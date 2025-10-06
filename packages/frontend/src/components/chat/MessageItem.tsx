@@ -46,12 +46,9 @@ export const MessageItem: React.FC<MessageItemProps> = ({
           <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse" />
         ) : (
           <img
-            src={avatarUrl || '/default-avatar.svg'}
+            src={avatarUrl || ''}
             alt={`${message.username}'s avatar`}
             className="w-8 h-8 rounded-full object-cover"
-            onError={(e) => {
-              e.currentTarget.src = '/default-avatar.svg';
-            }}
           />
         )}
       </div>

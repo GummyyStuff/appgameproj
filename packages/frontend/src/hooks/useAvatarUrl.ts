@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './useAuth';
-import { supabase } from '../lib/supabase';
 
 export const useAvatarUrl = (avatarPath: string | null) => {
   const { session } = useAuth();
@@ -9,41 +8,58 @@ export const useAvatarUrl = (avatarPath: string | null) => {
   const [error, setError] = useState<string | null>(null);
 
   const fetchAvatarUrl = useCallback(async () => {
-    if (!avatarPath || !session?.access_token) {
+    console.log('[useAvatarUrl] fetchAvatarUrl called with avatarPath:', avatarPath);
+    console.log('[useAvatarUrl] Session exists:', !!session);
+    console.log('[useAvatarUrl] Access token exists:', !!session?.access_token);
+    console.log('[useAvatarUrl] Access token length:', session?.access_token?.length || 0);
+    
+    if (!session?.access_token) {
+      console.log('[useAvatarUrl] No session access token, setting avatarUrl to null');
       setAvatarUrl(null);
       return;
     }
+
+    // Use default avatar path if no avatar path is provided
+    const pathToFetch = avatarPath || 'defaults/default-avatar.svg';
+    console.log('[useAvatarUrl] Path to fetch:', pathToFetch);
 
     setIsLoading(true);
     setError(null);
 
     try {
-      const response = await fetch(
-        `/functions/v1/proxy-avatar?path=${encodeURIComponent(avatarPath)}`,
-        {
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        }
-      );
+      const url = `/functions/v1/proxy-avatar?path=${encodeURIComponent(pathToFetch)}`;
+      console.log('[useAvatarUrl] Fetching from URL:', url);
+      
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      console.log('[useAvatarUrl] Response status:', response.status, response.statusText);
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch avatar: ${response.status}`);
+        const errorText = await response.text();
+        console.error('[useAvatarUrl] Response error:', errorText);
+        throw new Error(`Failed to fetch avatar: ${response.status} - ${errorText}`);
       }
 
       // Convert blob to object URL
       const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
+      console.log('[useAvatarUrl] Blob received, size:', blob.size, 'type:', blob.type);
+      
+      const objectUrl = URL.createObjectURL(blob);
+      console.log('[useAvatarUrl] Object URL created:', objectUrl);
       
       setAvatarUrl(prevUrl => {
         // Clean up previous URL
         if (prevUrl) {
           URL.revokeObjectURL(prevUrl);
         }
-        return url;
+        return objectUrl;
       });
     } catch (err) {
-      console.error('Failed to fetch avatar:', err);
+      console.error('[useAvatarUrl] Failed to fetch avatar:', err);
       setError('Failed to load avatar');
       setAvatarUrl(null);
     } finally {
