@@ -6,7 +6,7 @@
   "main": "src/index.ts",
   "scripts": {
     "dev": "bun run --watch src/index.ts",
-    "build": "bun build src/index.ts --outdir ./dist --target bun",
+    "build": "bun build src/index.ts --outdir ./dist --target bun --external node-appwrite --external @supabase/supabase-js --external pg --external socket.io --external hono",
     "start": "bun run dist/index.js",
     "test": "bun test",
     "test:watch": "bun test --watch",
@@ -30,6 +30,7 @@
     "@supabase/supabase-js": "^2.57.4",
     "@types/pg": "^8.15.5",
     "hono": "^4.9.8",
+    "node-appwrite": "^20.1.0",
     "pg": "^8.16.3",
     "socket.io": "^4.8.1",
     "zod": "^4.1.11"

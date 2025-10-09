@@ -5,8 +5,10 @@ import path from 'path'
 
 export default defineConfig(({ mode }) => ({
   plugins: [
+    react({
+      jsxRuntime: 'automatic',
+    }),
     tailwindcss(),
-    react(),
   ],
   // Load environment variables based on mode
   envDir: '.',
@@ -36,7 +38,7 @@ export default defineConfig(({ mode }) => ({
           // Separate other large dependencies
           'router-vendor': ['react-router-dom'],
           'query-vendor': ['@tanstack/react-query'],
-          'supabase-vendor': ['@supabase/supabase-js'],
+          'appwrite-vendor': ['appwrite'],
           'animation-vendor': ['framer-motion'],
           'chart-vendor': ['recharts'],
           'socket-vendor': ['socket.io-client']
@@ -64,7 +66,7 @@ export default defineConfig(({ mode }) => ({
       'react-dom',
       'react-router-dom',
       '@tanstack/react-query',
-      '@supabase/supabase-js',
+      'appwrite',
       'framer-motion',
       'recharts',
       'socket.io-client'

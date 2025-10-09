@@ -1,11 +1,14 @@
 import { Context, Next } from 'hono'
 import { HTTPException } from 'hono/http-exception'
+import { getCookie } from 'hono/cookie'
+import { validateSession, SESSION_COOKIE_NAME } from '../config/appwrite'
 import { supabaseAdmin } from '../config/supabase'
 
 export interface AuthUser {
   id: string
   email: string
   username?: string
+  name?: string
 }
 
 declare module 'hono' {
@@ -19,27 +22,25 @@ declare module 'hono' {
 }
 
 /**
- * Authentication middleware that validates Supabase JWT tokens
- * Extracts user information and adds it to the context
+ * Authentication middleware that validates Appwrite sessions
+ * Extracts user information from session cookie and adds it to the context
  */
 export async function authMiddleware(c: Context, next: Next) {
-  const authHeader = c.req.header('Authorization')
+  const sessionId = getCookie(c, SESSION_COOKIE_NAME)
   
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    throw new HTTPException(401, { message: 'Missing or invalid authorization header' })
+  if (!sessionId) {
+    throw new HTTPException(401, { message: 'Missing session. Please log in.' })
   }
 
-  const token = authHeader.substring(7) // Remove 'Bearer ' prefix
-
   try {
-    // Verify the JWT token with Supabase
-    const { data: { user }, error } = await supabaseAdmin.auth.getUser(token)
+    // Validate the session with Appwrite
+    const user = await validateSession(sessionId)
     
-    if (error || !user) {
-      throw new HTTPException(401, { message: 'Invalid or expired token' })
+    if (!user) {
+      throw new HTTPException(401, { message: 'Invalid or expired session' })
     }
 
-    // Get additional user profile data
+    // Get additional user profile data from database if needed
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('user_profiles')
       .select('username')
@@ -54,8 +55,12 @@ export async function authMiddleware(c: Context, next: Next) {
     c.set('user', {
       id: user.id,
       email: user.email || '',
+      name: user.name,
       username: profile?.username
     })
+
+    // Store session ID in context
+    c.set('sessionId', sessionId)
 
     await next()
   } catch (error) {
@@ -69,19 +74,17 @@ export async function authMiddleware(c: Context, next: Next) {
 }
 
 /**
- * Optional authentication middleware - doesn't throw if no token provided
+ * Optional authentication middleware - doesn't throw if no session provided
  * Useful for endpoints that work with or without authentication
  */
 export async function optionalAuthMiddleware(c: Context, next: Next) {
-  const authHeader = c.req.header('Authorization')
+  const sessionId = getCookie(c, SESSION_COOKIE_NAME)
   
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    const token = authHeader.substring(7)
-    
+  if (sessionId) {
     try {
-      const { data: { user }, error } = await supabaseAdmin.auth.getUser(token)
+      const user = await validateSession(sessionId)
       
-      if (!error && user) {
+      if (user) {
         const { data: profile } = await supabaseAdmin
           .from('user_profiles')
           .select('username')
@@ -91,8 +94,11 @@ export async function optionalAuthMiddleware(c: Context, next: Next) {
         c.set('user', {
           id: user.id,
           email: user.email || '',
+          name: user.name,
           username: profile?.username
         })
+        
+        c.set('sessionId', sessionId)
       }
     } catch (error) {
       // Silently fail for optional auth

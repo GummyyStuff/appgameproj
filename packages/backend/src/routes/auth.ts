@@ -1,256 +1,205 @@
-import { Hono } from 'hono'
-import { HTTPException } from 'hono/http-exception'
-import { z } from 'zod'
-import { supabaseAdmin } from '../config/supabase'
-import { asyncHandler } from '../middleware/error'
-import { logSecurityEvent } from '../middleware/logger'
-import { env } from '../config/env'
-import { authRateLimit, sensitiveRateLimit } from '../middleware/rate-limit'
-import { validationMiddleware, commonSchemas } from '../middleware/validation'
-import { auditAuth, auditLog } from '../middleware/audit'
+import { Hono } from 'hono';
+import { HTTPException } from 'hono/http-exception';
+import { Context } from 'hono';
+import { randomUUID } from 'crypto';
+import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
+import { asyncHandler } from '../middleware/error';
+import { logSecurityEvent } from '../middleware/logger';
+import { authRateLimit } from '../middleware/rate-limit';
+import { 
+  handleOAuthCallback, 
+  validateSession,
+  logout as appwriteLogout,
+  DISCORD_OAUTH_REDIRECT,
+  FRONTEND_URL,
+  SESSION_COOKIE_NAME,
+  SESSION_MAX_AGE,
+  OAuthSession
+} from '../config/appwrite';
 
-export const authRoutes = new Hono()
+// Extend Hono types for our custom context
+type Variables = {
+  sessionId?: string;
+};
 
-// Enhanced validation schemas with security
-const registerSchema = z.object({
-  email: commonSchemas.email,
-  password: commonSchemas.password,
-  username: commonSchemas.username
-})
+type Env = {
+  Variables: Variables;
+};
 
-const loginSchema = z.object({
-  email: commonSchemas.email,
-  password: z.string().min(1, 'Password is required').max(128)
-})
+export const authRoutes = new Hono<{ Variables: Variables }>();
 
-const resetPasswordSchema = z.object({
-  email: commonSchemas.email
-})
-
-// Register new user
-authRoutes.post('/register', 
-  authRateLimit,
-  validationMiddleware(registerSchema),
-  auditAuth('user_register'),
-  asyncHandler(async (c) => {
-  const { email, password, username } = c.get('validatedData')
+// Security headers middleware
+authRoutes.use('*', async (c, next) => {
+  await next();
   
-  const ip = c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP')
+  // Security headers
+  c.header('X-Content-Type-Options', 'nosniff');
+  c.header('X-Frame-Options', 'DENY');
+  c.header('X-XSS-Protection', '1; mode=block');
+  c.header('Referrer-Policy', 'strict-origin-when-cross-origin');
+  c.header('Content-Security-Policy', "default-src 'self'");
+  c.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  c.header('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+});
 
-  try {
-    // Check if username is already taken
-    const { data: existingUser } = await supabaseAdmin
-      .from('user_profiles')
-      .select('username')
-      .eq('username', username)
-      .single()
-
-    if (existingUser) {
-      throw new HTTPException(400, { message: 'Username already taken' })
-    }
-
-    // Create user with Supabase Auth
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true, // Auto-confirm for development
-      user_metadata: {
-        username
-      }
-    })
-
-    if (authError) {
-      logSecurityEvent('registration_failed', undefined, ip, { email, error: authError.message })
-      throw new HTTPException(400, { message: authError.message })
-    }
-
-    if (!authData.user) {
-      throw new HTTPException(500, { message: 'Failed to create user' })
-    }
-
-    // Create user profile with starting balance
-    const { error: profileError } = await supabaseAdmin
-      .from('user_profiles')
-      .insert({
-        id: authData.user.id,
-        username,
-        balance: parseInt(env.STARTING_BALANCE),
-        created_at: new Date().toISOString()
-      })
-
-    if (profileError) {
-      // Clean up auth user if profile creation fails
-      await supabaseAdmin.auth.admin.deleteUser(authData.user.id)
-      throw new HTTPException(500, { message: 'Failed to create user profile' })
-    }
-
-    logSecurityEvent('user_registered', authData.user.id, ip, { email, username })
-    await auditLog.userRegistered(authData.user.id, email, ip)
-
-    return c.json({
-      message: 'User registered successfully',
-      user: {
-        id: authData.user.id,
-        email: authData.user.email,
-        username
-      }
-    }, 201)
-
-  } catch (error) {
-    if (error instanceof HTTPException) {
-      throw error
-    }
-    console.error('Registration error:', error)
-    throw new HTTPException(500, { message: 'Registration failed' })
-  }
-}))
-
-// Login user
-authRoutes.post('/login',
+// Discord OAuth login - This should be called from the frontend
+authRoutes.get('/discord', 
   authRateLimit,
-  validationMiddleware(loginSchema),
-  auditAuth('user_login'),
-  asyncHandler(async (c) => {
-  const { email, password } = c.get('validatedData')
-  
-  const ip = c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP')
+  asyncHandler(async (c: Context) => {
+    try {
+      const state = randomUUID();
+      const redirectUrl = new URL(DISCORD_OAUTH_REDIRECT);
+      
+      // Store state in secure, HTTP-only cookie
+      setCookie(c, 'oauth_state', state, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'Lax',
+        maxAge: 600, // 10 minutes
+        path: '/',
+        domain: new URL(FRONTEND_URL).hostname
+      });
 
-  try {
-    // Sign in with Supabase Auth
-    const { data, error } = await supabaseAdmin.auth.signInWithPassword({
-      email,
-      password
-    })
+      // Redirect to Discord OAuth
+      redirectUrl.searchParams.set('state', state);
+      return c.redirect(redirectUrl.toString());
+    } catch (error) {
+      console.error('OAuth initialization error:', error);
+      return c.redirect(`${FRONTEND_URL}/login?error=oauth_init_failed`);
+    }
+  })
+);
 
-    if (error || !data.user) {
-      logSecurityEvent('login_failed', undefined, ip, { email, error: error?.message })
-      throw new HTTPException(401, { message: 'Invalid credentials' })
+// OAuth callback handler
+authRoutes.get('/callback', 
+  authRateLimit,
+  asyncHandler(async (c: Context) => {
+    const { searchParams } = new URL(c.req.url);
+    const userId = searchParams.get('userId');
+    const secret = searchParams.get('secret');
+    const state = searchParams.get('state');
+    const storedState = getCookie(c, 'oauth_state');
+    const ip = c.req.header('cf-connecting-ip') || 'unknown';
+    const userAgent = c.req.header('user-agent') || 'unknown';
+    
+    // Validate state to prevent CSRF
+    if (!state || state !== storedState) {
+      logSecurityEvent(`oauth_invalid_state: ip=${ip}, userAgent=${userAgent}`);
+      return c.redirect(`${FRONTEND_URL}/login?error=invalid_state`);
+    }
+    
+    // Clear the state cookie
+    deleteCookie(c, 'oauth_state', {
+      path: '/',
+      domain: new URL(FRONTEND_URL).hostname
+    });
+
+    if (!userId || !secret) {
+      logSecurityEvent(`oauth_missing_params: ip=${ip}, userAgent=${userAgent}`);
+      return c.redirect(`${FRONTEND_URL}/login?error=invalid_request`);
     }
 
-    // Get user profile
-    const { data: profile } = await supabaseAdmin
-      .from('user_profiles')
-      .select('username, balance')
-      .eq('id', data.user.id)
-      .single()
+    try {
+      // Create session using the OAuth callback credentials
+      const session = await handleOAuthCallback(userId, secret);
+      
+      // Log successful authentication
+      logSecurityEvent(`oauth_success: userId=${session.userId}, provider=${session.provider}, ip=${ip}`);
+      
+      // Set secure, HTTP-only cookie with session ID
+      setCookie(c, SESSION_COOKIE_NAME, session.$id, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'Lax',
+        maxAge: SESSION_MAX_AGE,
+        path: '/',
+        domain: new URL(FRONTEND_URL).hostname
+      });
 
-    logSecurityEvent('user_logged_in', data.user.id, ip, { email })
-    await auditLog.userLoggedIn(data.user.id, email, ip)
-
-    return c.json({
-      message: 'Login successful',
-      user: {
-        id: data.user.id,
-        email: data.user.email,
-        username: profile?.username,
-        balance: profile?.balance || 0
-      },
-      session: {
-        access_token: data.session?.access_token,
-        refresh_token: data.session?.refresh_token,
-        expires_at: data.session?.expires_at
-      }
-    })
-
-  } catch (error) {
-    if (error instanceof HTTPException) {
-      throw error
+      return c.redirect(`${FRONTEND_URL}/dashboard`);
+    } catch (error) {
+      console.error('OAuth callback error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      logSecurityEvent(`oauth_failure: error=${errorMessage}, ip=${ip}`);
+      return c.redirect(`${FRONTEND_URL}/login?error=auth_failed`);
     }
-    console.error('Login error:', error)
-    throw new HTTPException(500, { message: 'Login failed' })
-  }
-}))
+  })
+);
 
-// Logout user
+// Get current user session
+authRoutes.get('/me',
+  authRateLimit,
+  asyncHandler(async (c: Context) => {
+    const sessionId = getCookie(c, SESSION_COOKIE_NAME);
+    
+    if (!sessionId) {
+      throw new HTTPException(401, { message: 'Not authenticated' });
+    }
+    
+    const user = await validateSession(sessionId);
+    if (!user) {
+      throw new HTTPException(401, { message: 'Invalid or expired session' });
+    }
+    
+    return c.json(user);
+  })
+);
+
+// Logout
 authRoutes.post('/logout', 
-  auditAuth('user_logout'),
-  asyncHandler(async (c) => {
-  const authHeader = c.req.header('Authorization')
-  const ip = c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP')
-  
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    const token = authHeader.substring(7)
+  authRateLimit,
+  asyncHandler(async (c: Context) => {
+    const sessionId = getCookie(c, SESSION_COOKIE_NAME);
+    
+    if (!sessionId) {
+      // No session to log out from
+      return c.json({ success: true });
+    }
     
     try {
-      // Get user info before logout
-      const { data: { user } } = await supabaseAdmin.auth.getUser(token)
+      // Clear the session cookie first to prevent any race conditions
+      deleteCookie(c, SESSION_COOKIE_NAME, {
+        path: '/',
+        domain: new URL(FRONTEND_URL).hostname
+      });
       
-      // Sign out the user
-      await supabaseAdmin.auth.admin.signOut(token)
+      // Then invalidate the session on the server
+      const success = await appwriteLogout(sessionId);
       
-      if (user) {
-        logSecurityEvent('user_logged_out', user.id, ip)
-        await auditLog.userLoggedOut(user.id, ip)
+      if (!success) {
+        console.error('Failed to invalidate session on server:', sessionId);
+        // We still return success since we've cleared the client-side session
       }
     } catch (error) {
-      console.warn('Logout error:', error)
+      console.error('Error during logout:', error);
+      // Even if there's an error, we consider the logout successful from the client's perspective
     }
-  }
+    
+    return c.json({ success: true })
+  })
+)
 
-  return c.json({ message: 'Logout successful' })
-}))
-
-// Reset password
-authRoutes.post('/reset-password',
-  sensitiveRateLimit,
-  validationMiddleware(resetPasswordSchema),
-  auditAuth('password_reset_request'),
-  asyncHandler(async (c) => {
-  const { email } = c.get('validatedData')
-  
-  const ip = c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP')
-
-  try {
-    const { error } = await supabaseAdmin.auth.resetPasswordForEmail(email, {
-      redirectTo: `${c.req.header('Origin')}/reset-password`
-    })
-
-    if (error) {
-      throw new HTTPException(400, { message: error.message })
+// Get current user session
+authRoutes.get('/me',
+  authRateLimit,
+  asyncHandler(async (c: Context) => {
+    const sessionId = c.req.header('X-Session-ID')
+    
+    if (!sessionId) {
+      throw new HTTPException(401, { message: 'Not authenticated' })
     }
-
-    logSecurityEvent('password_reset_requested', undefined, ip, { email })
-
-    return c.json({ message: 'Password reset email sent' })
-
-  } catch (error) {
-    if (error instanceof HTTPException) {
-      throw error
+    
+    const session = await getCurrentUser(sessionId)
+    
+    if (!session) {
+      throw new HTTPException(401, { message: 'Invalid or expired session' })
     }
-    console.error('Password reset error:', error)
-    throw new HTTPException(500, { message: 'Password reset failed' })
-  }
-}))
-
-// Refresh token
-authRoutes.post('/refresh', asyncHandler(async (c) => {
-  const body = await c.req.json()
-  const { refresh_token } = z.object({
-    refresh_token: z.string()
-  }).parse(body)
-
-  try {
-    const { data, error } = await supabaseAdmin.auth.refreshSession({
-      refresh_token
-    })
-
-    if (error || !data.session) {
-      throw new HTTPException(401, { message: 'Invalid refresh token' })
-    }
-
+    
     return c.json({
-      session: {
-        access_token: data.session.access_token,
-        refresh_token: data.session.refresh_token,
-        expires_at: data.session.expires_at
-      }
+      id: session.userId,
+      email: session.email,
+      name: session.name,
+      avatar: session.picture
     })
-
-  } catch (error) {
-    if (error instanceof HTTPException) {
-      throw error
-    }
-    console.error('Token refresh error:', error)
-    throw new HTTPException(500, { message: 'Token refresh failed' })
-  }
-}))
+  })
+)

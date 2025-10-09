@@ -7,7 +7,7 @@ import { describe, test, expect, mock, beforeEach } from 'bun:test'
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import CaseOpeningGame from '../CaseOpeningGame'
-import AuthProvider from '../../providers/AuthProvider'
+import { AuthProvider } from '../../../hooks/useAuth'
 import ToastProvider from '../../providers/ToastProvider'
 
 // Mock framer-motion

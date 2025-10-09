@@ -1,5 +1,5 @@
 import QueryProvider from './components/providers/QueryProvider'
-import AuthProvider from './components/providers/AuthProvider'
+import { AuthProvider } from './hooks/useAuth'
 import ToastProvider from './components/providers/ToastProvider'
 import { PerformanceProvider } from './components/providers/PerformanceProvider'
 import AppRouter from './router/AppRouter'
