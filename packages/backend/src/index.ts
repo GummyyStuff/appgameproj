@@ -134,24 +134,42 @@ app.route('/api', apiRoutes)
 app.use('/*', serveStatic({ 
   root: './public',
   rewriteRequestPath: (path) => path.replace(/^\//, ''),
-  // Explicitly set MIME types to fix "text/plain" errors
-  mimes: {
-    css: 'text/css',
-    js: 'application/javascript',
-    json: 'application/json',
-    woff: 'font/woff',
-    woff2: 'font/woff2',
-    ttf: 'font/ttf',
-    eot: 'application/vnd.ms-fontobject',
-    otf: 'font/otf',
-    svg: 'image/svg+xml',
-    png: 'image/png',
-    jpg: 'image/jpeg',
-    jpeg: 'image/jpeg',
-    gif: 'image/gif',
-    webp: 'image/webp',
-    ico: 'image/x-icon',
-    webmanifest: 'application/manifest+json',
+  // Manually set correct MIME types using onFound callback
+  onFound: (path, c) => {
+    // Set Content-Type based on file extension
+    if (path.endsWith('.css')) {
+      c.header('Content-Type', 'text/css; charset=utf-8')
+    } else if (path.endsWith('.js')) {
+      c.header('Content-Type', 'application/javascript; charset=utf-8')
+    } else if (path.endsWith('.json')) {
+      c.header('Content-Type', 'application/json; charset=utf-8')
+    } else if (path.endsWith('.woff')) {
+      c.header('Content-Type', 'font/woff')
+    } else if (path.endsWith('.woff2')) {
+      c.header('Content-Type', 'font/woff2')
+    } else if (path.endsWith('.ttf')) {
+      c.header('Content-Type', 'font/ttf')
+    } else if (path.endsWith('.eot')) {
+      c.header('Content-Type', 'application/vnd.ms-fontobject')
+    } else if (path.endsWith('.svg')) {
+      c.header('Content-Type', 'image/svg+xml')
+    } else if (path.endsWith('.png')) {
+      c.header('Content-Type', 'image/png')
+    } else if (path.endsWith('.jpg') || path.endsWith('.jpeg')) {
+      c.header('Content-Type', 'image/jpeg')
+    } else if (path.endsWith('.gif')) {
+      c.header('Content-Type', 'image/gif')
+    } else if (path.endsWith('.webp')) {
+      c.header('Content-Type', 'image/webp')
+    } else if (path.endsWith('.ico')) {
+      c.header('Content-Type', 'image/x-icon')
+    } else if (path.endsWith('.webmanifest')) {
+      c.header('Content-Type', 'application/manifest+json')
+    } else if (path.endsWith('.html')) {
+      c.header('Content-Type', 'text/html; charset=utf-8')
+    }
+    // Set cache headers for static assets
+    c.header('Cache-Control', 'public, max-age=31536000, immutable')
   }
 }))
 
