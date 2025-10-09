@@ -95,10 +95,12 @@ export const CACHE_TTL = {
 // Singleton cache instance
 export const gameCache = new GameDataCache();
 
-// Auto cleanup every 5 minutes
-setInterval(() => {
-  gameCache.cleanup();
-}, 5 * 60 * 1000);
+// Auto cleanup every 5 minutes (only in browser)
+if (typeof window !== 'undefined') {
+  setInterval(() => {
+    gameCache.cleanup();
+  }, 5 * 60 * 1000);
+}
 
 /**
  * Local storage cache for persistent data

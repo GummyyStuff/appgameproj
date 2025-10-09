@@ -49,13 +49,7 @@ export default defineConfig(({ mode }) => ({
       },
     },
     // Optimize bundle size
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true,
-      },
-    },
+    minify: 'esbuild', // Changed from terser to esbuild for better compatibility
     // Set chunk size warning limit
     chunkSizeWarningLimit: 1000,
   },
