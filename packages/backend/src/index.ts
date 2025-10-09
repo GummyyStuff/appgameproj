@@ -20,7 +20,7 @@ app.use('*', ipSecurityMiddleware())
 app.use('*', requestTimeoutMiddleware())
 
 // Global middleware
-if (!isProduction) {
+if (!isProduction()) {
   app.use('*', logger())
 }
 
@@ -31,7 +31,7 @@ if (config.enableRequestLogging) {
 
 // CORS configuration
 app.use('*', cors({
-  origin: isProduction 
+  origin: isProduction() 
     ? ['https://tarkov.juanis.cool'] // Production domain
     : ['http://localhost:5173', 'http://localhost:3000'],
   credentials: true,
@@ -78,7 +78,7 @@ app.get('/api/statistics/leaderboard', async (c) => {
     if (error instanceof z.ZodError) {
       throw new HTTPException(400, { 
         message: 'Invalid parameters', 
-        cause: error.errors 
+        cause: error.issues 
       })
     }
     
@@ -116,7 +116,7 @@ app.get('/api/statistics/global', async (c) => {
     if (error instanceof z.ZodError) {
       throw new HTTPException(400, { 
         message: 'Invalid parameters', 
-        cause: error.errors 
+        cause: error.issues 
       })
     }
     
@@ -133,7 +133,26 @@ app.route('/api', apiRoutes)
 // Serve all static files including Font Awesome
 app.use('/*', serveStatic({ 
   root: './public',
-  rewriteRequestPath: (path) => path.replace(/^\//, '')
+  rewriteRequestPath: (path) => path.replace(/^\//, ''),
+  // Explicitly set MIME types to fix "text/plain" errors
+  mimes: {
+    css: 'text/css',
+    js: 'application/javascript',
+    json: 'application/json',
+    woff: 'font/woff',
+    woff2: 'font/woff2',
+    ttf: 'font/ttf',
+    eot: 'application/vnd.ms-fontobject',
+    otf: 'font/otf',
+    svg: 'image/svg+xml',
+    png: 'image/png',
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    gif: 'image/gif',
+    webp: 'image/webp',
+    ico: 'image/x-icon',
+    webmanifest: 'application/manifest+json',
+  }
 }))
 
 // Fallback to index.html for SPA routing (only for HTML requests)
@@ -145,7 +164,7 @@ app.get('*', async (c) => {
     return c.notFound()
   }
   // Otherwise serve index.html for SPA routing
-  return serveStatic({ path: './public/index.html' })(c, () => Promise.resolve(c.notFound()))
+  return serveStatic({ path: './public/index.html' })(c, async () => {})
 })
 
 // Global error handler
@@ -167,14 +186,14 @@ process.on('SIGINT', async () => {
 // Unhandled error handling
 process.on('unhandledRejection', (reason, promise) => {
   console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason)
-  if (isProduction) {
+  if (isProduction()) {
     process.exit(1)
   }
 })
 
 process.on('uncaughtException', (error) => {
   console.error('❌ Uncaught Exception:', error)
-  if (isProduction) {
+  if (isProduction()) {
     process.exit(1)
   }
 })
@@ -189,7 +208,7 @@ async function initializeServices() {
     console.log('✅ Supabase Realtime service initialized')
   } catch (error) {
     console.error('❌ Failed to initialize Supabase Realtime:', error)
-    if (isProduction) {
+    if (isProduction()) {
       process.exit(1)
     }
   }
