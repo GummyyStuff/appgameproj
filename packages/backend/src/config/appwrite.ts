@@ -5,7 +5,6 @@ const requiredEnvVars = [
   'APPWRITE_ENDPOINT',
   'APPWRITE_PROJECT_ID',
   'APPWRITE_API_KEY',
-  'APPWRITE_DISCORD_REDIRECT_URI',
   'FRONTEND_URL'
 ];
 
@@ -24,7 +23,8 @@ export const appwriteClient = new Client()
 export const appwriteAccount = new Account(appwriteClient);
 
 // OAuth configuration
-export const DISCORD_OAUTH_REDIRECT = process.env.APPWRITE_DISCORD_REDIRECT_URI!;
+// This is YOUR backend callback URL, not Appwrite's OAuth callback
+export const BACKEND_CALLBACK_URL = process.env.BACKEND_CALLBACK_URL || 'http://localhost:3001/api/auth/callback';
 export const FRONTEND_URL = process.env.FRONTEND_URL!;
 
 // Session configuration

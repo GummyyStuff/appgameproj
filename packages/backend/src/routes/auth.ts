@@ -10,7 +10,7 @@ import {
   handleOAuthCallback, 
   validateSession,
   logout as appwriteLogout,
-  DISCORD_OAUTH_REDIRECT,
+  BACKEND_CALLBACK_URL,
   FRONTEND_URL,
   SESSION_COOKIE_NAME,
   SESSION_MAX_AGE,
@@ -63,8 +63,8 @@ authRoutes.get('/discord',
       const appwriteEndpoint = process.env.APPWRITE_ENDPOINT!;
       const projectId = process.env.APPWRITE_PROJECT_ID!;
       
-      // The success callback is our backend callback endpoint
-      const successUrl = DISCORD_OAUTH_REDIRECT;
+      // The success callback is our backend callback endpoint (where Appwrite redirects after Discord auth)
+      const successUrl = BACKEND_CALLBACK_URL;
       const failureUrl = `${FRONTEND_URL}/login?error=oauth_failed`;
       
       // Construct the Appwrite OAuth initiation URL
