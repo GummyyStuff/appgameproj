@@ -44,10 +44,7 @@ ENV VITE_API_URL=${VITE_API_URL}
 ENV VITE_APPWRITE_ENDPOINT=${VITE_APPWRITE_ENDPOINT}
 ENV VITE_APPWRITE_PROJECT_ID=${VITE_APPWRITE_PROJECT_ID}
 
-# Debug: Check vite config file and run build with verbose logging
-RUN ls -la vite.config.ts tsconfig.json tsconfig.node.json && \
-    cat vite.config.ts && \
-    bun run build
+RUN bun run build
 
 # Build backend stage
 FROM base AS backend-build
