@@ -50,13 +50,14 @@ authRoutes.get('/discord',
       const state = randomUUID();
       
       // Store state in secure, HTTP-only cookie for CSRF protection
+      const frontendDomain = new URL(FRONTEND_URL).hostname;
       setCookie(c, 'oauth_state', state, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: true, // Always use secure in production (HTTPS)
         sameSite: 'Lax',
         maxAge: 600, // 10 minutes
         path: '/',
-        domain: new URL(FRONTEND_URL).hostname
+        domain: frontendDomain === 'localhost' ? undefined : frontendDomain // Don't set domain for localhost
       });
 
       // Build Appwrite OAuth URL
@@ -119,13 +120,14 @@ authRoutes.get('/callback',
       logSecurityEvent(`oauth_success: userId=${session.userId}, provider=${session.provider}, ip=${ip}`);
       
       // Set secure, HTTP-only cookie with session ID
+      const frontendDomain = new URL(FRONTEND_URL).hostname;
       setCookie(c, SESSION_COOKIE_NAME, session.$id, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: true, // Always use secure (HTTPS)
         sameSite: 'Lax',
         maxAge: SESSION_MAX_AGE,
         path: '/',
-        domain: new URL(FRONTEND_URL).hostname
+        domain: frontendDomain === 'localhost' ? undefined : frontendDomain // Don't set domain for localhost
       });
 
       return c.redirect(`${FRONTEND_URL}/`);
