@@ -189,11 +189,12 @@ export function rateLimitMiddleware(rateLimitConfig?: Partial<RateLimitConfig>) 
 
 /**
  * Strict rate limiting for authentication endpoints
+ * More lenient in development for testing
  */
 export const authRateLimit = rateLimitMiddleware({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  maxRequests: 5, // 5 attempts per 15 minutes
-  blockDurationMs: 30 * 60 * 1000, // Block for 30 minutes after limit exceeded
+  windowMs: process.env.NODE_ENV === 'production' ? 15 * 60 * 1000 : 60 * 1000, // 15 min prod, 1 min dev
+  maxRequests: process.env.NODE_ENV === 'production' ? 5 : 100, // 5 prod, 100 dev
+  blockDurationMs: process.env.NODE_ENV === 'production' ? 30 * 60 * 1000 : 60 * 1000, // 30 min prod, 1 min dev
   keyGenerator: (c) => {
     const ip = c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP') || 'unknown'
     return `auth:${ip}`

@@ -1,8 +1,15 @@
+/**
+ * Chat Realtime Hook (Appwrite version)
+ * Handles real-time chat messages and presence using Appwrite Realtime
+ */
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from './useAuth';
 import { useProfile } from './useProfile';
 import { useMessageCooldown } from './useMessageCooldown';
-import { supabase } from '../lib/supabase';
+import { subscribeToChatMessages } from '../services/appwrite-realtime';
+
+const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 export interface ChatMessage {
   id: string;
@@ -10,15 +17,15 @@ export interface ChatMessage {
   content: string;
   created_at: string;
   username: string;
-  display_name: string;
-  avatar_path: string;
+  display_name?: string;
+  avatar_path?: string;
 }
 
 export interface ChatPresence {
   user_id: string;
   username: string;
-  display_name: string;
-  avatar_path: string;
+  display_name?: string;
+  avatar_path?: string;
   last_seen: string;
 }
 
@@ -28,268 +35,215 @@ export const useChatRealtime = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const channelRef = useRef<any>(null);
   const hasInitializedRef = useRef(false);
   
   // Initialize cooldown system
   const { cooldownState, attemptSendMessage, formatRemainingTime, cleanup } = useMessageCooldown();
 
-  // Fetch initial messages
+  // Fetch initial messages from backend API
   const fetchInitialMessages = useCallback(async () => {
     if (!user) return;
 
-    // Fetching initial messages
-    
     try {
-      // First, let's test if we can access the user_profiles table
-      const { data: profileTest, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('id, username, display_name')
-        .eq('id', user.id)
-        .single();
-      
-      if (profileError) {
-        console.error('Cannot access user_profiles:', profileError);
-        setError('Authentication error: Cannot access profile');
-        return;
-      }
-
-      // Use a simpler approach - fetch messages first, then get user profiles separately
-      const { data: messagesData, error: messagesError } = await supabase
-        .from('chat_messages')
-        .select('id, user_id, content, created_at, username')
-        .eq('is_deleted', false)
-        .order('created_at', { ascending: false })
-        .limit(20);
-
-      if (messagesError) {
-        console.error('Error fetching messages:', messagesError);
-        throw messagesError;
-      }
-
-      // Get unique user IDs from messages
-      const userIds = [...new Set(messagesData?.map(msg => msg.user_id) || [])];
-      
-      // Fetch user profiles for all users in messages
-      const { data: profilesData, error: profilesError } = await supabase
-        .from('user_profiles')
-        .select('id, display_name, avatar_path')
-        .in('id', userIds);
-
-      if (profilesError) {
-        console.error('Error fetching profiles:', profilesError);
-        throw profilesError;
-      }
-
-      // Create a map for quick profile lookup
-      const profileMap = new Map(profilesData?.map(profile => [profile.id, profile]) || []);
-
-      // Combine messages with profile data
-      const data = messagesData?.map(msg => ({
-        ...msg,
-        user_profiles: profileMap.get(msg.user_id) || { display_name: msg.username, avatar_path: 'defaults/default-avatar.svg' }
-      })) || [];
-
-      console.log('Combined data:', data);
-      
-      // Transform the data to match our interface
-      const messages: ChatMessage[] = (data || []).map(msg => ({
-        id: msg.id,
-        user_id: msg.user_id,
-        content: msg.content,
-        created_at: msg.created_at,
-        username: msg.username,
-        display_name: msg.user_profiles.display_name,
-        avatar_path: msg.user_profiles.avatar_path
-      }));
-
-      // Reverse to show oldest first (newest at bottom)
-      setMessages(messages.reverse());
-    } catch (err) {
-      console.error('Failed to fetch initial messages:', err);
-      setError('Failed to load chat messages');
-    }
-  }, [user]);
-
-  // Send a message
-  const sendMessage = useCallback(async (content: string) => {
-    if (!user || !profile || !content.trim()) return;
-
-    // Check cooldown before sending
-    const cooldownResult = attemptSendMessage();
-    if (!cooldownResult.canSend) {
-      setError(cooldownResult.reason || 'Please wait before sending another message');
-      throw new Error(cooldownResult.reason || 'Cooldown active');
-    }
-
-    // Optimistic UI update - add message immediately
-    const optimisticMessage: ChatMessage = {
-      id: `temp-${Date.now()}`, // Temporary ID
-      user_id: user.id,
-      username: profile.username,
-      content: content.trim(),
-      created_at: new Date().toISOString(),
-      display_name: profile.display_name || profile.username,
-      avatar_path: profile.avatar_path || 'defaults/default-avatar.svg'
-    };
-
-        // Add optimistic message immediately
-        setMessages(prev => {
-          const newMessages = [...prev, optimisticMessage];
-          // Keep only the last 20 messages
-          return newMessages.slice(-20);
-        });
-
-    try {
-      const { error } = await supabase
-        .from('chat_messages')
-        .insert({
-          user_id: user.id,
-          username: profile.username,
-          content: content.trim()
-        });
-
-      if (error) throw error;
-
-      // Don't remove optimistic message - let it stay since we skip our own messages in realtime
-      console.log('Message sent successfully, keeping optimistic version');
-    } catch (err) {
-      console.error('Failed to send message:', err);
-      setError('Failed to send message');
-      // Remove optimistic message on error
-      setMessages(prev => prev.filter(msg => msg.id !== optimisticMessage.id));
-      throw err;
-    }
-  }, [user, profile, attemptSendMessage]);
-
-  // Delete a message (moderators only)
-  const deleteMessage = useCallback(async (messageId: string) => {
-    if (!user) return;
-
-    try {
-      const { error } = await supabase
-        .from('chat_messages')
-        .update({ is_deleted: true })
-        .eq('id', messageId);
-
-      if (error) throw error;
-    } catch (err) {
-      console.error('Failed to delete message:', err);
-      setError('Failed to delete message');
-      throw err;
-    }
-  }, [user]);
-
-  // Set up realtime subscription - only run once per user
-  useEffect(() => {
-    if (!user || hasInitializedRef.current) {
-      console.log('No user or already initialized, skipping chat setup');
-      return;
-    }
-
-    console.log('Setting up chat realtime subscription for user:', user.id);
-    hasInitializedRef.current = true;
-    
-    const channel = supabase
-      .channel('public:chat_messages')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'chat_messages',
+      const response = await fetch(`${API_URL}/chat/messages?limit=50`, {
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
         },
-        (payload) => {
-          console.log('Chat change received:', payload);
-
-          if (payload.eventType === 'INSERT') {
-            const newMessage = payload.new as any;
-            
-            // Skip if this is our own message (we already have the optimistic version)
-            if (newMessage.user_id === user?.id) {
-              console.log('Skipping own message from realtime (already have optimistic version)');
-              return;
-            }
-            
-            // Fetch the full message data with user profile info
-            supabase
-              .from('chat_messages')
-              .select(`
-                id,
-                user_id,
-                content,
-                created_at,
-                username,
-                user_profiles!inner(display_name, avatar_path)
-              `)
-              .eq('id', newMessage.id)
-              .single()
-              .then(({ data, error }) => {
-                if (error) {
-                  console.error('Failed to fetch full message data:', error);
-                  return;
-                }
-                
-                const fullMessage: ChatMessage = {
-                  id: data.id,
-                  user_id: data.user_id,
-                  content: data.content,
-                  created_at: data.created_at,
-                  username: data.username,
-                  display_name: data.user_profiles.display_name,
-                  avatar_path: data.user_profiles.avatar_path
-                };
-                
-                console.log('Adding message from other user:', fullMessage);
-                setMessages(prev => {
-                  const newMessages = [...prev, fullMessage];
-                  // Keep only the last 20 messages to prevent memory issues
-                  return newMessages.slice(-20);
-                });
-              });
-          } else if (payload.eventType === 'UPDATE') {
-            const updatedMessage = payload.new as any;
-            if (updatedMessage.is_deleted) {
-              // Remove deleted message from UI
-              setMessages(prev => prev.filter(msg => msg.id !== updatedMessage.id));
-            }
-          }
-        }
-      )
-      .subscribe((status) => {
-        console.log('Chat subscription status:', status);
-        setIsConnected(status === 'SUBSCRIBED');
       });
 
-    // Store channel reference
-    channelRef.current = channel;
-
-    // Fetch initial messages
-    console.log('Fetching initial messages...');
-    fetchInitialMessages();
-
-    return () => {
-      console.log('Cleaning up chat subscription');
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
-        channelRef.current = null;
+      if (!response.ok) {
+        throw new Error('Failed to fetch messages');
       }
-      hasInitializedRef.current = false;
-    };
-  }, [user?.id]); // Only depend on user ID, not the whole user object
 
-  // Cleanup on unmount
+      const result = await response.json();
+      const messages: ChatMessage[] = (result.messages || []).reverse().map((msg: any) => ({
+        id: msg.$id,
+        user_id: msg.userId,
+        content: msg.content,
+        created_at: msg.createdAt,
+        username: msg.username,
+        display_name: msg.username, // Fallback to username
+        avatar_path: 'defaults/default-avatar.svg', // Default avatar
+      }));
+
+      setMessages(messages);
+      console.log('Loaded initial messages:', messages.length);
+    } catch (err) {
+      console.error('Error fetching initial messages:', err);
+      setError('Failed to load messages');
+    }
+  }, [user]);
+
+  // Load messages on mount
   useEffect(() => {
+    if (user && !hasInitializedRef.current) {
+      fetchInitialMessages();
+      hasInitializedRef.current = true;
+    }
+  }, [user, fetchInitialMessages]);
+
+  // Set up realtime subscription for new messages
+  useEffect(() => {
+    if (!user) return;
+
+    console.log('Setting up Appwrite Realtime subscription for chat...');
+    
+    const unsubscribe = subscribeToChatMessages({
+      onNewMessage: (message: any) => {
+        console.log('New message received:', message);
+        
+        // Skip our own messages (optimistic update already added)
+        if (message.userId === user.id) {
+          console.log('Skipping own message (already added optimistically)');
+          return;
+        }
+
+        const chatMessage: ChatMessage = {
+          id: message.$id,
+          user_id: message.userId,
+          content: message.content,
+          created_at: message.createdAt,
+          username: message.username,
+          display_name: message.username,
+          avatar_path: 'defaults/default-avatar.svg',
+        };
+
+        setMessages(prev => {
+          const newMessages = [...prev, chatMessage];
+          return newMessages.slice(-50); // Keep last 50 messages
+        });
+      },
+      onMessageUpdate: (message: any) => {
+        console.log('Message updated:', message);
+        
+        // Handle message deletions (soft delete)
+        if (message.isDeleted) {
+          setMessages(prev => prev.filter(msg => msg.id !== message.$id));
+        } else {
+          setMessages(prev => prev.map(msg =>
+            msg.id === message.$id
+              ? { ...msg, content: message.content, created_at: message.updatedAt }
+              : msg
+          ));
+        }
+      },
+      onMessageDelete: (message: any) => {
+        console.log('Message deleted:', message);
+        setMessages(prev => prev.filter(msg => msg.id !== message.$id));
+      },
+    });
+
+    setIsConnected(true);
+
     return () => {
-      if (channelRef.current) {
-        console.log('Final cleanup of chat subscription');
-        supabase.removeChannel(channelRef.current);
-        channelRef.current = null;
-      }
-      // Cleanup cooldown system
-      cleanup();
+      console.log('Cleaning up chat realtime subscription');
+      unsubscribe();
+      setIsConnected(false);
     };
-  }, [cleanup]);
+  }, [user]);
+
+  // Send message function with optimistic updates
+  const sendMessage = useCallback(async (content: string) => {
+    if (!user || !profile) {
+      setError('You must be logged in to send messages');
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    if (!content || content.trim().length === 0) {
+      setError('Message cannot be empty');
+      return { success: false, error: 'Message cannot be empty' };
+    }
+
+    if (content.length > 500) {
+      setError('Message is too long (max 500 characters)');
+      return { success: false, error: 'Message too long' };
+    }
+
+    // Check cooldown
+    const canSend = attemptSendMessage();
+    if (!canSend) {
+      const remaining = formatRemainingTime();
+      setError(`Please wait ${remaining} before sending another message`);
+      return { success: false, error: `Cooldown active: ${remaining}` };
+    }
+
+    // Optimistic update
+    const optimisticMessage: ChatMessage = {
+      id: `temp-${Date.now()}`,
+      user_id: user.id,
+      content: content.trim(),
+      created_at: new Date().toISOString(),
+      username: profile.username,
+      display_name: profile.displayName,
+      avatar_path: profile.avatar_path,
+    };
+
+    setMessages(prev => [...prev, optimisticMessage]);
+    setError(null);
+
+    try {
+      const response = await fetch(`${API_URL}/chat/messages`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({ content: content.trim() }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to send message');
+      }
+
+      const result = await response.json();
+      
+      // Replace optimistic message with actual message
+      setMessages(prev => prev.map(msg => 
+        msg.id === optimisticMessage.id 
+          ? { ...msg, id: result.chat_message.$id }
+          : msg
+      ));
+
+      return { success: true };
+    } catch (err) {
+      console.error('Error sending message:', err);
+      setError('Failed to send message');
+      
+      // Remove optimistic message on error
+      setMessages(prev => prev.filter(msg => msg.id !== optimisticMessage.id));
+      
+      return { success: false, error: 'Failed to send message' };
+    }
+  }, [user, profile, attemptSendMessage, formatRemainingTime]);
+
+  // Delete message (for moderators)
+  const deleteMessage = useCallback(async (messageId: string) => {
+    if (!user || !profile) return { success: false, error: 'Not authenticated' };
+
+    try {
+      const response = await fetch(`${API_URL}/chat/messages/${messageId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete message');
+      }
+
+      // Optimistically remove from UI
+      setMessages(prev => prev.filter(msg => msg.id !== messageId));
+
+      return { success: true };
+    } catch (err) {
+      console.error('Error deleting message:', err);
+      return { success: false, error: 'Failed to delete message' };
+    }
+  }, [user, profile]);
 
   return {
     messages,
@@ -297,8 +251,8 @@ export const useChatRealtime = () => {
     error,
     sendMessage,
     deleteMessage,
-    clearError: () => setError(null),
     cooldownState,
-    formatRemainingTime
+    formatRemainingTime,
   };
 };
+
