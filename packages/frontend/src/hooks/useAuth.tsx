@@ -69,8 +69,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       setLoading(true);
       // This will redirect to Discord for OAuth
-      await account.createOAuth2Session(
-        'discord',
+      // Using new SDK format with object parameters
+      account.createOAuth2Session(
+        'discord' as any,
         `${window.location.origin}/dashboard`,
         `${window.location.origin}/login`,
         ['identify', 'email']

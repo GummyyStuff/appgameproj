@@ -78,11 +78,19 @@ export const handleOAuthCallback = async (userId: string, secret: string): Promi
 
 /**
  * Validates a session and returns the user information
+ * Note: For server-side, we need to use the Users API to get user details
  */
 export const validateSession = async (sessionId: string) => {
   try {
+    // Import Users at runtime to avoid circular dependencies
+    const { Users } = await import('node-appwrite');
+    const users = new Users(appwriteClient);
+    
+    // Validate session exists and get userId
     const session = await appwriteAccount.getSession(sessionId);
-    const user = await appwriteAccount.get();
+    
+    // Fetch user details using Users API (requires API key)
+    const user = await users.get(session.userId);
     
     return {
       id: user.$id,
