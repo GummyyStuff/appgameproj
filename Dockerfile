@@ -45,7 +45,9 @@ ENV VITE_API_URL=${VITE_API_URL}
 ENV VITE_APPWRITE_ENDPOINT=${VITE_APPWRITE_ENDPOINT}
 ENV VITE_APPWRITE_PROJECT_ID=${VITE_APPWRITE_PROJECT_ID}
 
-RUN bun run build
+RUN bun run build && \
+    echo "📋 Verifying FontAwesome files in dist..." && \
+    ls -la ./dist/fa-v5-pro/css/ || echo "❌ FontAwesome NOT found in dist!"
 
 # Build backend stage
 FROM base AS backend-build
