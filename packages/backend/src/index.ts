@@ -133,12 +133,18 @@ app.route('/api', apiRoutes)
 // Serve all static files including Font Awesome
 app.use('/*', serveStatic({ 
   root: './public',
-  rewriteRequestPath: (path) => path.replace(/^\//, ''),
+  rewriteRequestPath: (path) => {
+    const rewritten = path.replace(/^\//, '')
+    console.log(`📁 [STATIC] Request: ${path} → Rewritten: ${rewritten}`)
+    return rewritten
+  },
   // Manually set correct MIME types using onFound callback
   onFound: (path, c) => {
+    console.log(`✅ [FOUND] File found: ${path}`)
     // Set Content-Type based on file extension
     if (path.endsWith('.css')) {
       c.header('Content-Type', 'text/css; charset=utf-8')
+      console.log(`📝 [MIME] Set CSS MIME type for: ${path}`)
     } else if (path.endsWith('.js')) {
       c.header('Content-Type', 'application/javascript; charset=utf-8')
     } else if (path.endsWith('.json')) {
@@ -170,6 +176,9 @@ app.use('/*', serveStatic({
     }
     // Set cache headers for static assets
     c.header('Cache-Control', 'public, max-age=31536000, immutable')
+  },
+  onNotFound: (path, c) => {
+    console.log(`❌ [NOT FOUND] Static file not found: ${path}, Request path: ${c.req.path}`)
   }
 }))
 
@@ -177,11 +186,15 @@ app.use('/*', serveStatic({
 app.get('*', async (c) => {
   // Check if the request is for a static asset
   const path = c.req.path
-  if (path.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|map)$/)) {
+  console.log(`🔄 [FALLBACK] Hit fallback handler for: ${path}`)
+  
+  if (path.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|map|webmanifest)$/)) {
     // If static asset not found, return 404 instead of index.html
+    console.log(`⚠️  [404] Static asset not found: ${path}`)
     return c.notFound()
   }
   // Otherwise serve index.html for SPA routing
+  console.log(`📄 [SPA] Serving index.html for: ${path}`)
   return serveStatic({ path: './public/index.html' })(c, async () => {})
 })
 
