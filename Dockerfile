@@ -25,12 +25,12 @@ RUN apt-get update && apt-get install -y curl unzip && \
     echo "📂 Extracting FontAwesome Pro..." && \
     unzip -q /tmp/fontawesome.zip -d /tmp/ && \
     mv /tmp/fontawesome-pro-5.15.4-web ./public/fa-v5-pro && \
-    chown -R bun:bun ./public/fa-v5-pro && \
     echo "✅ FontAwesome Pro installed successfully" && \
     rm /tmp/fontawesome.zip && \
     apt-get remove -y unzip && \
     apt-get autoremove -y && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* && \
+    chown -R bun:bun /app/packages/frontend
 USER bun
 
 # Set build-time environment variables for Vite
