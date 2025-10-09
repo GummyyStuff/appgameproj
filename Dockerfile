@@ -13,6 +13,7 @@ RUN bun install --frozen-lockfile
 FROM base AS frontend-build
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
+# Cache buster - change this to force rebuild: v1.1
 COPY packages/frontend/ ./packages/frontend/
 WORKDIR /app/packages/frontend
 
