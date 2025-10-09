@@ -68,7 +68,8 @@ authRoutes.get('/discord',
       const failureUrl = `${FRONTEND_URL}/login?error=oauth_failed`;
       
       // Construct the Appwrite OAuth initiation URL
-      const oauthUrl = new URL(`${appwriteEndpoint}/v1/account/sessions/oauth2/discord`);
+      // Note: APPWRITE_ENDPOINT already includes /v1, so don't add it again
+      const oauthUrl = new URL(`${appwriteEndpoint}/account/sessions/oauth2/discord`);
       oauthUrl.searchParams.set('project', projectId);
       oauthUrl.searchParams.set('success', `${successUrl}?state=${state}`);
       oauthUrl.searchParams.set('failure', failureUrl);
