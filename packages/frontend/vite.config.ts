@@ -1,16 +1,14 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 
-export default defineConfig(async ({ mode }) => {
-  const tailwindcss = (await import('@tailwindcss/vite')).default
-  
-  return {
-    plugins: [
-      react({
-        jsxRuntime: 'automatic',
-      }),
-      tailwindcss(),
-    ],
+export default defineConfig({
+  plugins: [
+    react({
+      jsxRuntime: 'automatic',
+    }),
+    tailwindcss(),
+  ],
   // Load environment variables based on mode
   envDir: '.',
   envPrefix: 'VITE_',
@@ -73,4 +71,4 @@ export default defineConfig(async ({ mode }) => {
       'socket.io-client'
     ],
   },
-}})
+})
