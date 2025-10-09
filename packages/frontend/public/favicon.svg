@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Tarkov-themed tactical skull favicon -->
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2D3748;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1A202C;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Dark background -->
+  <rect width="64" height="64" rx="12" fill="url(#bg)"/>
+  
+  <!-- Tactical skull design -->
+  <g transform="translate(32, 32)">
+    <!-- Skull outline -->
+    <ellipse cx="0" cy="-2" rx="14" ry="16" fill="#4A5568" stroke="#48BB78" stroke-width="1.5"/>
+    
+    <!-- Eye sockets with glow -->
+    <ellipse cx="-5" cy="-5" rx="3.5" ry="4.5" fill="#1A202C"/>
+    <ellipse cx="5" cy="-5" rx="3.5" ry="4.5" fill="#1A202C"/>
+    <ellipse cx="-5" cy="-5" rx="1.5" ry="2" fill="#48BB78" opacity="0.8"/>
+    <ellipse cx="5" cy="-5" rx="1.5" ry="2" fill="#48BB78" opacity="0.8"/>
+    
+    <!-- Nose cavity -->
+    <path d="M -2,-1 L 0,2 L 2,-1 Z" fill="#1A202C"/>
+    
+    <!-- Teeth/jaw -->
+    <line x1="-8" y1="6" x2="-3" y2="6" stroke="#2D3748" stroke-width="2" stroke-linecap="round"/>
+    <line x1="3" y1="6" x2="8" y2="6" stroke="#2D3748" stroke-width="2" stroke-linecap="round"/>
+    <line x1="-2" y1="7" x2="-2" y2="10" stroke="#2D3748" stroke-width="1.5"/>
+    <line x1="2" y1="7" x2="2" y2="10" stroke="#2D3748" stroke-width="1.5"/>
+    <line x1="0" y1="7" x2="0" y2="11" stroke="#2D3748" stroke-width="1.5"/>
+    
+    <!-- Tactical crosshair accent -->
+    <circle cx="0" cy="-2" r="18" fill="none" stroke="#48BB78" stroke-width="0.8" opacity="0.3"/>
+    <line x1="0" y1="-20" x2="0" y2="-22" stroke="#48BB78" stroke-width="1.2" opacity="0.6"/>
+    <line x1="0" y1="16" x2="0" y2="18" stroke="#48BB78" stroke-width="1.2" opacity="0.6"/>
+    <line x1="-18" y1="-2" x2="-20" y2="-2" stroke="#48BB78" stroke-width="1.2" opacity="0.6"/>
+    <line x1="18" y1="-2" x2="20" y2="-2" stroke="#48BB78" stroke-width="1.2" opacity="0.6"/>
+  </g>
+  
+  <!-- Corner accent (military style) -->
+  <path d="M 8,8 L 8,12 M 8,8 L 12,8" stroke="#48BB78" stroke-width="1" opacity="0.4"/>
+  <path d="M 56,8 L 52,8 M 56,8 L 56,12" stroke="#48BB78" stroke-width="1" opacity="0.4"/>
+</svg>
+

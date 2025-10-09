@@ -17,6 +17,29 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY packages/frontend/ ./packages/frontend/
 WORKDIR /app/packages/frontend
 
+# Download Font Awesome Pro during build (not committed to repo)
+ARG FONTAWESOME_URL
+ARG APPWRITE_API_KEY
+RUN if [ -n "$FONTAWESOME_URL" ]; then \
+      echo "Downloading Font Awesome Pro from Appwrite..." && \
+      apt-get update && apt-get install -y unzip && \
+      if [ -n "$APPWRITE_API_KEY" ]; then \
+        echo "Using Appwrite API key for authentication..." && \
+        curl -fsSL -H "X-Appwrite-Project: tarkovcas" -H "X-Appwrite-Key: $APPWRITE_API_KEY" "$FONTAWESOME_URL" -o /tmp/fontawesome.zip; \
+      else \
+        echo "Using public bucket access..." && \
+        curl -fsSL "$FONTAWESOME_URL" -o /tmp/fontawesome.zip; \
+      fi && \
+      mkdir -p public/fa-v5-pro && \
+      unzip -q /tmp/fontawesome.zip -d /tmp/fa-extract && \
+      mv /tmp/fa-extract/fontawesome-pro-*-web/* public/fa-v5-pro/ && \
+      rm -rf /tmp/fontawesome.zip /tmp/fa-extract && \
+      apt-get remove -y unzip && apt-get autoremove -y && rm -rf /var/lib/apt/lists/* && \
+      echo "Font Awesome downloaded and extracted successfully"; \
+    else \
+      echo "Warning: FONTAWESOME_URL not set, Font Awesome will not be available"; \
+    fi
+
 # Set build-time environment variables for Vite
 ARG VITE_SUPABASE_URL
 ARG VITE_SUPABASE_ANON_KEY

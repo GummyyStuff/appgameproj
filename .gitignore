@@ -78,7 +78,6 @@ dist
 
 # Gatsby files
 .cache/
-public
 
 # Storybook build outputs
 .out
@@ -113,3 +112,7 @@ Thumbs.db
 
 # CS2 Case Simulator
 cs2-case-simulator/
+
+# Font Awesome Pro (cannot be committed to public repo)
+packages/frontend/public/fa-v5-pro/
+fontawesome-pro-*.tar.gz
