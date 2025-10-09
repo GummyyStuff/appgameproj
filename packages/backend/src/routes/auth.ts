@@ -49,6 +49,9 @@ authRoutes.get('/discord',
     try {
       const state = randomUUID();
       
+      console.log('=== Starting OAuth Flow ===');
+      console.log('Generated state:', state);
+      
       // Store state in secure, HTTP-only cookie for CSRF protection
       const frontendDomain = new URL(FRONTEND_URL).hostname;
       setCookie(c, 'oauth_state', state, {
@@ -59,6 +62,8 @@ authRoutes.get('/discord',
         path: '/',
         domain: frontendDomain === 'localhost' ? undefined : frontendDomain // Don't set domain for localhost
       });
+      
+      console.log('Set cookie domain:', frontendDomain === 'localhost' ? 'none (localhost)' : frontendDomain);
 
       // Build Appwrite OAuth URL
       const appwriteEndpoint = process.env.APPWRITE_ENDPOINT!;
@@ -75,9 +80,13 @@ authRoutes.get('/discord',
       oauthUrl.searchParams.set('success', `${successUrl}?state=${state}`);
       oauthUrl.searchParams.set('failure', failureUrl);
 
+      console.log('Redirecting to Appwrite OAuth URL:', oauthUrl.toString());
+      console.log('Success callback:', successUrl);
+      console.log('===========================');
+
       return c.redirect(oauthUrl.toString());
     } catch (error) {
-      console.error('OAuth initialization error:', error);
+      console.error('❌ OAuth initialization error:', error);
       return c.redirect(`${FRONTEND_URL}/login?error=oauth_init_failed`);
     }
   })
@@ -92,22 +101,38 @@ authRoutes.get('/callback',
     const secret = searchParams.get('secret');
     const state = searchParams.get('state');
     const storedState = getCookie(c, 'oauth_state');
-    const ip = c.req.header('cf-connecting-ip') || 'unknown';
+    const ip = c.req.header('cf-connecting-ip') || c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP') || 'unknown';
     const userAgent = c.req.header('user-agent') || 'unknown';
+    
+    // DEBUG: Log all callback parameters
+    console.log('=== OAuth Callback Debug ===');
+    console.log('Full URL:', c.req.url);
+    console.log('Query params:', { userId, secret: secret ? 'present' : 'missing', state });
+    console.log('Cookie state:', storedState);
+    console.log('All query params:', Object.fromEntries(searchParams));
+    console.log('IP:', ip);
+    console.log('===========================');
     
     // Validate state to prevent CSRF
     if (!state || state !== storedState) {
-      logSecurityEvent(`oauth_invalid_state: ip=${ip}, userAgent=${userAgent}`);
+      console.error('❌ State mismatch!', { received: state, expected: storedState });
+      logSecurityEvent(`oauth_invalid_state: ip=${ip}, userAgent=${userAgent}, state=${state}, cookieState=${storedState}`);
       return c.redirect(`${FRONTEND_URL}/login?error=invalid_state`);
     }
     
     // Clear the state cookie
+    const frontendDomain = new URL(FRONTEND_URL).hostname;
     deleteCookie(c, 'oauth_state', {
       path: '/',
-      domain: new URL(FRONTEND_URL).hostname
+      domain: frontendDomain === 'localhost' ? undefined : frontendDomain
     });
 
     if (!userId || !secret) {
+      console.error('❌ Missing OAuth parameters!', { 
+        userId: userId ? 'present' : 'MISSING', 
+        secret: secret ? 'present' : 'MISSING',
+        allParams: Object.fromEntries(searchParams)
+      });
       logSecurityEvent(`oauth_missing_params: ip=${ip}, userAgent=${userAgent}`);
       return c.redirect(`${FRONTEND_URL}/login?error=invalid_request`);
     }

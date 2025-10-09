@@ -49,7 +49,15 @@ export interface OAuthSession {
  */
 export const handleOAuthCallback = async (userId: string, secret: string): Promise<OAuthSession> => {
   try {
+    console.log('🔐 Creating Appwrite session...', { userId, secret: secret ? 'present' : 'missing' });
+    
     const session = await appwriteAccount.createSession(userId, secret);
+    
+    console.log('✅ Session created successfully:', {
+      sessionId: session.$id,
+      userId: session.userId,
+      provider: session.provider
+    });
     
     // Create a new session object with only the properties we need
     const oauthSession: OAuthSession = {
@@ -71,7 +79,7 @@ export const handleOAuthCallback = async (userId: string, secret: string): Promi
     
     return oauthSession;
   } catch (error) {
-    console.error('Failed to create OAuth session:', error);
+    console.error('❌ Failed to create OAuth session:', error);
     throw new Error('Authentication failed: Could not create session');
   }
 };
