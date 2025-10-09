@@ -44,9 +44,9 @@ dist
 !README.md
 docs
 
-# Font Awesome Pro (trimmed to 18MB from 92MB)
-# Kept in Docker build for local hosting
-# Original backup: /tmp/fa-v5-pro-backup
+# Font Awesome Pro - Downloaded from bucket during Docker build
+# Do not copy from local filesystem (licensed content)
+packages/frontend/public/fa-v5-pro
 
 # Development files
 .prettierrc

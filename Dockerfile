@@ -17,6 +17,21 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY packages/frontend/ ./packages/frontend/
 WORKDIR /app/packages/frontend
 
+# Download and extract FontAwesome Pro from bucket
+USER root
+RUN apt-get update && apt-get install -y curl unzip && \
+    echo "📦 Downloading FontAwesome Pro from bucket..." && \
+    curl -L -o /tmp/fontawesome.zip "https://db.juanis.cool/v1/storage/buckets/fa5/files/68e81874001eb53ee4e9/download?project=tarkovcas" && \
+    echo "📂 Extracting FontAwesome Pro..." && \
+    unzip -q /tmp/fontawesome.zip -d /tmp/ && \
+    mv /tmp/fontawesome-pro-5.15.4-web ./public/fa-v5-pro && \
+    echo "✅ FontAwesome Pro installed successfully" && \
+    rm /tmp/fontawesome.zip && \
+    apt-get remove -y unzip && \
+    apt-get autoremove -y && \
+    rm -rf /var/lib/apt/lists/*
+USER bun
+
 # Set build-time environment variables for Vite
 ARG VITE_SUPABASE_URL
 ARG VITE_SUPABASE_ANON_KEY
