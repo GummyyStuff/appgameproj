@@ -79,6 +79,8 @@ dist
 # Gatsby files
 .cache/
 public
+# BUT allow frontend public folder (contains Font Awesome and other assets)
+!packages/frontend/public/
 
 # Storybook build outputs
 .out

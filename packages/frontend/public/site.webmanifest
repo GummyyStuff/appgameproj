@@ -1,0 +1,23 @@
+{
+  "name": "Tarkov Casino",
+  "short_name": "Tarkov Casino",
+  "description": "Experience classic casino games with Escape from Tarkov theming. Play roulette and blackjack with virtual currency.",
+  "icons": [
+    {
+      "src": "/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "theme_color": "#171923",
+  "background_color": "#171923",
+  "display": "standalone",
+  "start_url": "/",
+  "orientation": "portrait-primary"
+}
+
