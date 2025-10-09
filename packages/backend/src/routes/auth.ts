@@ -166,20 +166,56 @@ authRoutes.get('/callback',
 );
 
 // Get current user session
+// Get current user session - supports both client-side and server-side sessions
 authRoutes.get('/me',
   authRateLimit,
   asyncHandler(async (c: Context) => {
+    console.log('🔍 Checking user session...');
+    
+    // Try Appwrite client session first (from frontend SDK)
+    const appwriteUserId = c.req.header('X-Appwrite-User-Id');
+    
+    if (appwriteUserId) {
+      console.log('📱 Found Appwrite client user ID:', appwriteUserId);
+      try {
+        const { UserService } = await import('../services/user-service');
+        const profile = await UserService.getUserProfile(appwriteUserId);
+        
+        if (profile) {
+          console.log('✅ User profile found');
+          return c.json({
+            id: appwriteUserId,
+            email: profile.email || '',
+            name: profile.displayName || profile.username,
+            username: profile.username,
+            balance: profile.balance,
+          });
+        } else {
+          console.log('❌ No profile found for Appwrite user');
+          throw new HTTPException(401, { message: 'User profile not found' });
+        }
+      } catch (error) {
+        console.error('❌ Error fetching Appwrite user profile:', error);
+        throw new HTTPException(401, { message: 'Failed to fetch user profile' });
+      }
+    }
+    
+    // Fallback to backend session cookie
     const sessionId = getCookie(c, SESSION_COOKIE_NAME);
     
     if (!sessionId) {
+      console.log('❌ No session found');
       throw new HTTPException(401, { message: 'Not authenticated' });
     }
     
+    console.log('🍪 Found backend session cookie');
     const user = await validateSession(sessionId);
     if (!user) {
+      console.log('❌ Invalid session');
       throw new HTTPException(401, { message: 'Invalid or expired session' });
     }
     
+    console.log('✅ Session valid');
     return c.json(user);
   })
 );
@@ -191,54 +227,25 @@ authRoutes.post('/logout',
     const sessionId = getCookie(c, SESSION_COOKIE_NAME);
     
     if (!sessionId) {
-      // No session to log out from
       return c.json({ success: true });
     }
     
     try {
-      // Clear the session cookie first to prevent any race conditions
+      const frontendDomain = new URL(FRONTEND_URL).hostname;
       deleteCookie(c, SESSION_COOKIE_NAME, {
         path: '/',
-        domain: new URL(FRONTEND_URL).hostname
+        domain: frontendDomain === 'localhost' ? undefined : frontendDomain
       });
       
-      // Then invalidate the session on the server
       const success = await appwriteLogout(sessionId);
       
       if (!success) {
         console.error('Failed to invalidate session on server:', sessionId);
-        // We still return success since we've cleared the client-side session
       }
     } catch (error) {
       console.error('Error during logout:', error);
-      // Even if there's an error, we consider the logout successful from the client's perspective
     }
     
     return c.json({ success: true })
-  })
-)
-
-// Get current user session
-authRoutes.get('/me',
-  authRateLimit,
-  asyncHandler(async (c: Context) => {
-    const sessionId = c.req.header('X-Session-ID')
-    
-    if (!sessionId) {
-      throw new HTTPException(401, { message: 'Not authenticated' })
-    }
-    
-    const session = await getCurrentUser(sessionId)
-    
-    if (!session) {
-      throw new HTTPException(401, { message: 'Invalid or expired session' })
-    }
-    
-    return c.json({
-      id: session.userId,
-      email: session.email,
-      name: session.name,
-      avatar: session.picture
-    })
   })
 )

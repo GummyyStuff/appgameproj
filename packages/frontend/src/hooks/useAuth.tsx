@@ -33,24 +33,55 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    // Check for existing session via backend API
+    // Check for existing Appwrite session
     const checkSession = async () => {
       try {
-        const response = await fetch(`${API_URL}/auth/me`, {
-          credentials: 'include', // Include HTTP-only cookies
-          headers: {
-            'Accept': 'application/json',
-          },
-        });
+        // First check if there's an Appwrite session
+        const { account } = await import('../lib/appwrite');
+        
+        try {
+          // Try to get current Appwrite session
+          const appwriteUser = await account.get();
+          
+          // If we have an Appwrite session, get full user info from backend
+          const response = await fetch(`${API_URL}/auth/me`, {
+            credentials: 'include',
+            headers: {
+              'Accept': 'application/json',
+              'X-Appwrite-User-Id': appwriteUser.$id, // Send Appwrite user ID
+            },
+          });
 
-        if (response.ok) {
-          const userData = await response.json();
-          setUser(userData);
-          setIsAuthenticated(true);
-        } else {
-          // No active session
-          setUser(null);
-          setIsAuthenticated(false);
+          if (response.ok) {
+            const userData = await response.json();
+            setUser(userData);
+            setIsAuthenticated(true);
+          } else {
+            // Backend doesn't recognize user, might need to create profile
+            setUser({
+              id: appwriteUser.$id,
+              email: appwriteUser.email,
+              name: appwriteUser.name,
+            });
+            setIsAuthenticated(true);
+          }
+        } catch (appwriteError) {
+          // No Appwrite session, try backend session
+          const response = await fetch(`${API_URL}/auth/me`, {
+            credentials: 'include',
+            headers: {
+              'Accept': 'application/json',
+            },
+          });
+
+          if (response.ok) {
+            const userData = await response.json();
+            setUser(userData);
+            setIsAuthenticated(true);
+          } else {
+            setUser(null);
+            setIsAuthenticated(false);
+          }
         }
       } catch (error) {
         console.error('Session check failed:', error);
@@ -68,14 +99,26 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       setLoading(true);
       
-      // Call backend logout endpoint
-      await fetch(`${API_URL}/auth/logout`, {
-        method: 'POST',
-        credentials: 'include', // Include HTTP-only cookies
-        headers: {
-          'Accept': 'application/json',
-        },
-      });
+      // Logout from Appwrite (client-side session)
+      const { account } = await import('../lib/appwrite');
+      try {
+        await account.deleteSession('current');
+      } catch (e) {
+        console.log('Appwrite logout failed (might not have session):', e);
+      }
+      
+      // Also call backend logout endpoint to clear any backend session
+      try {
+        await fetch(`${API_URL}/auth/logout`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Accept': 'application/json',
+          },
+        });
+      } catch (e) {
+        console.log('Backend logout failed:', e);
+      }
       
       setUser(null);
       setIsAuthenticated(false);
@@ -90,15 +133,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const signInWithDiscord = useCallback(async () => {
     try {
       setLoading(true);
-      // Redirect to backend OAuth endpoint which will handle the Discord OAuth flow
-      // The backend will create the session and redirect back to the frontend
-      window.location.href = `${API_URL}/auth/discord`;
-      // The page will redirect, so we don't need to handle the response here
+      
+      // Use Appwrite client SDK to initiate OAuth (client-side flow)
+      const { account } = await import('../lib/appwrite');
+      
+      // Appwrite will handle the entire OAuth flow and create the session
+      // Then redirect back to the success URL (frontend)
+      await account.createOAuth2Session(
+        'discord' as any, // Provider name
+        `${window.location.origin}/`, // Success URL - redirect to home after login
+        `${window.location.origin}/login?error=oauth_failed` // Failure URL
+      );
+      
+      // The page will redirect to Discord, so this code won't execute
     } catch (error) {
       console.error('Discord OAuth error:', error);
-      throw error;
-    } finally {
       setLoading(false);
+      throw error;
     }
   }, []);
 
