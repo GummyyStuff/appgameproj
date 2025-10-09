@@ -44,8 +44,9 @@ dist
 !README.md
 docs
 
-# Font Awesome Pro - Temporarily allowing local copy for testing
-# packages/frontend/public/fa-v5-pro
+# Font Awesome Pro - Downloaded from bucket during Docker build
+# Do not copy from local filesystem (licensed content)
+packages/frontend/public/fa-v5-pro
 
 # Development files
 .prettierrc
