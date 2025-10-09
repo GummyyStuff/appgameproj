@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../lib/supabase';
+
+const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 export interface UserStats {
   total_wagered: number;
@@ -28,23 +29,39 @@ export const useUserStats = (userId: string | null) => {
     setError(null);
 
     try {
-      const { data, error } = await supabase
-        .rpc('get_user_quick_stats', { 
-          target_user_id: userId, 
-          days: 7 
-        });
+      const response = await fetch(`${API_URL}/user/stats`, {
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+        },
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error('Failed to fetch user stats');
+      }
 
-      if (data && data.length > 0) {
-        const userStats = data[0];
+      const result = await response.json();
+      const statsData = result.stats;
+
+      if (statsData) {
+        // Calculate wins/losses from game breakdown
+        let wins = 0;
+        let losses = 0;
+        
+        if (statsData.game_breakdown && statsData.game_breakdown.stats) {
+          const gameStats = statsData.game_breakdown.stats;
+          wins = Object.values(gameStats).reduce((sum: number, game: any) => 
+            sum + (game.wins || 0), 0);
+          losses = statsData.games_played - wins;
+        }
+
         setStats({
-          total_wagered: parseFloat(userStats.total_wagered) || 0,
-          total_won: parseFloat(userStats.total_won) || 0,
-          wins: userStats.wins || 0,
-          losses: userStats.losses || 0,
-          win_loss_ratio: parseFloat(userStats.win_loss_ratio) || 0,
-          profit_series: userStats.profit_series || []
+          total_wagered: statsData.total_wagered || 0,
+          total_won: statsData.total_won || 0,
+          wins,
+          losses,
+          win_loss_ratio: wins > 0 ? (wins / (wins + losses)) : 0,
+          profit_series: [] // TODO: Calculate from game history if needed
         });
       } else {
         setStats({

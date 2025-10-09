@@ -3,9 +3,11 @@ import { HTTPException } from 'hono/http-exception'
 import { z } from 'zod'
 import { authMiddleware } from '../middleware/auth'
 import { asyncHandler } from '../middleware/error'
-import { supabaseAdmin } from '../config/supabase'
-import { CurrencyService } from '../services/currency'
-import { DatabaseService } from '../services/database'
+import { UserService } from '../services/user-service'
+import { CurrencyService } from '../services/currency-new'
+import { GameService } from '../services/game-service'
+import { appwriteDb } from '../services/appwrite-database'
+import { COLLECTION_IDS } from '../config/collections'
 
 export const userRoutes = new Hono()
 
@@ -25,13 +27,9 @@ userRoutes.get('/profile', asyncHandler(async (c) => {
   const user = c.get('user')
 
   try {
-    const { data: profile, error } = await supabaseAdmin
-      .from('user_profiles')
-      .select('username, balance, created_at, last_login')
-      .eq('id', user.id)
-      .single()
+    const profile = await UserService.getUserProfile(user.id)
 
-    if (error) {
+    if (!profile) {
       throw new HTTPException(404, { message: 'User profile not found' })
     }
 
@@ -40,9 +38,11 @@ userRoutes.get('/profile', asyncHandler(async (c) => {
         id: user.id,
         email: user.email,
         username: profile.username,
+        displayName: profile.displayName,
         balance: profile.balance,
-        created_at: profile.created_at,
-        last_login: profile.last_login
+        created_at: profile.createdAt,
+        is_moderator: profile.isModerator,
+        avatar_path: profile.avatarPath
       }
     })
 
@@ -61,7 +61,7 @@ userRoutes.get('/balance', asyncHandler(async (c) => {
 
   try {
     const balance = await CurrencyService.getBalance(user.id)
-    const dailyBonusStatus = await CurrencyService.getDailyBonusStatus(user.id)
+    const dailyBonusStatus = await CurrencyService.checkDailyBonusStatus(user.id)
 
     return c.json({
       balance,
@@ -92,29 +92,22 @@ userRoutes.get('/history', asyncHandler(async (c) => {
   const gameType = c.req.query('game_type')
 
   try {
-    let query = supabaseAdmin
-      .from('game_history')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1)
+    const result = await GameService.getGameHistory(user.id, {
+      gameType,
+      limit,
+      offset
+    })
 
-    if (gameType) {
-      query = query.eq('game_type', gameType)
-    }
-
-    const { data: history, error } = await query
-
-    if (error) {
-      throw new HTTPException(500, { message: 'Failed to fetch game history' })
+    if (!result.success) {
+      throw new HTTPException(500, { message: result.error || 'Failed to fetch game history' })
     }
 
     return c.json({
-      history: history || [],
+      history: result.games || [],
       pagination: {
         limit,
         offset,
-        total: history?.length || 0
+        total: result.total || 0
       }
     })
 
@@ -190,7 +183,7 @@ userRoutes.post('/validate-balance', asyncHandler(async (c) => {
   }
 }))
 
-// Get transaction history
+// Get transaction history (same as game history)
 userRoutes.get('/transactions', asyncHandler(async (c) => {
   const user = c.get('user')
   const limit = parseInt(c.req.query('limit') || '50')
@@ -198,16 +191,24 @@ userRoutes.get('/transactions', asyncHandler(async (c) => {
   const gameType = c.req.query('game_type')
 
   try {
-    const history = await CurrencyService.getTransactionHistory(user.id, limit, offset, gameType)
+    const result = await GameService.getGameHistory(user.id, { gameType, limit, offset })
+
+    if (!result.success) {
+      throw new HTTPException(500, { message: result.error || 'Failed to fetch transaction history' })
+    }
 
     return c.json({
-      transactions: history.transactions.map(tx => ({
+      transactions: result.games!.map(tx => ({
         ...tx,
         formatted_bet: CurrencyService.formatCurrency(tx.betAmount),
         formatted_win: CurrencyService.formatCurrency(tx.winAmount),
-        formatted_net: CurrencyService.formatCurrency(tx.netResult)
+        formatted_net: CurrencyService.formatCurrency(tx.winAmount - tx.betAmount)
       })),
-      pagination: history.pagination
+      pagination: {
+        limit,
+        offset,
+        total: result.total
+      }
     })
 
   } catch (error) {
@@ -223,74 +224,50 @@ userRoutes.get('/transactions', asyncHandler(async (c) => {
 userRoutes.put('/profile', asyncHandler(async (c) => {
   const user = c.get('user')
   const body = await c.req.json()
-  const { username, email } = updateProfileSchema.parse(body)
+  const { username } = updateProfileSchema.parse(body) // Email update removed (OAuth only)
 
   try {
     // Check if username is already taken (if username is being updated)
     if (username) {
-      const { data: existingUser } = await supabaseAdmin
-        .from('user_profiles')
-        .select('id')
-        .eq('username', username)
-        .neq('id', user.id)
-        .single()
-
-      if (existingUser) {
+      // Query Appwrite to check if username exists
+      const { data: existingUsers } = await appwriteDb.listDocuments(
+        COLLECTION_IDS.USERS,
+        [appwriteDb.equal('username', username)]
+      );
+      
+      if (existingUsers && existingUsers.length > 0 && existingUsers[0].userId !== user.id) {
         throw new HTTPException(400, { message: 'Username already taken' })
       }
     }
 
-    // Update profile in user_profiles table
+    // Update profile
     const profileUpdates: any = {}
     if (username) {
       profileUpdates.username = username
+      profileUpdates.displayName = username // Update display name too
     }
 
     if (Object.keys(profileUpdates).length > 0) {
-      const { error: profileError } = await supabaseAdmin
-        .from('user_profiles')
-        .update(profileUpdates)
-        .eq('id', user.id)
-
-      if (profileError) {
-        throw new HTTPException(500, { message: 'Failed to update profile' })
+      const result = await UserService.updateUserProfile(user.id, profileUpdates)
+      
+      if (!result.success) {
+        throw new HTTPException(500, { message: result.error || 'Failed to update profile' })
       }
+
+      return c.json({
+        message: 'Profile updated successfully',
+        user: {
+          id: user.id,
+          email: user.email,
+          username: result.profile!.username,
+          displayName: result.profile!.displayName,
+          balance: result.profile!.balance,
+          created_at: result.profile!.createdAt
+        }
+      })
     }
 
-    // Update email in Supabase Auth (if email is being updated)
-    if (email) {
-      const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(
-        user.id,
-        { email }
-      )
-
-      if (authError) {
-        throw new HTTPException(400, { message: authError.message })
-      }
-    }
-
-    // Fetch updated profile
-    const { data: updatedProfile, error: fetchError } = await supabaseAdmin
-      .from('user_profiles')
-      .select('username, balance, created_at, last_login')
-      .eq('id', user.id)
-      .single()
-
-    if (fetchError) {
-      throw new HTTPException(500, { message: 'Failed to fetch updated profile' })
-    }
-
-    return c.json({
-      message: 'Profile updated successfully',
-      user: {
-        id: user.id,
-        email: email || user.email,
-        username: updatedProfile.username,
-        balance: updatedProfile.balance,
-        created_at: updatedProfile.created_at,
-        last_login: updatedProfile.last_login
-      }
-    })
+    return c.json({ message: 'No updates provided' })
 
   } catch (error) {
     if (error instanceof HTTPException) {
@@ -308,24 +285,22 @@ userRoutes.post('/daily-bonus', asyncHandler(async (c) => {
   try {
     const result = await CurrencyService.claimDailyBonus(user.id)
 
+    if (!result.success) {
+      throw new HTTPException(400, { message: result.error || 'Failed to claim daily bonus' })
+    }
+
     return c.json({
       message: 'Daily bonus claimed successfully',
       bonus_amount: result.bonusAmount,
-      formatted_bonus: CurrencyService.formatCurrency(result.bonusAmount),
-      previous_balance: result.previousBalance,
+      formatted_bonus: CurrencyService.formatCurrency(result.bonusAmount!),
       new_balance: result.newBalance,
-      formatted_new_balance: CurrencyService.formatCurrency(result.newBalance),
-      next_bonus_available: result.nextBonusAvailable
+      formatted_new_balance: CurrencyService.formatCurrency(result.newBalance!),
+      next_bonus_available: result.nextAvailableDate
     })
 
   } catch (error) {
     if (error instanceof HTTPException) {
       throw error
-    }
-    
-    // Handle specific currency service errors
-    if (error.message.includes('already claimed')) {
-      throw new HTTPException(400, { message: error.message })
     }
     
     console.error('Daily bonus error:', error)

@@ -2,7 +2,7 @@ import { Context, Next } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { getCookie } from 'hono/cookie'
 import { validateSession, SESSION_COOKIE_NAME } from '../config/appwrite'
-import { supabaseAdmin } from '../config/supabase'
+import { UserService } from '../services/user-service'
 
 export interface AuthUser {
   id: string
@@ -40,16 +40,8 @@ export async function authMiddleware(c: Context, next: Next) {
       throw new HTTPException(401, { message: 'Invalid or expired session' })
     }
 
-    // Get additional user profile data from database if needed
-    const { data: profile, error: profileError } = await supabaseAdmin
-      .from('user_profiles')
-      .select('username')
-      .eq('id', user.id)
-      .single()
-
-    if (profileError && profileError.code !== 'PGRST116') { // PGRST116 = no rows returned
-      console.error('Error fetching user profile:', profileError)
-    }
+    // Get additional user profile data from Appwrite database if needed
+    const profile = await UserService.getUserProfile(user.id)
 
     // Add user to context
     c.set('user', {
@@ -85,11 +77,7 @@ export async function optionalAuthMiddleware(c: Context, next: Next) {
       const user = await validateSession(sessionId)
       
       if (user) {
-        const { data: profile } = await supabaseAdmin
-          .from('user_profiles')
-          .select('username')
-          .eq('id', user.id)
-          .single()
+        const profile = await UserService.getUserProfile(user.id)
 
         c.set('user', {
           id: user.id,

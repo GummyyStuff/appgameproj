@@ -1,15 +1,20 @@
 import { useState, useEffect, createContext, useContext, useCallback } from 'react';
 import type { ReactNode } from 'react';
-import { Models } from 'appwrite';
-import { account } from '../lib/appwrite';
 
-// Define types for Appwrite user and session
-interface AppwriteUser extends Models.User<Models.Preferences> {}
-interface AppwriteSession extends Models.Session {}
+// Backend API URL
+const API_URL = import.meta.env.VITE_API_URL || '/api';
+
+// User type from backend
+interface User {
+  id: string;
+  email: string;
+  name?: string;
+  username?: string;
+  avatar?: string;
+}
 
 interface AuthContextType {
-  user: AppwriteUser | null;
-  session: AppwriteSession | null;
+  user: User | null;
   loading: boolean;
   signInWithDiscord: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -23,25 +28,34 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  const [user, setUser] = useState<AppwriteUser | null>(null);
-  const [session, setSession] = useState<AppwriteSession | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    // Check for existing session
+    // Check for existing session via backend API
     const checkSession = async () => {
       try {
-        const session = await account.getSession('current');
-        if (session) {
-          const user = await account.get();
-          setSession(session);
-          setUser(user);
+        const response = await fetch(`${API_URL}/auth/me`, {
+          credentials: 'include', // Include HTTP-only cookies
+          headers: {
+            'Accept': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          const userData = await response.json();
+          setUser(userData);
           setIsAuthenticated(true);
+        } else {
+          // No active session
+          setUser(null);
+          setIsAuthenticated(false);
         }
       } catch (error) {
         console.error('Session check failed:', error);
-        // No active session
+        setUser(null);
+        setIsAuthenticated(false);
       } finally {
         setLoading(false);
       }
@@ -53,9 +67,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const signOut = useCallback(async () => {
     try {
       setLoading(true);
-      await account.deleteSession('current');
+      
+      // Call backend logout endpoint
+      await fetch(`${API_URL}/auth/logout`, {
+        method: 'POST',
+        credentials: 'include', // Include HTTP-only cookies
+        headers: {
+          'Accept': 'application/json',
+        },
+      });
+      
       setUser(null);
-      setSession(null);
       setIsAuthenticated(false);
     } catch (error) {
       console.error('Error signing out:', error);
@@ -68,14 +90,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const signInWithDiscord = useCallback(async () => {
     try {
       setLoading(true);
-      // This will redirect to Discord for OAuth
-      // Using new SDK format with object parameters
-      account.createOAuth2Session(
-        'discord' as any,
-        `${window.location.origin}/dashboard`,
-        `${window.location.origin}/login`,
-        ['identify', 'email']
-      );
+      // Redirect to backend OAuth endpoint which will handle the Discord OAuth flow
+      // The backend will create the session and redirect back to the frontend
+      window.location.href = `${API_URL}/auth/discord`;
       // The page will redirect, so we don't need to handle the response here
     } catch (error) {
       console.error('Discord OAuth error:', error);
@@ -87,7 +104,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const contextValue: AuthContextType = {
     user,
-    session,
     loading,
     isAuthenticated,
     signInWithDiscord,

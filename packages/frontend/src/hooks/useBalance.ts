@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from './useAuth'
-import { supabase } from '../lib/supabase'
+import { subscribeToUserBalance } from '../services/appwrite-realtime'
+
+const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 interface BalanceData {
     balance: number
@@ -23,20 +25,25 @@ export const useBalance = (options: {
     const queryClient = useQueryClient()
     const [previousBalance, setPreviousBalance] = useState<number | undefined>()
 
-    // Query for balance data
+    // Query for balance data from backend API
     const { data: balance, isLoading, error, refetch } = useQuery({
         queryKey: ['balance', user?.id],
         queryFn: async () => {
             if (!user) return 0
 
-            const { data, error } = await supabase
-                .from('user_profiles')
-                .select('balance')
-                .eq('id', user.id)
-                .single()
+            const response = await fetch(`${API_URL}/user/balance`, {
+                credentials: 'include',
+                headers: {
+                    'Accept': 'application/json',
+                },
+            });
 
-            if (error) throw error
-            return data?.balance || 0
+            if (!response.ok) {
+                throw new Error('Failed to fetch balance');
+            }
+
+            const result = await response.json();
+            return result.balance || 0;
         },
         enabled: !!user,
         refetchInterval,
@@ -56,33 +63,18 @@ export const useBalance = (options: {
         }
     }, [balance, previousBalance])
 
-    // Set up real-time subscription for balance updates
+    // Set up real-time subscription for balance updates using Appwrite
     useEffect(() => {
         if (!user || !enableRealtime) return
 
-        const channel = supabase
-            .channel(`balance-${user.id}`)
-            .on(
-                'postgres_changes',
-                {
-                    event: 'UPDATE',
-                    schema: 'public',
-                    table: 'user_profiles',
-                    filter: `id=eq.${user.id}`,
-                },
-                (payload) => {
-                    const newBalance = payload.new.balance
-                    if (newBalance !== balance) {
-                        // Update the query cache with new balance
-                        queryClient.setQueryData(['balance', user.id], newBalance)
-                    }
-                }
-            )
-            .subscribe()
+        const unsubscribe = subscribeToUserBalance(user.id, (newBalance) => {
+            if (newBalance !== balance) {
+                // Update the query cache with new balance
+                queryClient.setQueryData(['balance', user.id], newBalance)
+            }
+        });
 
-        return () => {
-            supabase.removeChannel(channel)
-        }
+        return unsubscribe;
     }, [user, balance, queryClient, enableRealtime])
 
     return {

@@ -7,9 +7,9 @@ import { auditGame, auditLog } from '../middleware/audit'
 import { z } from 'zod'
 import { RouletteGame } from '../services/game-engine/roulette-game'
 import { BlackjackGame } from '../services/game-engine/blackjack-game'
-import { CaseOpeningService } from '../services/case-opening'
+import { CaseOpeningService } from '../services/case-opening-appwrite'
 
-import { CurrencyService } from '../services/currency'
+import { CurrencyService } from '../services/currency-new'
 import { realtimeGameService } from '../services/realtime-game'
 
 export const gameRoutes = new Hono()

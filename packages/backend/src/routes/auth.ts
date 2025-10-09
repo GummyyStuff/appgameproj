@@ -42,15 +42,14 @@ authRoutes.use('*', async (c, next) => {
   c.header('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
 });
 
-// Discord OAuth login - This should be called from the frontend
+// Discord OAuth login - Initiates the OAuth flow with Appwrite
 authRoutes.get('/discord', 
   authRateLimit,
   asyncHandler(async (c: Context) => {
     try {
       const state = randomUUID();
-      const redirectUrl = new URL(DISCORD_OAUTH_REDIRECT);
       
-      // Store state in secure, HTTP-only cookie
+      // Store state in secure, HTTP-only cookie for CSRF protection
       setCookie(c, 'oauth_state', state, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
@@ -60,9 +59,21 @@ authRoutes.get('/discord',
         domain: new URL(FRONTEND_URL).hostname
       });
 
-      // Redirect to Discord OAuth
-      redirectUrl.searchParams.set('state', state);
-      return c.redirect(redirectUrl.toString());
+      // Build Appwrite OAuth URL
+      const appwriteEndpoint = process.env.APPWRITE_ENDPOINT!;
+      const projectId = process.env.APPWRITE_PROJECT_ID!;
+      
+      // The success callback is our backend callback endpoint
+      const successUrl = DISCORD_OAUTH_REDIRECT;
+      const failureUrl = `${FRONTEND_URL}/login?error=oauth_failed`;
+      
+      // Construct the Appwrite OAuth initiation URL
+      const oauthUrl = new URL(`${appwriteEndpoint}/v1/account/sessions/oauth2/discord`);
+      oauthUrl.searchParams.set('project', projectId);
+      oauthUrl.searchParams.set('success', `${successUrl}?state=${state}`);
+      oauthUrl.searchParams.set('failure', failureUrl);
+
+      return c.redirect(oauthUrl.toString());
     } catch (error) {
       console.error('OAuth initialization error:', error);
       return c.redirect(`${FRONTEND_URL}/login?error=oauth_init_failed`);
@@ -116,7 +127,7 @@ authRoutes.get('/callback',
         domain: new URL(FRONTEND_URL).hostname
       });
 
-      return c.redirect(`${FRONTEND_URL}/dashboard`);
+      return c.redirect(`${FRONTEND_URL}/`);
     } catch (error) {
       console.error('OAuth callback error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
