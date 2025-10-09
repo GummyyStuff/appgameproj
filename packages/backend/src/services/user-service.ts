@@ -38,21 +38,26 @@ export class UserService {
    */
   static async createUserProfile(
     userId: string,
-    username: string,
-    email?: string
-  ): Promise<{ success: boolean; profile?: UserProfile; error?: string }> {
+    data: {
+      username: string;
+      displayName?: string;
+      email?: string;
+      balance?: number;
+    }
+  ): Promise<UserProfile> {
     // Check if user already exists
     const existing = await this.getUserProfile(userId);
     if (existing) {
-      return { success: true, profile: existing };
+      return existing;
     }
 
     const now = new Date().toISOString();
     const profileData: Omit<UserProfile, '$id'> = {
       userId,
-      username,
-      displayName: username,
-      balance: 10000, // Starting balance
+      username: data.username,
+      displayName: data.displayName || data.username,
+      email: data.email,
+      balance: data.balance || 10000, // Starting balance
       totalWagered: 0,
       totalWon: 0,
       gamesPlayed: 0,
@@ -64,7 +69,7 @@ export class UserService {
       updatedAt: now,
     };
 
-    const { data, error } = await appwriteDb.createDocument<UserProfile>(
+    const { data: createdProfile, error } = await appwriteDb.createDocument<UserProfile>(
       COLLECTION_IDS.USERS,
       profileData,
       userId, // Use userId as document ID for easy lookup
@@ -74,11 +79,11 @@ export class UserService {
       ]
     );
 
-    if (error) {
-      return { success: false, error };
+    if (error || !createdProfile) {
+      throw new Error(`Failed to create user profile: ${error || 'Unknown error'}`);
     }
 
-    return { success: true, profile: data! };
+    return createdProfile;
   }
 
   /**

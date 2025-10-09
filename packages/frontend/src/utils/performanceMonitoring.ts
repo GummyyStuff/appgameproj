@@ -340,6 +340,7 @@ export const usePerformanceMonitoring = () => {
 }
 
 // Initialize with default configuration
-if (typeof window !== 'undefined') {
-  performanceMonitoring.initialize()
-}
+// Disabled to reduce console noise
+// if (typeof window !== 'undefined') {
+//   performanceMonitoring.initialize()
+// }

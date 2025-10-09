@@ -503,6 +503,7 @@ export const useUserExperienceMonitoring = () => {
 }
 
 // Initialize monitoring
-if (typeof window !== 'undefined') {
-  userExperienceMonitor.initialize()
-}
+// Disabled to reduce console noise
+// if (typeof window !== 'undefined') {
+//   userExperienceMonitor.initialize()
+// }

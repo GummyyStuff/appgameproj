@@ -130,10 +130,23 @@ app.use('/api/*', apiRateLimit())
 app.route('/api', apiRoutes)
 
 // Serve static files from public directory (built frontend)
-app.use('/*', serveStatic({ root: './public' }))
+// Serve all static files including Font Awesome
+app.use('/*', serveStatic({ 
+  root: './public',
+  rewriteRequestPath: (path) => path.replace(/^\//, '')
+}))
 
-// Fallback to index.html for SPA routing
-app.get('*', serveStatic({ path: './public/index.html' }))
+// Fallback to index.html for SPA routing (only for HTML requests)
+app.get('*', async (c) => {
+  // Check if the request is for a static asset
+  const path = c.req.path
+  if (path.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|map)$/)) {
+    // If static asset not found, return 404 instead of index.html
+    return c.notFound()
+  }
+  // Otherwise serve index.html for SPA routing
+  return serveStatic({ path: './public/index.html' })(c, () => Promise.resolve(c.notFound()))
+})
 
 // Global error handler
 app.onError(errorHandler)

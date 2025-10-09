@@ -145,9 +145,10 @@ class PerformanceMonitor {
     }
 
     // Log significant performance issues
-    if (this.isSignificantMetric(name, value)) {
-      console.warn(`Performance issue detected: ${name} = ${value}ms`, metadata);
-    }
+    // Disabled to reduce console noise
+    // if (this.isSignificantMetric(name, value)) {
+    //   console.warn(`Performance issue detected: ${name} = ${value}ms`, metadata);
+    // }
   }
 
   /**

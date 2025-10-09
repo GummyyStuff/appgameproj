@@ -13,6 +13,10 @@ export default defineConfig(({ mode }) => ({
   // Load environment variables based on mode
   envDir: '.',
   envPrefix: 'VITE_',
+  // Explicitly set public directory
+  publicDir: 'public',
+  // Set base URL for production
+  base: '/',
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -30,6 +34,8 @@ export default defineConfig(({ mode }) => ({
   build: {
     outDir: 'dist',
     sourcemap: true,
+    // Ensure public directory files are copied
+    copyPublicDir: true,
     rollupOptions: {
       output: {
         manualChunks: {

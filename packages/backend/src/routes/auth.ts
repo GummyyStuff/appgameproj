@@ -179,24 +179,41 @@ authRoutes.get('/me',
       console.log('📱 Found Appwrite client user ID:', appwriteUserId);
       try {
         const { UserService } = await import('../services/user-service');
-        const profile = await UserService.getUserProfile(appwriteUserId);
+        const { Users } = await import('node-appwrite');
+        const { appwriteClient } = await import('../config/appwrite');
         
-        if (profile) {
-          console.log('✅ User profile found');
-          return c.json({
-            id: appwriteUserId,
-            email: profile.email || '',
-            name: profile.displayName || profile.username,
-            username: profile.username,
-            balance: profile.balance,
+        let profile = await UserService.getUserProfile(appwriteUserId);
+        
+        if (!profile) {
+          console.log('📝 No profile found, creating new user profile...');
+          
+          // Get user info from Appwrite to get email/name
+          const users = new Users(appwriteClient);
+          const appwriteUser = await users.get(appwriteUserId);
+          
+          // Create new user profile with default values
+          profile = await UserService.createUserProfile(appwriteUserId, {
+            username: appwriteUser.name || `user_${appwriteUserId.substring(0, 8)}`,
+            displayName: appwriteUser.name,
+            email: appwriteUser.email,
+            balance: parseInt(process.env.STARTING_BALANCE || '10000'),
           });
+          
+          console.log('✅ User profile created successfully');
         } else {
-          console.log('❌ No profile found for Appwrite user');
-          throw new HTTPException(401, { message: 'User profile not found' });
+          console.log('✅ User profile found');
         }
+        
+        return c.json({
+          id: appwriteUserId,
+          email: profile.email || '',
+          name: profile.displayName || profile.username,
+          username: profile.username,
+          balance: profile.balance,
+        });
       } catch (error) {
-        console.error('❌ Error fetching Appwrite user profile:', error);
-        throw new HTTPException(401, { message: 'Failed to fetch user profile' });
+        console.error('❌ Error with Appwrite user profile:', error);
+        throw new HTTPException(401, { message: 'Failed to fetch/create user profile' });
       }
     }
     
