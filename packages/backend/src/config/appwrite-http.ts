@@ -66,10 +66,11 @@ export async function getUser(userId: string) {
 
 /**
  * List documents from a collection
+ * Queries should be JSON objects like: {method: 'equal', attribute: 'userId', values: ['123']}
  */
-export async function listDocuments(databaseId: string, collectionId: string, queries: string[] = []) {
+export async function listDocuments(databaseId: string, collectionId: string, queries: any[] = []) {
   const queryParams = queries.length > 0 
-    ? '?' + queries.map((q, i) => `queries[]=${encodeURIComponent(q)}`).join('&')
+    ? '?' + queries.map(q => `queries[]=${encodeURIComponent(JSON.stringify(q))}`).join('&')
     : '';
     
   return await appwriteFetch(`/databases/${databaseId}/collections/${collectionId}/documents${queryParams}`);

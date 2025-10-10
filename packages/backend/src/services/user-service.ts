@@ -18,7 +18,7 @@ export class UserService {
       const result = await listDocuments(
         process.env.APPWRITE_DATABASE_ID || 'main_db',
         COLLECTION_IDS.USERS,
-        [`equal("userId", "${userId}")`]
+        [{ method: 'equal', attribute: 'userId', values: [userId] }]
       );
       
       if (result && result.documents && result.documents.length > 0) {
