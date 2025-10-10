@@ -144,25 +144,17 @@ authRoutes.get('/callback',
       // Log successful authentication
       logSecurityEvent(`oauth_success: userId=${session.userId}, provider=${session.provider}, ip=${ip}`);
       
-      // Set secure, HTTP-only cookie with session ID
+      // Set secure, HTTP-only cookie with session SECRET (as per Appwrite SSR docs)
       const frontendDomain = new URL(FRONTEND_URL).hostname;
-      setCookie(c, SESSION_COOKIE_NAME, session.$id, {
+      const sessionCookieName = `a_session_${process.env.APPWRITE_PROJECT_ID}`;
+      
+      setCookie(c, sessionCookieName, session.secret, { // Use session.secret, not session.$id!
         httpOnly: true,
         secure: true, // Always use secure (HTTPS)
         sameSite: 'Lax',
         maxAge: SESSION_MAX_AGE,
         path: '/',
         domain: frontendDomain === 'localhost' ? undefined : frontendDomain // Don't set domain for localhost
-      });
-      
-      // Also store user ID for server-side session validation
-      setCookie(c, 'appwrite-user-id', session.userId, {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'Lax',
-        maxAge: SESSION_MAX_AGE,
-        path: '/',
-        domain: frontendDomain === 'localhost' ? undefined : frontendDomain
       });
 
       return c.redirect(`${FRONTEND_URL}/`);

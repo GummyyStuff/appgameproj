@@ -59,11 +59,10 @@ export class UserService {
     }
 
     const now = new Date().toISOString();
-    const profileData: Omit<UserProfile, '$id'> = {
+    const profileData = {
       userId,
       username: data.username,
       displayName: data.displayName || data.username,
-      email: data.email,
       balance: data.balance || 10000, // Starting balance
       totalWagered: 0,
       totalWon: 0,
@@ -76,21 +75,25 @@ export class UserService {
       updatedAt: now,
     };
 
-    const { data: createdProfile, error } = await appwriteDb.createDocument<UserProfile>(
-      COLLECTION_IDS.USERS,
-      profileData,
-      userId, // Use userId as document ID for easy lookup
-      [
-        Permission.read(Role.user(userId)),
-        Permission.update(Role.user(userId)),
-      ]
-    );
+    try {
+      // Use HTTP client to avoid SDK issues
+      const { createDocument } = await import('../config/appwrite-http');
+      const createdProfile = await createDocument(
+        process.env.APPWRITE_DATABASE_ID || 'main_db',
+        COLLECTION_IDS.USERS,
+        userId, // Use userId as document ID for easy lookup
+        profileData,
+        [
+          `read("user:${userId}")`,
+          `update("user:${userId}")`,
+        ]
+      );
 
-    if (error || !createdProfile) {
-      throw new Error(`Failed to create user profile: ${error || 'Unknown error'}`);
+      return createdProfile as UserProfile;
+    } catch (error: any) {
+      console.error('Error creating user profile:', error);
+      throw new Error(`Failed to create user profile: ${error.message || 'Unknown error'}`);
     }
-
-    return createdProfile;
   }
 
   /**

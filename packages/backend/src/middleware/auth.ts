@@ -26,22 +26,20 @@ declare module 'hono' {
  * Extracts user information from session cookie and adds it to the context
  */
 export async function authMiddleware(c: Context, next: Next) {
-  const sessionId = getCookie(c, SESSION_COOKIE_NAME)
-  const userId = getCookie(c, 'appwrite-user-id')
+  const sessionSecret = getCookie(c, SESSION_COOKIE_NAME)
   
-  if (!sessionId) {
+  if (!sessionSecret) {
     throw new HTTPException(401, { message: 'Missing session. Please log in.' })
   }
 
   try {
-    console.log('🔍 Checking user session...');
-    console.log('📱 Found Appwrite client user ID:', userId);
+    console.log('🔍 Validating session...');
     
-    // Validate the session with Appwrite
-    const user = await validateSession(sessionId, userId)
+    // Validate the session with Appwrite (using session secret)
+    const user = await validateSession(sessionSecret)
     
     if (!user) {
-      console.log('❌ No session found');
+      console.log('❌ Invalid session');
       throw new HTTPException(401, { message: 'Invalid or expired session' })
     }
 
@@ -68,8 +66,8 @@ export async function authMiddleware(c: Context, next: Next) {
       username: profile?.username || user.name
     })
 
-    // Store session ID in context
-    c.set('sessionId', sessionId)
+    // Store session secret in context
+    c.set('sessionId', sessionSecret)
 
     await next()
   } catch (error) {
@@ -87,11 +85,11 @@ export async function authMiddleware(c: Context, next: Next) {
  * Useful for endpoints that work with or without authentication
  */
 export async function optionalAuthMiddleware(c: Context, next: Next) {
-  const sessionId = getCookie(c, SESSION_COOKIE_NAME)
+  const sessionSecret = getCookie(c, SESSION_COOKIE_NAME)
   
-  if (sessionId) {
+  if (sessionSecret) {
     try {
-      const user = await validateSession(sessionId)
+      const user = await validateSession(sessionSecret)
       
       if (user) {
         const profile = await UserService.getUserProfile(user.id)
@@ -103,7 +101,7 @@ export async function optionalAuthMiddleware(c: Context, next: Next) {
           username: profile?.username
         })
         
-        c.set('sessionId', sessionId)
+        c.set('sessionId', sessionSecret)
       }
     } catch (error) {
       // Silently fail for optional auth

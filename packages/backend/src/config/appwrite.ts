@@ -48,7 +48,7 @@ export const BACKEND_CALLBACK_URL = process.env.BACKEND_CALLBACK_URL || 'http://
 export const FRONTEND_URL = process.env.FRONTEND_URL!;
 
 // Session configuration
-export const SESSION_COOKIE_NAME = 'appwrite-session';
+export const SESSION_COOKIE_NAME = `a_session_${process.env.APPWRITE_PROJECT_ID}`;
 export const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
 export interface OAuthSession {
@@ -106,38 +106,28 @@ export const handleOAuthCallback = async (userId: string, secret: string): Promi
 
 /**
  * Validates a session and returns the user information
- * Requires both session ID and user ID (from cookies)
+ * Creates a session client with the session secret from cookie
  */
-export const validateSession = async (sessionId: string, userId?: string) => {
+export const validateSession = async (sessionSecret: string) => {
   try {
-    if (!userId) {
-      console.error('User ID required for session validation');
-      return null;
-    }
+    // Create a new session client for this request
+    const sessionClient = new Client()
+      .setEndpoint(process.env.APPWRITE_ENDPOINT!)
+      .setProject(process.env.APPWRITE_PROJECT_ID!)
+      .setSession(sessionSecret); // Use the session secret from cookie
     
-    // Use direct HTTP to avoid SDK connection issues
-    const { getUser, getSession } = await import('./appwrite-http');
+    const { Account } = await import('node-appwrite');
+    const account = new Account(sessionClient);
     
-    // Validate the session exists
-    const session = await getSession(userId, sessionId);
-    if (!session || !session.current) {
-      console.error('Invalid or expired session');
-      return null;
-    }
-    
-    // Get user details
-    const user = await getUser(userId);
-    if (!user) {
-      console.error('User not found');
-      return null;
-    }
+    // Get the current user's account info
+    const user = await account.get();
     
     return {
       id: user.$id,
       email: user.email,
       name: user.name,
       avatar: `https://avatars.${new URL(process.env.APPWRITE_ENDPOINT!).hostname}/avatars/initials?name=${encodeURIComponent(user.name || user.email)}`,
-      sessionId: sessionId,
+      sessionId: sessionSecret,
       emailVerified: user.emailVerification,
       createdAt: user.$createdAt,
       updatedAt: user.$updatedAt
