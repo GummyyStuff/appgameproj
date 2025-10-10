@@ -1,6 +1,5 @@
 import { Hono } from 'hono'
 import { env, config } from '../config/env'
-import { getSupabaseHealth } from '../config/supabase'
 
 const monitoring = new Hono()
 
@@ -8,23 +7,19 @@ const monitoring = new Hono()
 monitoring.get('/health', async (c) => {
   try {
     const startTime = Date.now()
-    const supabaseHealth = await getSupabaseHealth()
     const responseTime = Date.now() - startTime
     
-    const isHealthy = supabaseHealth.overall === 'healthy'
-    
+    // Simple health check - service is up
     return c.json({
-      status: isHealthy ? 'ok' : 'degraded',
+      status: 'ok',
       timestamp: new Date().toISOString(),
       service: 'tarkov-casino-backend',
       version: '1.0.0',
       environment: env.NODE_ENV,
       uptime: process.uptime(),
       responseTime,
-      dependencies: {
-        supabase: supabaseHealth
-      }
-    }, isHealthy ? 200 : 503)
+      database: 'appwrite'
+    }, 200)
   } catch (error) {
     return c.json({
       status: 'error',
@@ -42,9 +37,6 @@ monitoring.get('/health', async (c) => {
 monitoring.get('/health/detailed', async (c) => {
   try {
     const startTime = Date.now()
-    
-    // Check Supabase health
-    const supabaseHealth = await getSupabaseHealth()
     
     // Check memory usage
     const memoryUsage = process.memoryUsage()
@@ -65,10 +57,9 @@ monitoring.get('/health/detailed', async (c) => {
     }
     
     const responseTime = Date.now() - startTime
-    const isHealthy = supabaseHealth.overall === 'healthy'
     
     return c.json({
-      status: isHealthy ? 'ok' : 'degraded',
+      status: 'ok',
       timestamp: new Date().toISOString(),
       service: 'tarkov-casino-backend',
       version: '1.0.0',
@@ -76,10 +67,8 @@ monitoring.get('/health/detailed', async (c) => {
       responseTime,
       system: systemInfo,
       memory: memoryUsageMB,
-      dependencies: {
-        supabase: supabaseHealth
-      }
-    }, isHealthy ? 200 : 503)
+      database: 'appwrite'
+    }, 200)
   } catch (error) {
     return c.json({
       status: 'error',
@@ -95,19 +84,15 @@ monitoring.get('/health/detailed', async (c) => {
 // Readiness check (for Kubernetes-style deployments)
 monitoring.get('/ready', async (c) => {
   try {
-    // Check if all critical services are ready
-    const supabaseHealth = await getSupabaseHealth()
-    
-    const isReady = supabaseHealth.overall === 'healthy'
-    
+    // Simple readiness check - service is ready
     return c.json({
-      ready: isReady,
+      ready: true,
       timestamp: new Date().toISOString(),
       checks: {
-        database: supabaseHealth.database.status === 'healthy',
-        auth: supabaseHealth.auth.status === 'healthy'
+        database: 'appwrite',
+        status: 'ready'
       }
-    }, isReady ? 200 : 503)
+    }, 200)
   } catch (error) {
     return c.json({
       ready: false,

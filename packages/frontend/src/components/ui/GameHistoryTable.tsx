@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../../hooks/useAuth'
-import { supabase } from '../../lib/supabase'
+// Supabase import removed - using Appwrite backend API
 import { motion } from 'framer-motion'
 import { SkeletonTable } from './Skeleton'
 import { useToastContext } from '../providers/ToastProvider'

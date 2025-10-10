@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../hooks/useAuth'
-import { supabase } from '../lib/supabase'
+// Supabase import removed - using Appwrite backend API
 import CurrencyManager from '../components/ui/CurrencyManager'
 import TransactionHistory from '../components/ui/TransactionHistory'
 import { AchievementSystem, TarkovButton, TarkovCard, ProfileLeaderboard, FontAwesomeSVGIcons } from '../components/ui'

@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './useAuth';
 import { useProfile } from './useProfile';
-import { supabase } from '../lib/supabase';
+
+const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 export const useChatRules = () => {
   const { user } = useAuth();
@@ -18,14 +19,21 @@ export const useChatRules = () => {
     setError(null);
 
     try {
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({ 
-          chat_rules_accepted_at: new Date().toISOString() 
+      // Use backend API to update profile with chat rules acceptance
+      const response = await fetch(`${API_URL}/user/profile`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chatRulesAcceptedAt: new Date().toISOString()
         })
-        .eq('id', user.id);
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error('Failed to accept chat rules');
+      }
     } catch (err) {
       console.error('Failed to accept chat rules:', err);
       setError('Failed to accept chat rules');

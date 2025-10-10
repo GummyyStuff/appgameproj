@@ -5,7 +5,6 @@
  */
 
 import { QueryClient, QueryKey, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '../lib/supabase'
 import { CaseType, CaseOpeningResult } from '../types/caseOpening'
 import { CaseOpeningApiService, CaseOpeningResponse, caseOpeningApi } from './caseOpeningApi'
 
@@ -62,19 +61,15 @@ function getDeduplicatedRequest<T>(key: string, requestFn: () => Promise<T>): Pr
 
 /**
  * Authenticated API call wrapper with deduplication
+ * NOTE: Updated for Appwrite - auth handled via cookies, no need to check session here
  */
 async function authenticatedApiCall<T>(
   apiCall: () => Promise<T>,
   requestKey: string
 ): Promise<T> {
   return getDeduplicatedRequest(requestKey, async () => {
-    const session = await supabase.auth.getSession()
-    const token = session.data.session?.access_token
-
-    if (!token) {
-      throw new Error('Authentication required')
-    }
-
+    // Authentication is handled via HTTP-only cookies
+    // No need to manually check session here
     return apiCall()
   })
 }

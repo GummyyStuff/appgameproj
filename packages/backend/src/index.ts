@@ -10,7 +10,7 @@ import { apiRateLimit } from './middleware/rate-limit'
 import { validateContentType, validateRequestSize } from './middleware/validation'
 import { apiRoutes } from './routes/api'
 import { monitoring } from './routes/monitoring'
-import { supabaseRealtimeService } from './services/realtime-supabase'
+// Supabase realtime service removed - now using Appwrite realtime
 
 const app = new Hono()
 
@@ -51,7 +51,7 @@ app.route('/api', monitoring)
 app.get('/api/statistics/leaderboard', async (c) => {
   const { z } = await import('zod')
   const { HTTPException } = await import('hono/http-exception')
-  const { StatisticsService } = await import('./services/statistics')
+  const { StatisticsServiceAppwrite: StatisticsService } = await import('./services/statistics-appwrite')
   
   const query = c.req.query()
   
@@ -91,7 +91,7 @@ app.get('/api/statistics/leaderboard', async (c) => {
 app.get('/api/statistics/global', async (c) => {
   const { z } = await import('zod')
   const { HTTPException } = await import('hono/http-exception')
-  const { StatisticsService } = await import('./services/statistics')
+  const { StatisticsServiceAppwrite: StatisticsService } = await import('./services/statistics-appwrite')
   
   const query = c.req.query()
   

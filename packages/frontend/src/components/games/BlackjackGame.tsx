@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useBalance } from '../../hooks/useBalance'
 import { useAdvancedFeatures } from '../../hooks/useAdvancedFeatures'
-import { supabase } from '../../lib/supabase'
+// Supabase import removed - using Appwrite with cookie auth
 import BlackjackHand from './BlackjackHand'
 import BlackjackActions from './BlackjackActions'
 import BlackjackBetting from './BlackjackBetting'
@@ -92,18 +92,12 @@ const BlackjackGame: React.FC = () => {
     setError(null)
 
     try {
-      const session = await supabase.auth.getSession()
-      const token = session.data.session?.access_token
-
-      if (!token) {
-        throw new Error('Please log in to place bets')
-      }
-
+      // Make API call with credentials (cookies handle auth)
       const response = await fetch('/api/games/blackjack/start', {
         method: 'POST',
+        credentials: 'include',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ amount: betAmount })
       })
@@ -183,13 +177,6 @@ const BlackjackGame: React.FC = () => {
     setError(null)
 
     try {
-      const session = await supabase.auth.getSession()
-      const token = session.data.session?.access_token
-
-      if (!token) {
-        throw new Error('Please log in to perform actions')
-      }
-
       const requestBody = {
         gameId: gameState.gameId,
         action,
@@ -200,9 +187,9 @@ const BlackjackGame: React.FC = () => {
 
       const response = await fetch('/api/games/blackjack/action', {
         method: 'POST',
+        credentials: 'include',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify(requestBody)
       })

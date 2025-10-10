@@ -6,7 +6,7 @@ import { useSoundEffects, useSoundPreferences } from '../hooks/useSoundEffects'
 import { useToastContext } from '../components/providers/ToastProvider'
 import { useGameShortcuts } from '../hooks/useKeyboardShortcuts'
 import { useAdvancedFeatures } from '../hooks/useAdvancedFeatures'
-import { supabase } from '../lib/supabase'
+// Supabase import removed - using Appwrite with cookie auth
 import { formatCurrency } from '../utils/currency'
 import { FontAwesomeSVGIcons } from '../components/ui/FontAwesomeSVG'
 import { trackRoulettePerformance } from '../utils/roulette-performance'
@@ -148,20 +148,12 @@ const RoulettePage: React.FC = () => {
       // Broadcast game start for real-time updates
       await broadcastGameStart(betAmount, currentBet.betType, currentBet.betValue)
 
-      const session = await supabase.auth.getSession()
-      const token = session.data.session?.access_token
-
-      if (!token) {
-        throw new Error('Please log in to place bets')
-      }
-
-      console.log('Making API call with token:', token ? 'Token present' : 'No token')
-
+      // Make API call with credentials (cookies handle auth)
       const response = await fetch('/api/games/roulette/bet', {
         method: 'POST',
+        credentials: 'include', // Send cookies for auth
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           amount: betAmount,

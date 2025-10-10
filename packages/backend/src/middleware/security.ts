@@ -1,6 +1,5 @@
 import { Context, Next } from 'hono'
 import { HTTPException } from 'hono/http-exception'
-import { supabaseAdmin } from '../config/supabase'
 import { logSecurityEvent } from './logger'
 import { config, isProduction } from '../config/env'
 

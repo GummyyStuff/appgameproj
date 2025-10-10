@@ -1,9 +1,9 @@
 /**
  * Simplified Case Opening API Service
  * Uses the single /api/games/cases/open endpoint with atomic transactions
+ * Updated for Appwrite migration
  */
 
-import { supabase } from '../lib/supabase'
 import { CaseType, CaseOpeningResult } from '../types/caseOpening'
 
 export interface CaseOpeningRequest {

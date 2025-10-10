@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../../hooks/useAuth'
-import { supabase } from '../../lib/supabase'
+// Supabase import removed - using Appwrite backend API
 import { FontAwesomeSVGIcons } from './FontAwesomeSVG'
 import {
   AreaChart,

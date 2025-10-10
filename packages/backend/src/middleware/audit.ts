@@ -1,7 +1,7 @@
 import { Context, Next } from 'hono'
-import { supabaseAdmin } from '../config/supabase'
 import { logSecurityEvent } from './logger'
 import { isTest } from '../config/env'
+import { AuditService } from '../services/audit-service'
 
 export interface AuditLogEntry {
   id?: string
@@ -44,26 +44,25 @@ export class AuditLogger {
 
       // Skip database operations in test environment
       if (!isTest()) {
-        // Store in database (gracefully handle if table doesn't exist)
+        // Store in Appwrite database using AuditService
         try {
-          const { error } = await supabaseAdmin
-            .from('audit_logs')
-            .insert(auditEntry)
-
-          if (error) {
-            // Check if it's a table not found error
-            if (error.message.includes('relation "audit_logs" does not exist')) {
-              console.warn('Audit logs table not found - logging to console instead')
-            } else {
-              console.error('Failed to store audit log:', error)
-            }
-            // Fallback to console logging
-            console.log('AUDIT:', JSON.stringify(auditEntry, null, 2))
-          }
-        } catch (dbError) {
-          console.error('Database error during audit logging:', dbError)
+          await AuditService.log({
+            userId: entry.user_id,
+            action: entry.action,
+            resourceType: entry.resource_type,
+            resourceId: entry.resource_id,
+            oldValues: entry.old_values,
+            newValues: entry.new_values,
+            ipAddress: entry.ip_address,
+            userAgent: entry.user_agent,
+            success: entry.success,
+            errorMessage: entry.error_message,
+            metadata: entry.metadata
+          })
+        } catch (error) {
+          console.error('Failed to store audit log:', error)
           // Fallback to console logging
-          console.log('AUDIT_DB_ERROR:', JSON.stringify(auditEntry, null, 2))
+          console.log('AUDIT:', JSON.stringify(auditEntry, null, 2))
         }
       }
 

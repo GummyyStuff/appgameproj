@@ -1,9 +1,9 @@
 /**
  * Real-time Game Service
- * Handles real-time game state updates via Supabase Realtime
+ * Handles real-time game state updates
+ * NOTE: Migrated to Appwrite - Supabase realtime removed
  */
 
-import { supabaseAdmin as supabase } from '../config/supabase'
 import { GameResult } from './game-engine/types'
 import { GameHistory, RouletteResult } from '../types/database'
 
@@ -45,6 +45,7 @@ export class RealtimeGameService {
 
   /**
    * Subscribe to game updates for a specific user
+   * NOTE: Disabled for Appwrite migration - use Appwrite Realtime on client side
    */
   async subscribeToUserGames(userId: string, callback: (update: GameStateUpdate) => void) {
     const channelName = `user-games-${userId}`
@@ -53,74 +54,37 @@ export class RealtimeGameService {
       return this.channels.get(channelName)
     }
 
-    const channel = supabase
-      .channel(channelName)
-      .on('broadcast', { event: 'game-update' }, (payload) => {
-        if (payload.payload.userId === userId) {
-          callback(payload.payload as GameStateUpdate)
-        }
-      })
-      .subscribe()
-
-    this.channels.set(channelName, channel)
-    return channel
+    // Appwrite realtime is handled client-side, not server-side
+    console.log(`Game subscription requested for user ${userId} - handled by Appwrite client`)
+    return null
   }
 
   /**
    * Subscribe to global game events (for leaderboards, etc.)
+   * NOTE: Disabled for Appwrite migration - use Appwrite Realtime on client side
    */
   async subscribeToGlobalGames(callback: (update: GameStateUpdate) => void) {
-    const channelName = 'global-games'
-    
-    if (this.channels.has(channelName)) {
-      return this.channels.get(channelName)
-    }
-
-    const channel = supabase
-      .channel(channelName)
-      .on('broadcast', { event: 'global-game-update' }, (payload) => {
-        callback(payload.payload as GameStateUpdate)
-      })
-      .subscribe()
-
-    this.channels.set(channelName, channel)
-    return channel
+    console.log('Global game subscription requested - handled by Appwrite client')
+    return null
   }
 
   /**
    * Broadcast game state update to user's channel
+   * NOTE: Disabled for Appwrite - broadcasting handled by client-side Appwrite Realtime
    */
   async broadcastGameUpdate(update: GameStateUpdate) {
-    const channelName = `user-games-${update.userId}`
-    
-    try {
-      await supabase
-        .channel(channelName)
-        .send({
-          type: 'broadcast',
-          event: 'game-update',
-          payload: update
-        })
-    } catch (error) {
-      console.error('Failed to broadcast game update:', error)
-    }
+    // No-op: Appwrite Realtime subscriptions are client-side only
+    // Game updates are reflected through database document updates
+    console.log('Game update broadcast (no-op for Appwrite):', update.gameType)
   }
 
   /**
    * Broadcast global game event (big wins, etc.)
+   * NOTE: Disabled for Appwrite - broadcasting handled by client-side Appwrite Realtime
    */
   async broadcastGlobalGameEvent(update: GameStateUpdate) {
-    try {
-      await supabase
-        .channel('global-games')
-        .send({
-          type: 'broadcast',
-          event: 'global-game-update',
-          payload: update
-        })
-    } catch (error) {
-      console.error('Failed to broadcast global game event:', error)
-    }
+    // No-op: Appwrite Realtime subscriptions are client-side only
+    console.log('Global game event (no-op for Appwrite):', update.gameType)
   }
 
   /**
