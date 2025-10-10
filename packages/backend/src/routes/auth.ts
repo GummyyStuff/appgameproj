@@ -53,17 +53,16 @@ authRoutes.get('/discord',
       console.log('Generated state:', state);
       
       // Store state in secure, HTTP-only cookie for CSRF protection
-      const frontendDomain = new URL(FRONTEND_URL).hostname;
+      const isProduction = process.env.NODE_ENV === 'production' || FRONTEND_URL.startsWith('https://');
+      
       setCookie(c, 'oauth_state', state, {
         httpOnly: true,
-        secure: true, // Always use secure in production (HTTPS)
+        secure: isProduction,
         sameSite: 'Lax',
         maxAge: 600, // 10 minutes
         path: '/',
-        domain: frontendDomain === 'localhost' ? undefined : frontendDomain // Don't set domain for localhost
+        // Don't set domain - host-only cookie
       });
-      
-      console.log('Set cookie domain:', frontendDomain === 'localhost' ? 'none (localhost)' : frontendDomain);
 
       // Build Appwrite OAuth URL
       const appwriteEndpoint = process.env.APPWRITE_ENDPOINT!;
@@ -121,10 +120,9 @@ authRoutes.get('/callback',
     }
     
     // Clear the state cookie
-    const frontendDomain = new URL(FRONTEND_URL).hostname;
     deleteCookie(c, 'oauth_state', {
-      path: '/',
-      domain: frontendDomain === 'localhost' ? undefined : frontendDomain
+      path: '/'
+      // Don't set domain - must match the setCookie call
     });
 
     if (!userId || !secret) {
@@ -148,13 +146,26 @@ authRoutes.get('/callback',
       const frontendDomain = new URL(FRONTEND_URL).hostname;
       const sessionCookieName = `a_session_${process.env.APPWRITE_PROJECT_ID}`;
       
+      // IMPORTANT: Don't set domain explicitly to allow same-origin cookie sharing
+      // When domain is set to 'tarkov.juanis.cool', it becomes a domain cookie
+      // Leave it undefined to make it a host-only cookie (more secure and works better)
+      const isProduction = process.env.NODE_ENV === 'production' || FRONTEND_URL.startsWith('https://');
+      
       setCookie(c, sessionCookieName, session.secret, { // Use session.secret, not session.$id!
         httpOnly: true,
-        secure: true, // Always use secure (HTTPS)
+        secure: isProduction, // Use secure cookies on HTTPS (production)
         sameSite: 'Lax',
         maxAge: SESSION_MAX_AGE,
         path: '/',
-        domain: frontendDomain === 'localhost' ? undefined : frontendDomain // Don't set domain for localhost
+        // Don't set domain - let it default to current host
+        // This makes the cookie available to the same origin (protocol + domain + port)
+      });
+      
+      console.log('🍪 Set session cookie:', { 
+        name: sessionCookieName, 
+        secure: isProduction,
+        sameSite: 'Lax',
+        httpOnly: true
       });
 
       return c.redirect(`${FRONTEND_URL}/`);
@@ -186,12 +197,12 @@ authRoutes.get('/me',
         
         let profile = await UserService.getUserProfile(appwriteUserId);
         
+        // Get user info from Appwrite to get email/name
+        const users = new Users(appwriteClient);
+        const appwriteUser = await users.get(appwriteUserId);
+        
         if (!profile) {
           console.log('📝 No profile found, creating new user profile...');
-          
-          // Get user info from Appwrite to get email/name
-          const users = new Users(appwriteClient);
-          const appwriteUser = await users.get(appwriteUserId);
           
           // Create new user profile with default values
           profile = await UserService.createUserProfile(appwriteUserId, {
@@ -208,7 +219,7 @@ authRoutes.get('/me',
         
         return c.json({
           id: appwriteUserId,
-          email: profile.email || '',
+          email: appwriteUser.email || '',
           name: profile.displayName || profile.username,
           username: profile.username,
           balance: profile.balance,
@@ -250,10 +261,9 @@ authRoutes.post('/logout',
     }
     
     try {
-      const frontendDomain = new URL(FRONTEND_URL).hostname;
       deleteCookie(c, SESSION_COOKIE_NAME, {
-        path: '/',
-        domain: frontendDomain === 'localhost' ? undefined : frontendDomain
+        path: '/'
+        // Don't set domain - must match the setCookie call
       });
       
       const success = await appwriteLogout(sessionId);

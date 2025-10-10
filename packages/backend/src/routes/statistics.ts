@@ -9,6 +9,8 @@ import { z } from 'zod'
 import { authMiddleware } from '../middleware/auth'
 import { asyncHandler } from '../middleware/error'
 import { StatisticsServiceAppwrite as StatisticsService, StatisticsFilters } from '../services/statistics-appwrite'
+import { UserService } from '../services/user-service'
+import { GameService } from '../services/game-service'
 
 export const statisticsRoutes = new Hono()
 
@@ -46,7 +48,30 @@ const gameHistorySchema = z.object({
   )
 })
 
+// Get global statistics (public endpoint for analytics/display)
+statisticsRoutes.get('/global', asyncHandler(async (c: Context) => {
+  const query = c.req.query()
+  const days = query.days ? parseInt(query.days) : 30
 
+  // Validate days parameter
+  if (days < 1 || days > 365) {
+    throw new HTTPException(400, { message: 'Days parameter must be between 1 and 365' })
+  }
+
+  try {
+    const globalStats = await StatisticsService.getGlobalStatistics(days)
+
+    return c.json({
+      success: true,
+      global_statistics: globalStats,
+      generated_at: new Date().toISOString()
+    })
+
+  } catch (error) {
+    console.error('Global statistics error:', error)
+    throw new HTTPException(500, { message: 'Failed to fetch global statistics' })
+  }
+}))
 
 // All other statistics routes require authentication
 statisticsRoutes.use('*', authMiddleware)
@@ -98,7 +123,7 @@ statisticsRoutes.get('/basic', asyncHandler(async (c: Context) => {
   const user = c.get('user')
 
   try {
-    const statistics = await DatabaseService.getUserStatistics(user.id)
+    const statistics = await UserService.getUserStatistics(user.id)
 
     return c.json({
       success: true,
@@ -124,7 +149,7 @@ statisticsRoutes.get('/history', asyncHandler(async (c: Context) => {
       gameType: query.gameType
     })
 
-    const history = await DatabaseService.getGameHistory(
+    const history = await GameService.getGameHistory(
       user.id,
       params.limit,
       params.offset,
@@ -294,33 +319,6 @@ statisticsRoutes.get('/playing-habits', asyncHandler(async (c: Context) => {
   } catch (error) {
     console.error('Playing habits error:', error)
     throw new HTTPException(500, { message: 'Failed to fetch playing habits' })
-  }
-}))
-
-
-
-// Get global statistics (for admin/analytics)
-statisticsRoutes.get('/global', asyncHandler(async (c: Context) => {
-  const query = c.req.query()
-  const days = query.days ? parseInt(query.days) : 30
-
-  // Validate days parameter
-  if (days < 1 || days > 365) {
-    throw new HTTPException(400, { message: 'Days parameter must be between 1 and 365' })
-  }
-
-  try {
-    const globalStats = await StatisticsService.getGlobalStatistics(days)
-
-    return c.json({
-      success: true,
-      global_statistics: globalStats,
-      generated_at: new Date().toISOString()
-    })
-
-  } catch (error) {
-    console.error('Global statistics error:', error)
-    throw new HTTPException(500, { message: 'Failed to fetch global statistics' })
   }
 }))
 

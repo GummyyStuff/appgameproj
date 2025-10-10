@@ -28,7 +28,15 @@ declare module 'hono' {
 export async function authMiddleware(c: Context, next: Next) {
   const sessionSecret = getCookie(c, SESSION_COOKIE_NAME)
   
+  // Debug logging for production issues
   if (!sessionSecret) {
+    console.log('🔍 Auth Debug:', {
+      cookieName: SESSION_COOKIE_NAME,
+      allCookies: c.req.header('Cookie'),
+      origin: c.req.header('Origin'),
+      referer: c.req.header('Referer'),
+      path: c.req.path
+    })
     throw new HTTPException(401, { message: 'Missing session. Please log in.' })
   }
 

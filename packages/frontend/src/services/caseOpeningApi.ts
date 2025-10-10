@@ -53,19 +53,12 @@ export class CaseOpeningApiServiceImpl implements CaseOpeningApiService {
     const requestId = generateRequestId()
 
     try {
-      const session = await supabase.auth.getSession()
-      const token = session.data.session?.access_token
-
-      if (!token) {
-        throw new Error('Authentication required')
-      }
-
       const response = await fetch('/api/games/cases/open', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
+        credentials: 'include', // Include cookies for authentication
         body: JSON.stringify({
           caseTypeId: caseType.id,
           delayCredit,
@@ -105,19 +98,12 @@ export class CaseOpeningApiServiceImpl implements CaseOpeningApiService {
     const requestId = generateRequestId()
 
     try {
-      const session = await supabase.auth.getSession()
-      const token = session.data.session?.access_token
-
-      if (!token) {
-        throw new Error('Authentication required')
-      }
-
       const response = await fetch('/api/games/cases/open', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
+        credentials: 'include', // Include cookies for authentication
         body: JSON.stringify({
           caseTypeId: caseType.id,
           previewOnly: true,
@@ -147,17 +133,8 @@ export class CaseOpeningApiServiceImpl implements CaseOpeningApiService {
    */
   async getCaseTypes(): Promise<CaseType[]> {
     try {
-      const session = await supabase.auth.getSession()
-      const token = session.data.session?.access_token
-
-      if (!token) {
-        return []
-      }
-
       const response = await fetch('/api/games/cases', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        credentials: 'include' // Include cookies for authentication
       })
 
       if (response.ok) {
@@ -178,17 +155,8 @@ export class CaseOpeningApiServiceImpl implements CaseOpeningApiService {
    */
   async getCaseType(caseTypeId: string): Promise<CaseType | null> {
     try {
-      const session = await supabase.auth.getSession()
-      const token = session.data.session?.access_token
-
-      if (!token) {
-        return null
-      }
-
       const response = await fetch(`/api/games/cases/${caseTypeId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        credentials: 'include' // Include cookies for authentication
       })
 
       if (response.ok) {
@@ -214,17 +182,8 @@ export class CaseOpeningApiServiceImpl implements CaseOpeningApiService {
         return []
       }
 
-      const session = await supabase.auth.getSession()
-      const token = session.data.session?.access_token
-
-      if (!token) {
-        return []
-      }
-
       const response = await fetch(`/api/games/cases/${caseTypeId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        credentials: 'include' // Include cookies for authentication
       })
 
       if (response.ok) {
