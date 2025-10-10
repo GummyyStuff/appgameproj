@@ -45,9 +45,7 @@ ENV VITE_API_URL=${VITE_API_URL}
 ENV VITE_APPWRITE_ENDPOINT=${VITE_APPWRITE_ENDPOINT}
 ENV VITE_APPWRITE_PROJECT_ID=${VITE_APPWRITE_PROJECT_ID}
 
-RUN bun run build && \
-    echo "📋 Verifying FontAwesome files in dist..." && \
-    ls -la ./dist/fa-v5-pro/css/ || echo "❌ FontAwesome NOT found in dist!"
+RUN bun run build
 
 # Build backend stage
 FROM base AS backend-build
@@ -73,10 +71,6 @@ COPY packages/backend/package.json ./
 
 # Copy built frontend (served by backend)
 COPY --from=frontend-build /app/packages/frontend/dist ./public
-
-# Verify FontAwesome files in production
-RUN echo "🔍 Verifying FontAwesome in production public folder..." && \
-    ls -la ./public/fa-v5-pro/css/ || echo "❌ FontAwesome NOT in production!"
 
 # Create non-root user for security
 RUN groupadd --system --gid 1001 nodejs
