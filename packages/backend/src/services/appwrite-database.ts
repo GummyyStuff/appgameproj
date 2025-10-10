@@ -101,18 +101,29 @@ export class AppwriteDatabaseService {
     limit?: number
   ) {
     try {
+      console.log(`📋 Listing documents from ${collectionId} with ${queries.length} queries`)
+      
       const response = await this.databases.listDocuments(
         DATABASE_ID,
         collectionId,
         queries
       );
+      
+      console.log(`✅ Found ${response.documents.length} documents (total: ${response.total})`)
+      
       return {
         data: response.documents as (T & { $id: string })[],
         total: response.total,
         error: null,
       };
     } catch (error: any) {
-      console.error(`Error listing documents from ${collectionId}:`, error);
+      console.error(`❌ Error listing documents from ${collectionId}:`, error);
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code,
+        type: error.type,
+        response: error.response
+      });
       return { data: [], total: 0, error: error.message || 'Failed to list documents' };
     }
   }

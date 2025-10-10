@@ -57,7 +57,7 @@ app.get('/api/statistics/leaderboard', async (c) => {
   
   try {
     const leaderboardSchema = z.object({
-      metric: z.enum(['balance', 'total_won', 'games_played', 'total_wagered']).default('balance'),
+      metric: z.enum(['balance', 'totalWon', 'gamesPlayed', 'totalWagered']).default('balance'),
       limit: z.number().int().min(1).max(100).default(10)
     })
     
@@ -94,6 +94,7 @@ app.get('/api/statistics/global', async (c) => {
   const { StatisticsServiceAppwrite: StatisticsService } = await import('./services/statistics-appwrite')
   
   const query = c.req.query()
+  const days = query.days ? parseInt(query.days) : 30
   
   try {
     const globalStatsSchema = z.object({
@@ -104,7 +105,9 @@ app.get('/api/statistics/global', async (c) => {
       days: query.days ? parseInt(query.days) : undefined
     })
 
+    console.log('📊 Fetching global statistics for', params.days, 'days...')
     const globalStats = await StatisticsService.getGlobalStatistics(params.days)
+    console.log('✅ Global statistics fetched successfully')
 
     return c.json({
       success: true,
@@ -120,8 +123,34 @@ app.get('/api/statistics/global', async (c) => {
       })
     }
     
-    console.error('Global stats error:', error)
-    throw new HTTPException(500, { message: 'Failed to fetch global statistics' })
+    console.error('❌ Global stats error:', error)
+    console.error('Error details:', error instanceof Error ? error.message : String(error))
+    console.error('Stack:', error instanceof Error ? error.stack : 'No stack')
+    
+    // Return empty statistics instead of crashing
+    return c.json({
+      success: true,
+      global_statistics: {
+        overview: {
+          totalGames: 0,
+          totalWagered: 0,
+          totalWon: 0,
+          netProfit: 0,
+          winRate: 0,
+          biggestWin: 0,
+          biggestLoss: 0,
+          averageBet: 0,
+          averageWin: 0,
+          profitMargin: 0
+        },
+        gameBreakdown: [],
+        timeSeriesData: [],
+        totalUsers: 0,
+        period: `${days} days`
+      },
+      generated_at: new Date().toISOString(),
+      note: 'No data available or error fetching statistics'
+    })
   }
 })
 

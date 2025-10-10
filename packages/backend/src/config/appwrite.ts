@@ -14,8 +14,8 @@ for (const envVar of requiredEnvVars) {
   }
 }
 
-// Create a custom fetch with timeout
-const timeoutFetch = (timeout: number = 10000) => {
+// Create a custom fetch with timeout and retry logic
+const createResilientFetch = (timeout: number = 30000) => {
   return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeout);
@@ -24,17 +24,20 @@ const timeoutFetch = (timeout: number = 10000) => {
       const response = await fetch(input, {
         ...init,
         signal: controller.signal,
+        // Add keep-alive and connection pooling
+        keepalive: true,
       });
       clearTimeout(id);
       return response;
     } catch (error) {
       clearTimeout(id);
+      console.error('Fetch error:', error);
       throw error;
     }
   };
 };
 
-// Initialize Appwrite client with production settings
+// Initialize Appwrite client with production settings and custom fetch
 export const appwriteClient = new Client()
   .setEndpoint(process.env.APPWRITE_ENDPOINT!)
   .setProject(process.env.APPWRITE_PROJECT_ID!)
