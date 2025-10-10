@@ -49,6 +49,7 @@ export const useChatRealtime = () => {
         credentials: 'include',
         headers: {
           'Accept': 'application/json',
+          'X-Appwrite-User-Id': user.id,
         },
       });
 

@@ -106,7 +106,7 @@ export class AppwriteDatabaseService {
       
       const response = await retryAppwriteOperation(
         () => this.databases.listDocuments(DATABASE_ID, collectionId, queries),
-        { maxRetries: 3, delayMs: 1000 }
+        { maxRetries: 1, delayMs: 2000 }
       );
       
       console.log(`✅ Found ${response.documents.length} documents (total: ${response.total})`)

@@ -87,11 +87,12 @@ app.get('/api/statistics/leaderboard', async (c) => {
   }
 })
 
-// Public global statistics endpoint (no rate limiting)
+// Public global statistics endpoint (no rate limiting, cached)
 app.get('/api/statistics/global', async (c) => {
   const { z } = await import('zod')
   const { HTTPException } = await import('hono/http-exception')
   const { StatisticsServiceAppwrite: StatisticsService } = await import('./services/statistics-appwrite')
+  const { withCache } = await import('./utils/cache')
   
   const query = c.req.query()
   const days = query.days ? parseInt(query.days) : 30
@@ -106,7 +107,14 @@ app.get('/api/statistics/global', async (c) => {
     })
 
     console.log('📊 Fetching global statistics for', params.days, 'days...')
-    const globalStats = await StatisticsService.getGlobalStatistics(params.days)
+    
+    // Cache global stats for 2 minutes (since it's expensive)
+    const globalStats = await withCache(
+      `global_stats_${params.days}d`,
+      () => StatisticsService.getGlobalStatistics(params.days),
+      2 * 60 * 1000
+    );
+    
     console.log('✅ Global statistics fetched successfully')
 
     return c.json({

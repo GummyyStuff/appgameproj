@@ -62,26 +62,34 @@ export class CaseOpeningService {
   private static randomGenerator = new SecureRandomGenerator();
 
   /**
-   * Get all available case types
+   * Get all available case types (cached for 5 minutes)
    */
   static async getCaseTypes(): Promise<CaseType[]> {
-    try {
-      const { data, error } = await appwriteDb.listDocuments<AppwriteCaseType>(
-        COLLECTION_IDS.CASE_TYPES,
-        [appwriteDb.equal('isActive', true)]
-      );
+    const { withCache } = await import('../utils/cache');
+    
+    return withCache(
+      'case_types_active',
+      async () => {
+        try {
+          const { data, error } = await appwriteDb.listDocuments<AppwriteCaseType>(
+            COLLECTION_IDS.CASE_TYPES,
+            [appwriteDb.equal('isActive', true)]
+          );
 
-      if (error) {
-        console.error('Error fetching case types:', error);
-        throw new Error('Failed to fetch case types');
-      }
+          if (error) {
+            console.error('Error fetching case types:', error);
+            throw new Error('Failed to fetch case types');
+          }
 
-      // Transform Appwrite format to expected format
-      return (data || []).map(this.transformCaseType);
-    } catch (error) {
-      console.error('Error in getCaseTypes:', error);
-      throw new Error('Failed to retrieve case types');
-    }
+          // Transform Appwrite format to expected format
+          return (data || []).map(this.transformCaseType);
+        } catch (error) {
+          console.error('Error in getCaseTypes:', error);
+          throw new Error('Failed to retrieve case types');
+        }
+      },
+      5 * 60 * 1000 // Cache for 5 minutes
+    );
   }
 
   /**
