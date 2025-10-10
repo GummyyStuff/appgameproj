@@ -26,7 +26,7 @@ class ErrorBoundary extends Component<Props, State> {
       mode: import.meta.env.MODE,
       prod: import.meta.env.PROD,
       dev: import.meta.env.DEV,
-      supabaseUrl: import.meta.env.VITE_SUPABASE_URL ? 'SET' : 'MISSING',
+      appwriteEndpoint: import.meta.env.VITE_APPWRITE_ENDPOINT ? 'SET' : 'MISSING',
       apiUrl: import.meta.env.VITE_API_URL ? 'SET' : 'MISSING'
     })
   }

@@ -34,21 +34,26 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
     queryFn: async () => {
       if (!user) return []
       
-      let query = supabase
-        .from('game_history')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: sortOrder === 'asc' })
-        .limit(limit)
+      const params = new URLSearchParams({
+        limit: limit.toString(),
+        order: sortOrder,
+      });
       
       if (gameFilter !== 'all') {
-        query = query.eq('game_type', gameFilter)
+        params.append('gameType', gameFilter);
       }
       
-      const { data, error } = await query
+      const response = await fetch(`/api/games/history?${params}`, {
+        credentials: 'include',
+        headers: {
+          'X-Appwrite-User-Id': user.id,
+        },
+      });
       
-      if (error) throw error
-      return data as Transaction[]
+      if (!response.ok) throw new Error('Failed to fetch transactions');
+      
+      const result = await response.json();
+      return result.history as Transaction[];
     },
     enabled: !!user,
     staleTime: 30000, // Cache for 30 seconds

@@ -70,23 +70,28 @@ const StatisticsDashboard: React.FC = () => {
     queryFn: async () => {
       if (!user) return []
       
-      let query = supabase
-        .from('game_history')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
+      const params = new URLSearchParams({
+        limit: '1000',
+        order: 'desc',
+      });
       
       // Apply time range filter
       if (timeRange !== 'all') {
-        const days = parseInt(timeRange.replace('d', ''))
-        const dateFrom = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
-        query = query.gte('created_at', dateFrom)
+        const days = parseInt(timeRange.replace('d', ''));
+        params.append('days', days.toString());
       }
       
-      const { data, error } = await query.limit(1000)
+      const response = await fetch(`/api/games/history?${params}`, {
+        credentials: 'include',
+        headers: {
+          'X-Appwrite-User-Id': user.id,
+        },
+      });
       
-      if (error) throw error
-      return data as GameHistory[]
+      if (!response.ok) throw new Error('Failed to fetch game history');
+      
+      const result = await response.json();
+      return result.history as GameHistory[];
     },
     enabled: !!user,
     staleTime: 60000, // Cache for 1 minute

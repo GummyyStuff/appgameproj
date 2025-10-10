@@ -58,15 +58,17 @@ const GameHistoryTable: React.FC<GameHistoryTableProps> = ({
     queryFn: async () => {
       if (!user) return []
       
-      const { data, error } = await supabase
-        .from('game_history')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(1000) // Reasonable limit
+      const response = await fetch('/api/games/history?limit=1000&order=desc', {
+        credentials: 'include',
+        headers: {
+          'X-Appwrite-User-Id': user.id,
+        },
+      });
       
-      if (error) throw error
-      return data as GameHistory[]
+      if (!response.ok) throw new Error('Failed to fetch game history');
+      
+      const result = await response.json();
+      return result.history as GameHistory[];
     },
     enabled: !!user,
     staleTime: 60000, // Cache for 1 minute

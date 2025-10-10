@@ -50,37 +50,47 @@ const ProfilePage: React.FC = () => {
     queryFn: async () => {
       if (!user) return null
       
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single()
+      const response = await fetch('/api/user/profile', {
+        credentials: 'include',
+        headers: {
+          'X-Appwrite-User-Id': user.id,
+        },
+      });
       
-      if (error) throw error
-      return data as UserProfile
+      if (!response.ok) throw new Error('Failed to fetch profile');
+      
+      const result = await response.json();
+      return result.user as UserProfile;
     },
     enabled: !!user,
     staleTime: 2 * 60 * 1000, // Cache for 2 minutes
     retry: 2,
   })
 
-  // Fetch game statistics - using fallback approach since RPC might not exist
+  // Fetch game statistics from backend API
   const { data: gameStats, isLoading: statsLoading } = useQuery({
     queryKey: ['gameStats', user?.id],
     queryFn: async () => {
       if (!user) return []
       
       try {
-        // Try the RPC function first
-        const { data, error } = await supabase
-          .rpc('get_user_statistics', { user_uuid: user.id })
+        const response = await fetch('/api/statistics/user', {
+          credentials: 'include',
+          headers: {
+            'X-Appwrite-User-Id': user.id,
+          },
+        });
         
-        if (error) throw error
-        return data as GameStats[]
+        if (!response.ok) {
+          console.warn('Game stats endpoint not available');
+          return [];
+        }
+        
+        const result = await response.json();
+        return result.statistics as GameStats[];
       } catch (error) {
-        // Fallback: return empty array if RPC doesn't exist
-        console.warn('Game stats RPC not available:', error)
-        return []
+        console.warn('Game stats not available:', error);
+        return [];
       }
     },
     enabled: !!user,
@@ -93,12 +103,17 @@ const ProfilePage: React.FC = () => {
     mutationFn: async (username: string) => {
       if (!user) throw new Error('No user')
       
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({ username })
-        .eq('id', user.id)
+      const response = await fetch('/api/user/profile', {
+        method: 'PUT',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Appwrite-User-Id': user.id,
+        },
+        body: JSON.stringify({ username }),
+      });
       
-      if (error) throw error
+      if (!response.ok) throw new Error('Failed to update username');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['profile'] })

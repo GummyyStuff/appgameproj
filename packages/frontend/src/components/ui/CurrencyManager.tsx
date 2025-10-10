@@ -16,26 +16,30 @@ interface CurrencyStats {
 const CurrencyManager: React.FC = () => {
   const { user } = useAuth()
 
-  // Fetch currency stats
+  // Fetch currency stats from backend API
   const { data: currencyStats } = useQuery({
     queryKey: ['currencyStats', user?.id],
     queryFn: async () => {
       if (!user) return null
       
-      const { data: profile, error } = await supabase
-        .from('user_profiles')
-        .select('balance, total_wagered, total_won, games_played')
-        .eq('id', user.id)
-        .single()
+      const response = await fetch('/api/user/profile', {
+        credentials: 'include',
+        headers: {
+          'X-Appwrite-User-Id': user.id,
+        },
+      });
       
-      if (error) throw error
+      if (!response.ok) throw new Error('Failed to fetch profile');
+      
+      const result = await response.json();
+      const profile = result.user;
       
       return {
         currentBalance: profile.balance || 0,
-        totalWagered: profile.total_wagered || 0,
-        totalWon: profile.total_won || 0,
-        netProfit: (profile.total_won || 0) - (profile.total_wagered || 0),
-        gamesPlayed: profile.games_played || 0,
+        totalWagered: profile.totalWagered || 0,
+        totalWon: profile.totalWon || 0,
+        netProfit: (profile.totalWon || 0) - (profile.totalWagered || 0),
+        gamesPlayed: profile.gamesPlayed || 0,
       } as CurrencyStats
     },
     enabled: !!user,
