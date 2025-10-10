@@ -503,35 +503,41 @@ export class StatisticsServiceAppwrite {
    * Get global game statistics for admin/analytics
    */
   static async getGlobalStatistics(days: number = 30) {
-    const dateFrom = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+    try {
+      const dateFrom = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 
-    const queries = [
-      appwriteDb.greaterThanEqual('createdAt', dateFrom),
-      appwriteDb.limit(10000) // Large limit for global stats
-    ];
+      const queries = [
+        appwriteDb.greaterThanEqual('createdAt', dateFrom),
+        appwriteDb.limit(10000) // Large limit for global stats
+      ];
 
-    const { data, error } = await appwriteDb.listDocuments<GameHistoryDocument>(
-      COLLECTION_IDS.GAME_HISTORY,
-      queries
-    );
+      const { data, error } = await appwriteDb.listDocuments<GameHistoryDocument>(
+        COLLECTION_IDS.GAME_HISTORY,
+        queries
+      );
 
-    if (error || !data) {
-      console.error('Error fetching global statistics:', error);
-      throw new Error('Failed to fetch global statistics');
+      if (error) {
+        console.error('Error fetching global statistics:', error);
+        throw new Error(`Failed to fetch global statistics: ${error}`);
+      }
+
+      // Handle empty data (no games played yet)
+      const games = data || [];
+      const overview = this.calculateOverviewStatistics(games);
+      const gameBreakdown = this.calculateGameTypeBreakdown(games);
+      const timeSeriesData = this.calculateTimeSeriesData(games);
+
+      return {
+        overview,
+        gameBreakdown,
+        timeSeriesData,
+        totalUsers: await this.getTotalActiveUsers(),
+        period: `${days} days`
+      };
+    } catch (error) {
+      console.error('Global statistics error:', error);
+      throw error;
     }
-
-    const games = data;
-    const overview = this.calculateOverviewStatistics(games);
-    const gameBreakdown = this.calculateGameTypeBreakdown(games);
-    const timeSeriesData = this.calculateTimeSeriesData(games);
-
-    return {
-      overview,
-      gameBreakdown,
-      timeSeriesData,
-      totalUsers: await this.getTotalActiveUsers(),
-      period: `${days} days`
-    };
   }
 
   /**
@@ -539,9 +545,9 @@ export class StatisticsServiceAppwrite {
    */
   static async getTotalActiveUsers(): Promise<number> {
     try {
-      const { data, error } = await appwriteDb.listDocuments(
+      const { data, total, error } = await appwriteDb.listDocuments(
         COLLECTION_IDS.USERS,
-        [appwriteDb.equal('isActive', true), appwriteDb.limit(1)]
+        [appwriteDb.equal('isActive', true)]
       );
 
       if (error) {
@@ -549,9 +555,8 @@ export class StatisticsServiceAppwrite {
         return 0;
       }
 
-      // Note: Appwrite doesn't return total count easily, so we'd need to implement pagination
-      // or use a different approach. For now, return 0 and implement proper counting later
-      return data?.length || 0;
+      // Return total count from Appwrite's response
+      return total || 0;
     } catch (error) {
       console.error('Error counting active users:', error);
       return 0;
