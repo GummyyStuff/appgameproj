@@ -203,12 +203,16 @@ authRoutes.get('/me',
         const { UserService } = await import('../services/user-service');
         const { Users } = await import('node-appwrite');
         const { appwriteClient } = await import('../config/appwrite');
+        const { retryAppwriteOperation } = await import('../utils/appwrite-retry');
         
         let profile = await UserService.getUserProfile(appwriteUserId);
         
-        // Get user info from Appwrite to get email/name
+        // Get user info from Appwrite to get email/name (with retry for socket errors)
         const users = new Users(appwriteClient);
-        const appwriteUser = await users.get(appwriteUserId);
+        const appwriteUser = await retryAppwriteOperation(
+          () => users.get(appwriteUserId),
+          { maxRetries: 5, delayMs: 500 }
+        );
         
         if (!profile) {
           console.log('📝 No profile found, creating new user profile...');
@@ -234,7 +238,7 @@ authRoutes.get('/me',
           balance: profile.balance,
         });
       } catch (error) {
-        console.error('❌ Error with Appwrite user profile:', error);
+        console.error('❌ Error with Appwrite user profile after retries:', error);
         throw new HTTPException(401, { message: 'Failed to fetch/create user profile' });
       }
     }

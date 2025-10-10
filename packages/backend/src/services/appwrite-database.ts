@@ -150,10 +150,24 @@ export class AppwriteDatabaseService {
   }
 
   /**
+   * Query helper: Greater Than or Equal
+   */
+  greaterThanEqual(attribute: string, value: any) {
+    return Query.greaterThanEqual(attribute, value);
+  }
+
+  /**
    * Query helper: Less Than
    */
   lessThan(attribute: string, value: number) {
     return Query.lessThan(attribute, value);
+  }
+
+  /**
+   * Query helper: Less Than or Equal
+   */
+  lessThanEqual(attribute: string, value: any) {
+    return Query.lessThanEqual(attribute, value);
   }
 
   /**
