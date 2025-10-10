@@ -10,8 +10,8 @@ const envSchema = z.object({
   SUPABASE_ANON_KEY: z.string().min(1).optional(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
   
-  // Security Configuration
-  JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters long'),
+  // Security Configuration (optional - only needed for tests)
+  JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters long').optional(),
   
   // Game Configuration
   STARTING_BALANCE: z.string().default('10000'),
@@ -58,7 +58,7 @@ export function validateEnv(): Env {
     console.error('Error:', error)
 
     if (error instanceof z.ZodError) {
-      error.errors.forEach(err => {
+      error.issues.forEach(err => {
         console.error(`   ${err.path.join('.')}: ${err.message}`)
       })
     } else {
