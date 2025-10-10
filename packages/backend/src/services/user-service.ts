@@ -50,6 +50,7 @@ export class UserService {
       displayName?: string;
       email?: string;
       balance?: number;
+      avatarUrl?: string;
     }
   ): Promise<UserProfile> {
     // Check if user already exists
@@ -68,7 +69,7 @@ export class UserService {
       totalWon: 0,
       gamesPlayed: 0,
       isModerator: false,
-      avatarPath: 'defaults/default-avatar.svg',
+      avatarPath: data.avatarUrl || 'defaults/default-avatar.svg',
       chatRulesVersion: 1,
       isActive: true,
       createdAt: now,

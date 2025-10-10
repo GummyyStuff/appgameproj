@@ -35,6 +35,7 @@ export const useBalance = (options: {
                 credentials: 'include',
                 headers: {
                     'Accept': 'application/json',
+                    'X-Appwrite-User-Id': user.id, // Add user ID header for auth
                 },
             });
 

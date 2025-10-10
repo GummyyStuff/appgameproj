@@ -3,7 +3,6 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import AppLayout from '../components/layout/AppLayout'
 import HomePage from '../pages/HomePage'
 import LoginPage from '../pages/LoginPage'
-import RegisterPage from '../pages/RegisterPage'
 import ProtectedRoute from '../components/auth/ProtectedRoute'
 
 // Lazy load game pages for better performance
@@ -35,10 +34,6 @@ const router = createBrowserRouter([
       {
         path: 'login',
         element: <LoginPage />,
-      },
-      {
-        path: 'register',
-        element: <RegisterPage />,
       },
       {
         path: 'profile',

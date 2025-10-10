@@ -22,9 +22,10 @@ export const useProfile = () => {
       if (!user) return null
       
       const response = await fetch(`${API_URL}/user/profile`, {
-        credentials: 'include', // Include HTTP-only cookies
+        credentials: 'include',
         headers: {
           'Accept': 'application/json',
+          'X-Appwrite-User-Id': user.id, // Add user ID header for auth
         },
       });
 

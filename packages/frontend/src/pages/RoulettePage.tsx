@@ -153,7 +153,8 @@ const RoulettePage: React.FC = () => {
         method: 'POST',
         credentials: 'include', // Send cookies for auth
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'X-Appwrite-User-Id': user.id, // Required for auth
         },
         body: JSON.stringify({
           amount: betAmount,

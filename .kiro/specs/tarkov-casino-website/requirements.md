@@ -12,7 +12,7 @@ A web-based casino gaming platform themed around Escape from Tarkov, offering cl
 
 #### Acceptance Criteria
 
-1. WHEN a new user visits the site THEN the system SHALL provide registration functionality with username, email, and password
+1. WHEN a new user visits the site THEN the system SHALL provide registration functionality with Discord
 2. WHEN a user registers THEN the system SHALL create an account with starting virtual currency balance
 3. WHEN a user logs in THEN the system SHALL authenticate credentials and establish a session
 4. WHEN a user accesses their profile THEN the system SHALL display current balance, game statistics, and account details

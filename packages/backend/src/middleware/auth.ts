@@ -1,7 +1,5 @@
 import { Context, Next } from 'hono'
 import { HTTPException } from 'hono/http-exception'
-import { getCookie } from 'hono/cookie'
-import { validateSession, SESSION_COOKIE_NAME } from '../config/appwrite'
 import { UserService } from '../services/user-service'
 
 export interface AuthUser {
@@ -22,60 +20,45 @@ declare module 'hono' {
 }
 
 /**
- * Authentication middleware that validates Appwrite sessions
- * Extracts user information from session cookie and adds it to the context
+ * Authentication middleware for client-side OAuth
+ * Validates that user is authenticated via Appwrite client SDK
+ * and exists in our database
  */
 export async function authMiddleware(c: Context, next: Next) {
-  const sessionSecret = getCookie(c, SESSION_COOKIE_NAME)
+  // Get Appwrite user ID from header (sent by frontend after Appwrite session check)
+  const appwriteUserId = c.req.header('X-Appwrite-User-Id')
   
-  // Debug logging for production issues
-  if (!sessionSecret) {
-    console.log('🔍 Auth Debug:', {
-      cookieName: SESSION_COOKIE_NAME,
-      allCookies: c.req.header('Cookie'),
+  if (!appwriteUserId) {
+    console.log('🔍 Auth Debug: Missing X-Appwrite-User-Id header', {
+      headers: Object.fromEntries(
+        Object.entries(c.req.header()).filter(([k]) => k.toLowerCase().includes('auth') || k.toLowerCase().includes('appwrite'))
+      ),
       origin: c.req.header('Origin'),
-      referer: c.req.header('Referer'),
       path: c.req.path
     })
     throw new HTTPException(401, { message: 'Missing session. Please log in.' })
   }
 
   try {
-    console.log('🔍 Validating session...');
+    console.log('🔍 Validating user:', appwriteUserId);
     
-    // Validate the session with Appwrite (using session secret)
-    const user = await validateSession(sessionSecret)
-    
-    if (!user) {
-      console.log('❌ Invalid session');
-      throw new HTTPException(401, { message: 'Invalid or expired session' })
-    }
-
-    console.log('✅ Session validated for user:', user.id);
-
-    // Get additional user profile data from Appwrite database if needed
-    const profile = await UserService.getUserProfile(user.id)
+    // Validate user exists in our database
+    const profile = await UserService.getUserProfile(appwriteUserId)
     
     if (!profile) {
-      console.log('📝 No profile found, creating new user profile...');
-      // Create profile on first login
-      await UserService.createUserProfile(user.id, {
-        username: user.name || user.email.split('@')[0],
-        displayName: user.name,
-        email: user.email
-      });
+      console.log('❌ User profile not found');
+      throw new HTTPException(401, { message: 'User profile not found. Please log in again.' })
     }
+
+    console.log('✅ User validated:', profile.username);
 
     // Add user to context
     c.set('user', {
-      id: user.id,
-      email: user.email || '',
-      name: user.name,
-      username: profile?.username || user.name
+      id: appwriteUserId,
+      email: profile.email || '',
+      name: profile.displayName || profile.username,
+      username: profile.username
     })
-
-    // Store session secret in context
-    c.set('sessionId', sessionSecret)
 
     await next()
   } catch (error) {
@@ -93,23 +76,20 @@ export async function authMiddleware(c: Context, next: Next) {
  * Useful for endpoints that work with or without authentication
  */
 export async function optionalAuthMiddleware(c: Context, next: Next) {
-  const sessionSecret = getCookie(c, SESSION_COOKIE_NAME)
+  // Get Appwrite user ID from header (sent by frontend after Appwrite session check)
+  const appwriteUserId = c.req.header('X-Appwrite-User-Id')
   
-  if (sessionSecret) {
+  if (appwriteUserId) {
     try {
-      const user = await validateSession(sessionSecret)
+      const profile = await UserService.getUserProfile(appwriteUserId)
       
-      if (user) {
-        const profile = await UserService.getUserProfile(user.id)
-
+      if (profile) {
         c.set('user', {
-          id: user.id,
-          email: user.email || '',
-          name: user.name,
-          username: profile?.username
+          id: appwriteUserId,
+          email: profile.email || '',
+          name: profile.displayName || profile.username,
+          username: profile.username
         })
-        
-        c.set('sessionId', sessionSecret)
       }
     } catch (error) {
       // Silently fail for optional auth

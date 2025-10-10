@@ -153,18 +153,11 @@ const Navigation: React.FC = () => {
             ) : (
               <div className="flex items-center space-x-3">
                 <TarkovButton
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => playGameSound('click')}
-                >
-                  <Link to="/login">Login</Link>
-                </TarkovButton>
-                <TarkovButton
                   variant="primary"
                   size="sm"
                   onClick={() => playGameSound('click')}
                 >
-                  <Link to="/register">Register</Link>
+                  <Link to="/login">Login with Discord</Link>
                 </TarkovButton>
               </div>
             )}
@@ -272,17 +265,6 @@ const Navigation: React.FC = () => {
                 ) : (
                   <div className="space-y-3 px-4">
                     <TarkovButton
-                      variant="secondary"
-                      size="sm"
-                      fullWidth
-                      onClick={() => {
-                        playGameSound('click')
-                        setIsMobileMenuOpen(false)
-                      }}
-                    >
-                      <Link to="/login">Login</Link>
-                    </TarkovButton>
-                    <TarkovButton
                       variant="primary"
                       size="sm"
                       fullWidth
@@ -291,7 +273,7 @@ const Navigation: React.FC = () => {
                         setIsMobileMenuOpen(false)
                       }}
                     >
-                      <Link to="/register">Register</Link>
+                      <Link to="/login">Login with Discord</Link>
                     </TarkovButton>
                   </div>
                 )}

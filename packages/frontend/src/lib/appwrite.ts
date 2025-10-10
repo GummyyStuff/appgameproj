@@ -1,4 +1,4 @@
-import { Client, Account, Databases, Storage } from 'appwrite';
+import { Client, Account, Databases, Storage, OAuthProvider } from 'appwrite';
 
 // Validate required environment variables
 const requiredEnvVars = {
@@ -44,6 +44,9 @@ export const appwriteClient = new Client()
 export const account = new Account(appwriteClient);
 export const databases = new Databases(appwriteClient);
 export const storage = new Storage(appwriteClient);
+
+// Export OAuthProvider for use in auth hook
+export { OAuthProvider };
 
 // Export client as default for convenience
 export default appwriteClient;

@@ -5,6 +5,7 @@
  */
 
 import { CaseType, CaseOpeningResult } from '../types/caseOpening'
+import { account } from '../lib/appwrite'
 
 export interface CaseOpeningRequest {
   caseTypeId: string
@@ -53,10 +54,14 @@ export class CaseOpeningApiServiceImpl implements CaseOpeningApiService {
     const requestId = generateRequestId()
 
     try {
+      // Get current user for authentication header
+      const user = await account.get();
+      
       const response = await fetch('/api/games/cases/open', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'X-Appwrite-User-Id': user.$id, // Required for auth
         },
         credentials: 'include', // Include cookies for authentication
         body: JSON.stringify({
@@ -98,10 +103,14 @@ export class CaseOpeningApiServiceImpl implements CaseOpeningApiService {
     const requestId = generateRequestId()
 
     try {
+      // Get current user for authentication header
+      const user = await account.get();
+      
       const response = await fetch('/api/games/cases/open', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'X-Appwrite-User-Id': user.$id, // Required for auth
         },
         credentials: 'include', // Include cookies for authentication
         body: JSON.stringify({

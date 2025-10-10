@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useAuth } from '../../hooks/useAuth'
 import { useBalance } from '../../hooks/useBalance'
 import { useAdvancedFeatures } from '../../hooks/useAdvancedFeatures'
 // Supabase import removed - using Appwrite with cookie auth
@@ -40,6 +41,7 @@ interface BlackjackGameResult {
 }
 
 const BlackjackGame: React.FC = () => {
+  const { user } = useAuth()
   const { balance, refetch: refreshBalance } = useBalance()
   const { trackGamePlayed, updateAchievementProgress } = useAdvancedFeatures()
   
@@ -97,7 +99,8 @@ const BlackjackGame: React.FC = () => {
         method: 'POST',
         credentials: 'include',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'X-Appwrite-User-Id': user?.id || '', // Required for auth
         },
         body: JSON.stringify({ amount: betAmount })
       })
@@ -189,7 +192,8 @@ const BlackjackGame: React.FC = () => {
         method: 'POST',
         credentials: 'include',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'X-Appwrite-User-Id': user?.id || '', // Required for auth
         },
         body: JSON.stringify(requestBody)
       })
