@@ -1,5 +1,5 @@
 /**
- * Comprehensive tests for Case Opening Service
+ * Comprehensive tests for Case Opening Service (Appwrite)
  * Tests core logic, rarity distribution, and provably fair algorithms
  */
 
@@ -7,14 +7,16 @@ import { describe, test, expect } from 'bun:test'
 
 // Set up environment variables before any imports
 process.env.NODE_ENV = 'test'
-process.env.SUPABASE_URL = 'http://localhost:54321'
-process.env.SUPABASE_ANON_KEY = 'test-anon-key-that-is-long-enough'
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key-that-is-long-enough'
+process.env.APPWRITE_ENDPOINT = 'https://db.juanis.cool/v1'
+process.env.APPWRITE_PROJECT_ID = 'tarkovcas'
+process.env.APPWRITE_API_KEY = 'test-key'
+process.env.APPWRITE_DATABASE_ID = 'main_db'
+process.env.FRONTEND_URL = 'http://localhost:3000'
 process.env.JWT_SECRET = 'test-jwt-secret-that-is-at-least-32-characters-long-for-validation'
 process.env.STARTING_BALANCE = '10000'
 process.env.DAILY_BONUS = '1000'
 
-import { CaseOpeningService, type CaseType, type TarkovItem, type WeightedItem, type ItemRarity } from './case-opening'
+import { CaseOpeningService, type CaseType, type TarkovItem, type WeightedItem, type ItemRarity } from './case-opening-appwrite'
 
 describe('Case Opening Service', () => {
 

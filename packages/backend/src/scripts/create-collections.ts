@@ -6,10 +6,9 @@
  * Or from backend dir: bun run src/scripts/create-collections.ts
  */
 
-import { Databases, ID, Permission, Role } from 'node-appwrite';
 import { resolve } from 'path';
 
-// Load environment variables from backend .env file
+// Load environment variables from backend .env file FIRST
 const envPath = resolve(__dirname, '../../.env');
 console.log(`Loading environment from: ${envPath}`);
 
@@ -33,8 +32,15 @@ try {
   console.log('Continuing with existing environment variables...\n');
 }
 
-import { appwriteClient } from '../config/appwrite';
+// NOW import after env vars are loaded
+import { Databases, ID, Permission, Role, Client } from 'node-appwrite';
 import { DATABASE_ID, COLLECTION_IDS } from '../config/collections';
+
+// Create client directly here instead of importing from appwrite.ts
+const appwriteClient = new Client()
+  .setEndpoint(process.env.APPWRITE_ENDPOINT!)
+  .setProject(process.env.APPWRITE_PROJECT_ID!)
+  .setKey(process.env.APPWRITE_API_KEY!);
 
 const databases = new Databases(appwriteClient);
 

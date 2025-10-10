@@ -8,9 +8,7 @@ import { HTTPException } from 'hono/http-exception'
 import { z } from 'zod'
 import { authMiddleware } from '../middleware/auth'
 import { asyncHandler } from '../middleware/error'
-import { StatisticsService, StatisticsFilters } from '../services/statistics'
-import { DatabaseService } from '../services/database'
-import { isValidGameType } from '../types/database'
+import { StatisticsServiceAppwrite as StatisticsService, StatisticsFilters } from '../services/statistics-appwrite'
 
 export const statisticsRoutes = new Hono()
 

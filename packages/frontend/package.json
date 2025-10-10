@@ -24,7 +24,6 @@
     "bundle-analyzer": "npx vite-bundle-analyzer dist"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.57.4",
     "@tailwindcss/vite": "^4.1.13",
     "@tanstack/react-query": "^5.89.0",
     "appwrite": "14.0.1",

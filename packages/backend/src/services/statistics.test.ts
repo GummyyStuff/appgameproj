@@ -3,57 +3,68 @@
  * Tests all statistics calculation methods with comprehensive test cases
  */
 
-import { describe, test, expect } from 'bun:test'
-import { StatisticsService } from './statistics'
-import { GameHistory } from '../types/database'
+import { describe, test, expect, beforeEach } from 'bun:test'
+import { StatisticsServiceAppwrite as StatisticsService } from './statistics-appwrite'
+
+// Update GameHistory interface to match Appwrite structure
+interface GameHistory {
+  $id: string;
+  userId: string;
+  gameType: 'roulette' | 'blackjack' | 'case_opening';
+  betAmount: number;
+  winAmount: number;
+  resultData: string; // JSON string in Appwrite
+  gameDuration?: number;
+  createdAt: string;
+}
 
 describe('StatisticsService', () => {
   let mockGameHistory: GameHistory[]
 
   beforeEach(() => {
-    // Reset mock data before each test
+    // Reset mock data before each test - updated for Appwrite format
     mockGameHistory = [
       {
-        id: '1',
-        user_id: 'test-user',
-        game_type: 'roulette',
-        bet_amount: 100,
-        win_amount: 200,
-        result_data: { bet_type: 'red', bet_value: 'red', winning_number: 7, multiplier: 2 },
-        created_at: '2024-01-15T10:00:00Z'
+        $id: '1',
+        userId: 'test-user',
+        gameType: 'roulette',
+        betAmount: 100,
+        winAmount: 200,
+        resultData: JSON.stringify({ bet_type: 'red', bet_value: 'red', winning_number: 7, multiplier: 2 }),
+        createdAt: '2024-01-15T10:00:00Z'
       },
       {
-        id: '2',
-        user_id: 'test-user',
-        game_type: 'blackjack',
-        bet_amount: 50,
-        win_amount: 0,
-        result_data: { 
+        $id: '2',
+        userId: 'test-user',
+        gameType: 'blackjack',
+        betAmount: 50,
+        winAmount: 0,
+        resultData: JSON.stringify({ 
           player_hand: [{ suit: 'hearts', value: 'K' }, { suit: 'spades', value: '7' }],
           dealer_hand: [{ suit: 'diamonds', value: 'A' }, { suit: 'clubs', value: 'K' }],
           result: 'dealer_win'
-        },
-        created_at: '2024-01-15T11:00:00Z'
+        }),
+        createdAt: '2024-01-15T11:00:00Z'
       },
 
       {
-        id: '3',
-        user_id: 'test-user',
-        game_type: 'roulette',
-        bet_amount: 25,
-        win_amount: 75,
-        result_data: { bet_type: 'dozen', bet_value: 1, winning_number: 5, multiplier: 3 },
-        created_at: '2024-01-15T12:00:00Z'
+        $id: '3',
+        userId: 'test-user',
+        gameType: 'roulette',
+        betAmount: 25,
+        winAmount: 75,
+        resultData: JSON.stringify({ bet_type: 'dozen', bet_value: 1, winning_number: 5, multiplier: 3 }),
+        createdAt: '2024-01-15T12:00:00Z'
       },
 
       {
-        id: '4',
-        user_id: 'test-user',
-        game_type: 'roulette',
-        bet_amount: 200,
-        win_amount: 0,
-        result_data: { bet_type: 'number', bet_value: 13, winning_number: 7, multiplier: 0 },
-        created_at: '2024-01-16T10:00:00Z'
+        $id: '4',
+        userId: 'test-user',
+        gameType: 'roulette',
+        betAmount: 200,
+        winAmount: 0,
+        resultData: JSON.stringify({ bet_type: 'number', bet_value: 13, winning_number: 7, multiplier: 0 }),
+        createdAt: '2024-01-16T10:00:00Z'
       }
     ]
   })
@@ -83,7 +94,7 @@ describe('StatisticsService', () => {
       expect(stats.netProfit).toBe(0)
       expect(stats.winRate).toBe(0)
       expect(stats.biggestWin).toBe(0) // Empty statistics return 0
-      expect(stats.biggestLoss).toBe(0)
+      expect(stats.biggestLoss).toBe(0) // Empty statistics return 0
       expect(stats.averageBet).toBe(0) // Empty statistics return 0
       expect(stats.averageWin).toBe(0)
       expect(stats.profitMargin).toBe(0)
@@ -110,7 +121,7 @@ describe('StatisticsService', () => {
     test('should calculate breakdown for all game types', () => {
       const breakdown = StatisticsService.calculateGameTypeBreakdown(mockGameHistory)
 
-      expect(breakdown).toHaveLength(2)
+      expect(breakdown).toHaveLength(3) // roulette, blackjack, case_opening
       expect(breakdown.map(b => b.gameType)).toEqual(expect.arrayContaining(['roulette', 'blackjack']))
 
       // Find roulette breakdown

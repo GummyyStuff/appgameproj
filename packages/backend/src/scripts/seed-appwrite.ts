@@ -8,7 +8,7 @@
 
 import { resolve } from 'path';
 
-// Load environment variables from backend .env file
+// Load environment variables from backend .env file FIRST
 const envPath = resolve(__dirname, '../../.env');
 console.log(`Loading environment from: ${envPath}`);
 
@@ -32,9 +32,35 @@ try {
   console.log('Continuing with existing environment variables...\n');
 }
 
-import { appwriteDb } from '../services/appwrite-database';
-import { COLLECTION_IDS } from '../config/collections';
-import { ID } from 'node-appwrite';
+// NOW import after env vars are loaded
+import { COLLECTION_IDS, DATABASE_ID } from '../config/collections';
+import { Databases, ID, Client } from 'node-appwrite';
+
+// Create client directly here instead of importing from appwrite.ts
+const appwriteClient = new Client()
+  .setEndpoint(process.env.APPWRITE_ENDPOINT!)
+  .setProject(process.env.APPWRITE_PROJECT_ID!)
+  .setKey(process.env.APPWRITE_API_KEY!);
+
+const databases = new Databases(appwriteClient);
+
+// Helper functions to match appwriteDb interface
+const appwriteDb = {
+  async createDocument(collectionId: string, data: any, documentId: string = ID.unique()) {
+    try {
+      const response = await databases.createDocument(
+        DATABASE_ID,
+        collectionId,
+        documentId,
+        data
+      );
+      return { data: response, error: null };
+    } catch (error: any) {
+      console.error(`Error creating document in ${collectionId}:`, error);
+      return { data: null, error: error.message || 'Failed to create document' };
+    }
+  }
+};
 
 // Case Types Data
 const caseTypes = [
