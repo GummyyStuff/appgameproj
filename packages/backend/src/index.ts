@@ -204,13 +204,13 @@ app.onError(errorHandler)
 // Graceful shutdown handling
 process.on('SIGTERM', async () => {
   console.log('🛑 SIGTERM received, shutting down gracefully...')
-  await supabaseRealtimeService.shutdown()
+  // No services to shutdown for Appwrite
   process.exit(0)
 })
 
 process.on('SIGINT', async () => {
   console.log('🛑 SIGINT received, shutting down gracefully...')
-  await supabaseRealtimeService.shutdown()
+  // No services to shutdown for Appwrite
   process.exit(0)
 })
 
@@ -231,14 +231,14 @@ process.on('uncaughtException', (error) => {
 
 const port = config.port
 
-// Initialize Supabase Realtime service
+// Initialize services (Appwrite version)
 async function initializeServices() {
   try {
-    await supabaseRealtimeService.initialize()
-    await supabaseRealtimeService.subscribeToTableChanges()
-    console.log('✅ Supabase Realtime service initialized')
+    // Appwrite doesn't require server-side initialization
+    // Realtime is handled client-side
+    console.log('✅ Appwrite services ready')
   } catch (error) {
-    console.error('❌ Failed to initialize Supabase Realtime:', error)
+    console.error('❌ Failed to initialize services:', error)
     if (isProduction()) {
       process.exit(1)
     }
@@ -248,7 +248,7 @@ async function initializeServices() {
 console.log(`🎰 Tarkov Casino Backend starting...`)
 console.log(`📊 Environment: ${env.NODE_ENV}`)
 console.log(`🚀 Port: ${port}`)
-console.log(`🔗 Supabase URL: ${env.SUPABASE_URL}`)
+console.log(`🔗 Database: Appwrite (${process.env.APPWRITE_ENDPOINT})`)
 console.log(`📝 Logging: ${config.enableRequestLogging ? 'enabled' : 'disabled'}`)
 console.log(`📊 Metrics: ${config.metricsEnabled ? 'enabled' : 'disabled'}`)
 

@@ -5,10 +5,10 @@ const envSchema = z.object({
   PORT: z.string().default('3000'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   
-  // Supabase Configuration
-  SUPABASE_URL: z.string().url(),
-  SUPABASE_ANON_KEY: z.string().min(1),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
+  // Supabase Configuration (DEPRECATED - kept for backward compatibility)
+  SUPABASE_URL: z.string().url().optional(),
+  SUPABASE_ANON_KEY: z.string().min(1).optional(),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
   
   // Security Configuration
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters long'),
@@ -45,7 +45,7 @@ export function validateEnv(): Env {
       console.log('🔧 Environment Configuration:')
       console.log(`   NODE_ENV: ${parsed.NODE_ENV}`)
       console.log(`   PORT: ${parsed.PORT}`)
-      console.log(`   SUPABASE_URL: ${parsed.SUPABASE_URL}`)
+      console.log(`   DATABASE: Appwrite`)
       console.log(`   LOG_LEVEL: ${parsed.LOG_LEVEL}`)
       console.log(`   METRICS_ENABLED: ${parsed.METRICS_ENABLED}`)
     }
