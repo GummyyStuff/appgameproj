@@ -78,12 +78,12 @@ RUN useradd --system --uid 1001 --gid nodejs bunjs
 RUN chown -R bunjs:nodejs /app
 USER bunjs
 
-# Expose port
-EXPOSE 3000
+# Expose port (dynamic based on env)
+EXPOSE ${PORT:-3000}
 
-# Enhanced health check for Coolify
+# Enhanced health check for Coolify (uses PORT env var, defaults to 3000)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-  CMD curl -f http://localhost:3000/api/health || exit 1
+  CMD curl -f http://localhost:${PORT:-3000}/api/health || exit 1
 
 # Start the application with proper signal handling
 CMD ["bun", "run", "dist/index.js"]
