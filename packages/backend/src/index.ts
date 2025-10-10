@@ -38,9 +38,9 @@ app.use('*', cors({
   credentials: true,
 }))
 
-// Content validation middleware
-app.use('*', validateContentType(['application/json', 'text/plain']))
-app.use('*', validateRequestSize(5 * 1024 * 1024)) // 5MB limit
+// Content validation middleware (only for API routes, not static files)
+app.use('/api/*', validateContentType(['application/json', 'text/plain']))
+app.use('/api/*', validateRequestSize(5 * 1024 * 1024)) // 5MB limit
 
 // Session management
 app.use('*', sessionTimeoutMiddleware())
