@@ -26,9 +26,9 @@ export async function retryAppwriteOperation<T>(
   
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      // Add timeout wrapper
+      // Add timeout wrapper (30s for database operations)
       const timeoutPromise = new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error('Operation timeout')), 10000)
+        setTimeout(() => reject(new Error('Operation timeout')), 30000)
       );
       
       const result = await Promise.race([operation(), timeoutPromise]);

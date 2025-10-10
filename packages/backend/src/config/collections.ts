@@ -28,6 +28,7 @@ export interface UserProfile {
   userId: string;
   username: string;
   displayName?: string;
+  email?: string; // User's email from Discord OAuth
   balance: number;
   totalWagered: number;
   totalWon: number;

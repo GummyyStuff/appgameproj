@@ -32,7 +32,7 @@ export class AppwriteDatabaseService {
         data,
         permissions
       );
-      return { data: response as T & { $id: string }, error: null };
+      return { data: response as unknown as T & { $id: string }, error: null };
     } catch (error: any) {
       console.error(`Error creating document in ${collectionId}:`, error);
       return { data: null, error: error.message || 'Failed to create document' };
@@ -49,7 +49,7 @@ export class AppwriteDatabaseService {
         collectionId,
         documentId
       );
-      return { data: response as T & { $id: string }, error: null };
+      return { data: response as unknown as T & { $id: string }, error: null };
     } catch (error: any) {
       console.error(`Error getting document from ${collectionId}:`, error);
       return { data: null, error: error.message || 'Document not found' };
@@ -73,7 +73,7 @@ export class AppwriteDatabaseService {
         data,
         permissions
       );
-      return { data: response as T & { $id: string }, error: null };
+      return { data: response as unknown as T & { $id: string }, error: null };
     } catch (error: any) {
       console.error(`Error updating document in ${collectionId}:`, error);
       return { data: null, error: error.message || 'Failed to update document' };
@@ -106,13 +106,13 @@ export class AppwriteDatabaseService {
       
       const response = await retryAppwriteOperation(
         () => this.databases.listDocuments(DATABASE_ID, collectionId, queries),
-        { maxRetries: 2, delayMs: 300 }
+        { maxRetries: 3, delayMs: 1000 }
       );
       
       console.log(`✅ Found ${response.documents.length} documents (total: ${response.total})`)
       
       return {
-        data: response.documents as (T & { $id: string })[],
+        data: response.documents as unknown as (T & { $id: string })[],
         total: response.total,
         error: null,
       };
