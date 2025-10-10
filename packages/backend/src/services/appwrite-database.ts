@@ -6,6 +6,7 @@
 import { Databases, Query, ID, Permission, Role } from 'node-appwrite';
 import { appwriteClient } from '../config/appwrite';
 import { DATABASE_ID, CollectionId } from '../config/collections';
+import { retryAppwriteOperation } from '../utils/appwrite-retry';
 
 export class AppwriteDatabaseService {
   private databases: Databases;
@@ -103,10 +104,9 @@ export class AppwriteDatabaseService {
     try {
       console.log(`📋 Listing documents from ${collectionId} with ${queries.length} queries`)
       
-      const response = await this.databases.listDocuments(
-        DATABASE_ID,
-        collectionId,
-        queries
+      const response = await retryAppwriteOperation(
+        () => this.databases.listDocuments(DATABASE_ID, collectionId, queries),
+        { maxRetries: 2, delayMs: 300 }
       );
       
       console.log(`✅ Found ${response.documents.length} documents (total: ${response.total})`)

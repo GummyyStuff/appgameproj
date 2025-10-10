@@ -1,5 +1,7 @@
 import { Hono } from 'hono'
 import { env, config } from '../config/env'
+import { appwriteDb } from '../services/appwrite-database'
+import { COLLECTION_IDS } from '../config/collections'
 
 const monitoring = new Hono()
 
@@ -84,15 +86,38 @@ monitoring.get('/health/detailed', async (c) => {
 // Readiness check (for Kubernetes-style deployments)
 monitoring.get('/ready', async (c) => {
   try {
-    // Simple readiness check - service is ready
+    const startTime = Date.now()
+    
+    // Test Appwrite connectivity
+    let appwriteStatus = 'unknown';
+    let appwriteError = null;
+    
+    try {
+      const testQuery = await Promise.race([
+        appwriteDb.listDocuments(COLLECTION_IDS.USERS, [appwriteDb.limit(1)]),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 3000))
+      ]) as any;
+      
+      appwriteStatus = testQuery.error ? 'error' : 'connected';
+      appwriteError = testQuery.error;
+    } catch (error: any) {
+      appwriteStatus = 'timeout';
+      appwriteError = error.message;
+    }
+    
+    const responseTime = Date.now() - startTime;
+    const isReady = appwriteStatus === 'connected';
+    
     return c.json({
-      ready: true,
+      ready: isReady,
       timestamp: new Date().toISOString(),
       checks: {
         database: 'appwrite',
-        status: 'ready'
+        status: appwriteStatus,
+        error: appwriteError,
+        responseTime
       }
-    }, 200)
+    }, isReady ? 200 : 503)
   } catch (error) {
     return c.json({
       ready: false,

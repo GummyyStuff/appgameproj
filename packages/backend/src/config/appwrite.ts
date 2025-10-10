@@ -14,34 +14,22 @@ for (const envVar of requiredEnvVars) {
   }
 }
 
-// Create a custom fetch with timeout and retry logic
-const createResilientFetch = (timeout: number = 30000) => {
-  return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), timeout);
-    
-    try {
-      const response = await fetch(input, {
-        ...init,
-        signal: controller.signal,
-        // Add keep-alive and connection pooling
-        keepalive: true,
-      });
-      clearTimeout(id);
-      return response;
-    } catch (error) {
-      clearTimeout(id);
-      console.error('Fetch error:', error);
-      throw error;
-    }
-  };
-};
-
-// Initialize Appwrite client with production settings and custom fetch
+// Initialize Appwrite client with production settings
+// Note: node-appwrite doesn't support custom fetch in the same way browser SDK does
+// We'll rely on Node's built-in HTTP agent configuration
 export const appwriteClient = new Client()
   .setEndpoint(process.env.APPWRITE_ENDPOINT!)
   .setProject(process.env.APPWRITE_PROJECT_ID!)
   .setKey(process.env.APPWRITE_API_KEY!);
+
+// Log client configuration in development
+if (process.env.NODE_ENV !== 'production') {
+  console.log('🔧 Appwrite Client Config:', {
+    endpoint: process.env.APPWRITE_ENDPOINT,
+    project: process.env.APPWRITE_PROJECT_ID,
+    hasApiKey: !!process.env.APPWRITE_API_KEY
+  });
+}
 
 export const appwriteAccount = new Account(appwriteClient);
 
@@ -71,10 +59,15 @@ export interface OAuthSession {
  * Handles the OAuth callback by creating a session with the provided credentials
  */
 export const handleOAuthCallback = async (userId: string, secret: string): Promise<OAuthSession> => {
+  const { retryAppwriteOperation } = await import('../utils/appwrite-retry');
+  
   try {
     console.log('🔐 Creating Appwrite session...', { userId, secret: secret ? 'present' : 'missing' });
     
-    const session = await appwriteAccount.createSession(userId, secret);
+    const session = await retryAppwriteOperation(
+      () => appwriteAccount.createSession(userId, secret),
+      { maxRetries: 3, delayMs: 500 }
+    );
     
     console.log('✅ Session created successfully:', {
       sessionId: session.$id,
@@ -102,7 +95,7 @@ export const handleOAuthCallback = async (userId: string, secret: string): Promi
     
     return oauthSession;
   } catch (error) {
-    console.error('❌ Failed to create OAuth session:', error);
+    console.error('❌ Failed to create OAuth session after retries:', error);
     throw new Error('Authentication failed: Could not create session');
   }
 };
@@ -112,31 +105,35 @@ export const handleOAuthCallback = async (userId: string, secret: string): Promi
  * Creates a session client with the session secret from cookie
  */
 export const validateSession = async (sessionSecret: string) => {
+  const { retryAppwriteOperation } = await import('../utils/appwrite-retry');
+  
   try {
-    // Create a new session client for this request
-    const sessionClient = new Client()
-      .setEndpoint(process.env.APPWRITE_ENDPOINT!)
-      .setProject(process.env.APPWRITE_PROJECT_ID!)
-      .setSession(sessionSecret); // Use the session secret from cookie
-    
-    const { Account } = await import('node-appwrite');
-    const account = new Account(sessionClient);
-    
-    // Get the current user's account info
-    const user = await account.get();
-    
-    return {
-      id: user.$id,
-      email: user.email,
-      name: user.name,
-      avatar: `https://avatars.${new URL(process.env.APPWRITE_ENDPOINT!).hostname}/avatars/initials?name=${encodeURIComponent(user.name || user.email)}`,
-      sessionId: sessionSecret,
-      emailVerified: user.emailVerification,
-      createdAt: user.$createdAt,
-      updatedAt: user.$updatedAt
-    };
+    return await retryAppwriteOperation(async () => {
+      // Create a new session client for this request
+      const sessionClient = new Client()
+        .setEndpoint(process.env.APPWRITE_ENDPOINT!)
+        .setProject(process.env.APPWRITE_PROJECT_ID!)
+        .setSession(sessionSecret); // Use the session secret from cookie
+      
+      const { Account } = await import('node-appwrite');
+      const account = new Account(sessionClient);
+      
+      // Get the current user's account info
+      const user = await account.get();
+      
+      return {
+        id: user.$id,
+        email: user.email,
+        name: user.name,
+        avatar: `https://avatars.${new URL(process.env.APPWRITE_ENDPOINT!).hostname}/avatars/initials?name=${encodeURIComponent(user.name || user.email)}`,
+        sessionId: sessionSecret,
+        emailVerified: user.emailVerification,
+        createdAt: user.$createdAt,
+        updatedAt: user.$updatedAt
+      };
+    }, { maxRetries: 3, delayMs: 500 });
   } catch (error) {
-    console.error('Session validation failed:', error);
+    console.error('Session validation failed after retries:', error);
     return null;
   }
 };

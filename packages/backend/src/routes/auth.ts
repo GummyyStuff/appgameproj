@@ -151,22 +151,31 @@ authRoutes.get('/callback',
       // Leave it undefined to make it a host-only cookie (more secure and works better)
       const isProduction = process.env.NODE_ENV === 'production' || FRONTEND_URL.startsWith('https://');
       
-      setCookie(c, sessionCookieName, session.secret, { // Use session.secret, not session.$id!
+      const cookieOptions = {
         httpOnly: true,
         secure: isProduction, // Use secure cookies on HTTPS (production)
-        sameSite: 'Lax',
+        sameSite: 'Lax' as const,
         maxAge: SESSION_MAX_AGE,
         path: '/',
         // Don't set domain - let it default to current host
         // This makes the cookie available to the same origin (protocol + domain + port)
+      };
+      
+      setCookie(c, sessionCookieName, session.secret, cookieOptions);
+      
+      console.log('🍪 SETTING SESSION COOKIE:', { 
+        name: sessionCookieName,
+        value: session.secret.substring(0, 20) + '...', 
+        valueLength: session.secret.length,
+        options: cookieOptions,
+        sessionExpire: session.expire,
+        userId: session.userId,
+        redirectUrl: FRONTEND_URL
       });
       
-      console.log('🍪 Set session cookie:', { 
-        name: sessionCookieName, 
-        secure: isProduction,
-        sameSite: 'Lax',
-        httpOnly: true
-      });
+      // Also set response header to verify cookie is being set
+      const cookieString = `${sessionCookieName}=${session.secret}; Path=/; Max-Age=${SESSION_MAX_AGE}; HttpOnly; ${isProduction ? 'Secure; ' : ''}SameSite=Lax`;
+      console.log('🍪 Cookie Header:', cookieString.substring(0, 100) + '...');
 
       return c.redirect(`${FRONTEND_URL}/`);
     } catch (error) {
