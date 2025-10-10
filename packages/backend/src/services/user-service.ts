@@ -12,17 +12,24 @@ export class UserService {
    * Get user profile by user ID
    */
   static async getUserProfile(userId: string): Promise<UserProfile | null> {
-    // Try to find by userId attribute first
-    const { data: users } = await appwriteDb.listDocuments<UserProfile>(
-      COLLECTION_IDS.USERS,
-      [appwriteDb.equal('userId', userId)]
-    );
-
-    if (users && users.length > 0) {
-      return users[0];
+    try {
+      // Use HTTP client to avoid SDK issues
+      const { listDocuments } = await import('../config/appwrite-http');
+      const result = await listDocuments(
+        process.env.APPWRITE_DATABASE_ID || 'main_db',
+        COLLECTION_IDS.USERS,
+        [`equal("userId", "${userId}")`]
+      );
+      
+      if (result && result.documents && result.documents.length > 0) {
+        return result.documents[0] as UserProfile;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error getting user profile:', error);
+      return null;
     }
-
-    return null;
   }
 
   /**

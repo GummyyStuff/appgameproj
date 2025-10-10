@@ -16,6 +16,7 @@ Migrate from Supabase to self-hosted Appwrite, converting PostgreSQL schema to N
 ## Phase 1 Status: ✅ **COMPLETE**
 
 **What's Been Built (13 new files):**
+
 - ✅ `config/collections.ts` - Collection definitions & TypeScript interfaces
 - ✅ `services/appwrite-database.ts` - Database service layer
 - ✅ `services/user-service.ts` - User operations
@@ -31,6 +32,7 @@ Migrate from Supabase to self-hosted Appwrite, converting PostgreSQL schema to N
 - ✅ Comprehensive documentation (3 markdown files)
 
 **Ready to Execute:**
+
 ```bash
 # Create collections in Appwrite
 bun run packages/backend/src/scripts/create-collections.ts
@@ -673,12 +675,9 @@ Create script to populate:
 
 ### To-dos
 
-**PHASE 1: Database Setup - SCRIPTS READY**
 - [ ] **MANUAL:** Run `bun run packages/backend/src/scripts/create-collections.ts` to create collections
 - [ ] **MANUAL:** Run `bun run packages/backend/src/scripts/seed-appwrite.ts` to seed initial data
 - [ ] **MANUAL:** Update environment variables (see APPWRITE_MIGRATION_GUIDE.md)
-
-**PHASE 2: Backend Services** ✅ **MOSTLY COMPLETE (80%)**
 - [x] Create centralized Appwrite database service layer with connection management ✅
 - [x] Rewrite UserService to use Appwrite instead of SQL RPC functions ✅
 - [x] Rewrite CurrencyService with TypeScript transaction logic replacing SQL stored procedures ✅
@@ -688,35 +687,24 @@ Create script to populate:
 - [x] Create ChatService for message operations using Appwrite ✅
 - [x] Create AuditService for logging using Appwrite ✅
 - [x] Update auth middleware to remove Supabase client references ✅
-- [~] Update all backend route handlers to use new Appwrite services **PARTIAL (30%)**
-  - [x] Updated user.ts (profile, balance endpoints) ✅
-  - [ ] Finish user.ts (daily bonus, stats endpoints)
-  - [ ] Update games.ts to use new services
-  - [ ] Create chat.ts routes
-
-**PHASE 3: Realtime** ✅ **50% COMPLETE**
+- [x] Updated user.ts (profile, balance endpoints) ✅
+- [ ] Finish user.ts (daily bonus, stats endpoints)
+- [ ] Update games.ts to use new services
+- [ ] Create chat.ts routes
 - [x] Create frontend Appwrite Realtime service ✅
 - [ ] Create backend Appwrite Realtime service for server-side broadcasting
 - [ ] Migrate chat realtime hook from Supabase to Appwrite Realtime
 - [ ] Create game realtime hook using Appwrite Realtime
 - [ ] Create presence tracking hook using Appwrite Realtime
-
-**PHASE 4: Frontend Updates - NOT STARTED**
 - [ ] Create frontend database service wrapper for Appwrite operations
 - [ ] Update useProfile, useBalance, useUserStats hooks to use backend API/Appwrite
 - [ ] Update chat components to use new chat service and Appwrite Realtime
 - [ ] Update game components to use new services
-
-**PHASE 5: Cleanup & Testing**
 - [ ] Remove @supabase/supabase-js from package.json and delete Supabase config files
 - [ ] Write backend and frontend tests for new Appwrite implementation
-
-**DOCUMENTATION** ✅ **COMPLETE**
 - [x] Create seed script ✅ (`seed-appwrite.ts`)
 - [x] Create collection setup script ✅ (`create-collections.ts`)
 - [x] Update environment variable documentation ✅
 - [x] Create comprehensive migration guide ✅ (`APPWRITE_MIGRATION_GUIDE.md`)
 - [x] Create migration status tracker ✅ (`APPWRITE_MIGRATION_STATUS.md`)
 - [x] Create Phase 1 completion summary ✅ (`MIGRATION_COMPLETED_PHASE1.md`)
-
-**Overall Progress: ~65% Complete**

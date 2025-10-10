@@ -154,6 +154,16 @@ authRoutes.get('/callback',
         path: '/',
         domain: frontendDomain === 'localhost' ? undefined : frontendDomain // Don't set domain for localhost
       });
+      
+      // Also store user ID for server-side session validation
+      setCookie(c, 'appwrite-user-id', session.userId, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'Lax',
+        maxAge: SESSION_MAX_AGE,
+        path: '/',
+        domain: frontendDomain === 'localhost' ? undefined : frontendDomain
+      });
 
       return c.redirect(`${FRONTEND_URL}/`);
     } catch (error) {

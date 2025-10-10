@@ -14,6 +14,26 @@ for (const envVar of requiredEnvVars) {
   }
 }
 
+// Create a custom fetch with timeout
+const timeoutFetch = (timeout: number = 10000) => {
+  return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+    
+    try {
+      const response = await fetch(input, {
+        ...init,
+        signal: controller.signal,
+      });
+      clearTimeout(id);
+      return response;
+    } catch (error) {
+      clearTimeout(id);
+      throw error;
+    }
+  };
+};
+
 // Initialize Appwrite client with production settings
 export const appwriteClient = new Client()
   .setEndpoint(process.env.APPWRITE_ENDPOINT!)
@@ -86,26 +106,38 @@ export const handleOAuthCallback = async (userId: string, secret: string): Promi
 
 /**
  * Validates a session and returns the user information
- * Note: For server-side, we need to use the Users API to get user details
+ * Requires both session ID and user ID (from cookies)
  */
-export const validateSession = async (sessionId: string) => {
+export const validateSession = async (sessionId: string, userId?: string) => {
   try {
-    // Import Users at runtime to avoid circular dependencies
-    const { Users } = await import('node-appwrite');
-    const users = new Users(appwriteClient);
+    if (!userId) {
+      console.error('User ID required for session validation');
+      return null;
+    }
     
-    // Validate session exists and get userId
-    const session = await appwriteAccount.getSession(sessionId);
+    // Use direct HTTP to avoid SDK connection issues
+    const { getUser, getSession } = await import('./appwrite-http');
     
-    // Fetch user details using Users API (requires API key)
-    const user = await users.get(session.userId);
+    // Validate the session exists
+    const session = await getSession(userId, sessionId);
+    if (!session || !session.current) {
+      console.error('Invalid or expired session');
+      return null;
+    }
+    
+    // Get user details
+    const user = await getUser(userId);
+    if (!user) {
+      console.error('User not found');
+      return null;
+    }
     
     return {
       id: user.$id,
       email: user.email,
       name: user.name,
       avatar: `https://avatars.${new URL(process.env.APPWRITE_ENDPOINT!).hostname}/avatars/initials?name=${encodeURIComponent(user.name || user.email)}`,
-      sessionId: session.$id,
+      sessionId: sessionId,
       emailVerified: user.emailVerification,
       createdAt: user.$createdAt,
       updatedAt: user.$updatedAt
