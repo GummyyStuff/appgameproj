@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
 import { serveStatic } from 'hono/bun'
+import { existsSync, readdirSync } from 'fs'
 import { env, config, isProduction } from './config/env'
 import { errorHandler } from './middleware/error'
 import { requestLogger } from './middleware/logger'
@@ -251,6 +252,16 @@ console.log(`🚀 Port: ${port}`)
 console.log(`🔗 Supabase URL: ${env.SUPABASE_URL}`)
 console.log(`📝 Logging: ${config.enableRequestLogging ? 'enabled' : 'disabled'}`)
 console.log(`📊 Metrics: ${config.metricsEnabled ? 'enabled' : 'disabled'}`)
+
+// Debug: Verify static files are accessible
+const publicDir = './public'
+const faDir = './public/fa-v5-pro/css'
+console.log(`📁 Working directory: ${process.cwd()}`)
+console.log(`📁 Public dir exists: ${existsSync(publicDir)}`)
+console.log(`📁 FontAwesome dir exists: ${existsSync(faDir)}`)
+if (existsSync(faDir)) {
+  console.log(`📋 FontAwesome CSS files:`, readdirSync(faDir).filter(f => f.endsWith('.css')))
+}
 
 // Initialize services
 initializeServices()

@@ -74,6 +74,10 @@ COPY packages/backend/package.json ./
 # Copy built frontend (served by backend)
 COPY --from=frontend-build /app/packages/frontend/dist ./public
 
+# Verify FontAwesome files in production
+RUN echo "🔍 Verifying FontAwesome in production public folder..." && \
+    ls -la ./public/fa-v5-pro/css/ || echo "❌ FontAwesome NOT in production!"
+
 # Create non-root user for security
 RUN groupadd --system --gid 1001 nodejs
 RUN useradd --system --uid 1001 --gid nodejs bunjs
