@@ -5,7 +5,7 @@
 
 import { appwriteDb } from './appwrite-database';
 import { COLLECTION_IDS, UserProfile } from '../config/collections';
-import { Permission, Role } from 'node-appwrite';
+import { Permission, Role, ID } from 'node-appwrite';
 
 export class UserService {
   /**
@@ -13,16 +13,19 @@ export class UserService {
    */
   static async getUserProfile(userId: string): Promise<UserProfile | null> {
     try {
-      // Use HTTP client to avoid SDK issues
-      const { listDocuments } = await import('../config/appwrite-http');
-      const result = await listDocuments(
-        process.env.APPWRITE_DATABASE_ID || 'main_db',
+      // Query Appwrite to find user by userId field
+      const { data, error } = await appwriteDb.listDocuments<UserProfile>(
         COLLECTION_IDS.USERS,
-        [{ method: 'equal', attribute: 'userId', values: [userId] }]
+        [appwriteDb.equal('userId', userId)]
       );
       
-      if (result && result.documents && result.documents.length > 0) {
-        return result.documents[0] as UserProfile;
+      if (error) {
+        console.error('Error querying user profile:', error);
+        return null;
+      }
+      
+      if (data && data.length > 0) {
+        return data[0];
       }
       
       return null;
@@ -74,23 +77,26 @@ export class UserService {
       isActive: true,
       createdAt: now,
       updatedAt: now,
+      email: data.email,
     };
 
     try {
-      // Use HTTP client to avoid SDK issues
-      const { createDocument } = await import('../config/appwrite-http');
-      const createdProfile = await createDocument(
-        process.env.APPWRITE_DATABASE_ID || 'main_db',
+      // Create document using Appwrite SDK
+      const { data: createdProfile, error } = await appwriteDb.createDocument<UserProfile>(
         COLLECTION_IDS.USERS,
-        userId, // Use userId as document ID for easy lookup
         profileData,
+        ID.unique(),
         [
           `read("user:${userId}")`,
           `update("user:${userId}")`,
         ]
       );
 
-      return createdProfile as UserProfile;
+      if (error) {
+        throw new Error(error);
+      }
+
+      return createdProfile!;
     } catch (error: any) {
       console.error('Error creating user profile:', error);
       throw new Error(`Failed to create user profile: ${error.message || 'Unknown error'}`);
