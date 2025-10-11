@@ -189,7 +189,7 @@ export class CaseOpeningService {
     }
 
     // Generate secure random number
-    const random = await this.randomGenerator.generate();
+    const random = await this.randomGenerator.generateSecureRandom();
     const selectedValue = random * totalWeight;
 
     // Select item based on weighted random selection

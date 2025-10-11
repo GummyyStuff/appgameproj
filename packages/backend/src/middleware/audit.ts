@@ -46,19 +46,21 @@ export class AuditLogger {
       if (!isTest()) {
         // Store in Appwrite database using AuditService
         try {
-          await AuditService.log({
-            userId: entry.user_id,
-            action: entry.action,
-            resourceType: entry.resource_type,
-            resourceId: entry.resource_id,
-            oldValues: entry.old_values,
-            newValues: entry.new_values,
-            ipAddress: entry.ip_address,
-            userAgent: entry.user_agent,
-            success: entry.success,
-            errorMessage: entry.error_message,
-            metadata: entry.metadata
-          })
+          await AuditService.logEvent(
+            entry.action,
+            entry.resource_type,
+            {
+              userId: entry.user_id,
+              resourceId: entry.resource_id,
+              oldValues: entry.old_values,
+              newValues: entry.new_values,
+              ipAddress: entry.ip_address,
+              userAgent: entry.user_agent,
+              success: entry.success,
+              errorMessage: entry.error_message,
+              metadata: entry.metadata
+            }
+          )
         } catch (error) {
           console.error('Failed to store audit log:', error)
           // Fallback to console logging
@@ -172,7 +174,7 @@ export function auditMiddleware(config: AuditConfig) {
         requestData = {
           method: c.req.method,
           path: c.req.path,
-          headers: Object.fromEntries(c.req.headers.entries()),
+          headers: c.req.header() || {},
           // Don't consume the body here as it will be consumed by validation middleware
         }
       } catch (error) {
