@@ -22,7 +22,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -33,11 +33,31 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user has Appwrite session
-    const checkSession = async () => {
+    // Check if user has Appwrite session and refresh if needed
+    const checkAndRefreshSession = async () => {
       try {
         // Check Appwrite session first
         const appwriteUser = await account.get();
+        
+        // Check if session needs refresh (within 1 day of expiry)
+        try {
+          const session = await account.getSession('current');
+          const expiry = new Date(session.expire);
+          const now = new Date();
+          const timeUntilExpiry = expiry.getTime() - now.getTime();
+          const oneDayInMs = 86400000; // 24 hours
+          
+          // Refresh if expiring within 1 day
+          if (timeUntilExpiry < oneDayInMs && timeUntilExpiry > 0) {
+            console.log('🔄 Refreshing OAuth session (expires soon)');
+            await account.updateSession('current');
+            console.log('✅ Session refreshed successfully');
+          }
+        } catch (refreshError) {
+          // Session refresh failed, but user is still authenticated
+          // This is non-critical, log and continue
+          console.warn('⚠️ Session refresh failed:', refreshError);
+        }
         
         // Get full user profile from backend (includes balance, stats, etc.)
         const response = await fetch(`${API_URL}/auth/me`, {
@@ -66,7 +86,29 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
     };
 
-    checkSession();
+    checkAndRefreshSession();
+    
+    // Set up periodic session refresh check (every 30 minutes)
+    const refreshInterval = setInterval(async () => {
+      try {
+        const session = await account.getSession('current');
+        const expiry = new Date(session.expire);
+        const now = new Date();
+        const timeUntilExpiry = expiry.getTime() - now.getTime();
+        const oneDayInMs = 86400000;
+        
+        if (timeUntilExpiry < oneDayInMs && timeUntilExpiry > 0) {
+          console.log('🔄 Periodic session refresh');
+          await account.updateSession('current');
+          console.log('✅ Session refreshed');
+        }
+      } catch (error) {
+        console.warn('⚠️ Periodic session refresh failed:', error);
+      }
+    }, 30 * 60 * 1000); // Every 30 minutes
+    
+    // Cleanup interval on unmount
+    return () => clearInterval(refreshInterval);
   }, []);
 
   const signInWithDiscord = useCallback(async () => {

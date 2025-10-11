@@ -1,6 +1,6 @@
-import { Context, Next } from 'hono'
+import type { Context, Next } from 'hono'
 import { HTTPException } from 'hono/http-exception'
-import { z, ZodSchema } from 'zod'
+import { z, type ZodSchema } from 'zod'
 import { logSecurityEvent } from './logger'
 
 /**

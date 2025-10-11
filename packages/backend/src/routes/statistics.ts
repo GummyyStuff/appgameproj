@@ -8,11 +8,16 @@ import { HTTPException } from 'hono/http-exception'
 import { z } from 'zod'
 import { authMiddleware } from '../middleware/auth'
 import { asyncHandler } from '../middleware/error'
-import { StatisticsServiceAppwrite as StatisticsService, StatisticsFilters } from '../services/statistics-appwrite'
+import { StatisticsServiceAppwrite as StatisticsService, type StatisticsFilters } from '../services/statistics-appwrite'
 import { UserService } from '../services/user-service'
 import { GameService } from '../services/game-service'
 
 export const statisticsRoutes = new Hono()
+
+// Helper to validate game types
+const isValidGameType = (gameType: string): boolean => {
+  return ['roulette', 'blackjack', 'case_opening'].includes(gameType)
+}
 
 // Validation schemas
 const statisticsFiltersSchema = z.object({

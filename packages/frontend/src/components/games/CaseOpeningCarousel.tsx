@@ -249,10 +249,16 @@ const carouselStyles = `
 `
 
 // Inject styles into document head
-if (typeof document !== 'undefined') {
-  const styleSheet = document.createElement('style')
-  styleSheet.textContent = carouselStyles
-  document.head.appendChild(styleSheet)
+// Guard for test environment where document manipulation may cause issues
+if (typeof document !== 'undefined' && typeof document.createElement === 'function' && document.head) {
+  try {
+    const styleSheet = document.createElement('style')
+    styleSheet.textContent = carouselStyles
+    document.head.appendChild(styleSheet)
+  } catch (error) {
+    // Silently fail in test/SSR environments
+    console.debug('Could not inject carousel styles:', error)
+  }
 }
 
 // Individual Carousel Item Component

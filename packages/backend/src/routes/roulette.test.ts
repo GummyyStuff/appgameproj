@@ -3,7 +3,7 @@
  * Tests for roulette game API endpoints including authentication, validation, and game flow
  */
 
-import { describe, test, expect } from 'bun:test'
+import { describe, test, expect, beforeEach, mock } from 'bun:test'
 import { Hono } from 'hono'
 import { RouletteGame } from '../services/game-engine/roulette-game'
 

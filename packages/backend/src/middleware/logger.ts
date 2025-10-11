@@ -1,4 +1,4 @@
-import { Context, Next } from 'hono'
+import type { Context, Next } from 'hono'
 import { env, config, isDevelopment, isProduction, isTest } from '../config/env'
 
 export interface RequestLog {

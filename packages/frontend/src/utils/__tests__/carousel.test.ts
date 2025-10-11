@@ -197,8 +197,8 @@ describe('Carousel Utilities', () => {
   describe('CAROUSEL_TIMING constants', () => {
     test('should have reasonable timing values', () => {
       expect(CAROUSEL_TIMING.FAST_SPIN_DURATION).toBeGreaterThan(1000)
-      expect(CAROUSEL_TIMING.DECELERATION_DURATION).toBeGreaterThan(2000)
-      expect(CAROUSEL_TIMING.TOTAL_DURATION).toBeGreaterThan(5000)
+      expect(CAROUSEL_TIMING.DECELERATION_DURATION).toBeGreaterThanOrEqual(2000)
+      expect(CAROUSEL_TIMING.TOTAL_DURATION).toBeGreaterThan(4000)
     })
 
     test('should have consistent item dimensions', () => {

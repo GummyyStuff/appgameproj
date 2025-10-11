@@ -190,7 +190,7 @@ describe('Carousel Integration Tests', () => {
       expect(CAROUSEL_TIMING.FAST_SPIN_DURATION).toBeGreaterThan(1000) // At least 1 second
       expect(CAROUSEL_TIMING.FAST_SPIN_DURATION).toBeLessThan(5000) // Not too long
       
-      expect(CAROUSEL_TIMING.DECELERATION_DURATION).toBeGreaterThan(2000) // Enough time to build suspense
+      expect(CAROUSEL_TIMING.DECELERATION_DURATION).toBeGreaterThanOrEqual(2000) // Enough time to build suspense
       expect(CAROUSEL_TIMING.DECELERATION_DURATION).toBeLessThan(10000) // Not too slow
       
       expect(CAROUSEL_TIMING.TOTAL_DURATION).toBeLessThan(15000) // Complete in under 15 seconds

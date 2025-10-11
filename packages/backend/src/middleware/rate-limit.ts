@@ -1,242 +1,171 @@
-import { Context, Next } from 'hono'
-import { HTTPException } from 'hono/http-exception'
-import { config } from '../config/env'
-import { logSecurityEvent } from './logger'
+/**
+ * Rate Limiting Middleware
+ * Protects API endpoints from abuse and DDoS attacks
+ */
 
-interface RateLimitEntry {
-  count: number
-  resetTime: number
-  blocked: boolean
-  blockUntil?: number
-}
-
-interface RateLimitConfig {
-  windowMs: number
-  maxRequests: number
-  blockDurationMs?: number
-  skipSuccessfulRequests?: boolean
-  keyGenerator?: (c: Context) => string
-  onLimitReached?: (c: Context, key: string) => void
-}
-
-class RateLimiter {
-  private store = new Map<string, RateLimitEntry>()
-  private cleanupInterval: Timer | null = null
-
-  constructor() {
-    // Clean up expired entries every 5 minutes
-    this.cleanupInterval = setInterval(() => {
-      this.cleanup()
-    }, 5 * 60 * 1000)
-  }
-
-  private cleanup() {
-    const now = Date.now()
-    for (const [key, entry] of this.store.entries()) {
-      if (entry.resetTime < now && (!entry.blockUntil || entry.blockUntil < now)) {
-        this.store.delete(key)
-      }
-    }
-  }
-
-  private getKey(c: Context, keyGenerator?: (c: Context) => string): string {
-    if (keyGenerator) {
-      return keyGenerator(c)
-    }
-    
-    const user = c.get('user')
-    const ip = c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP') || 'unknown'
-    
-    // Use user ID if authenticated, otherwise use IP
-    return user?.id || `ip:${ip}`
-  }
-
-  check(c: Context, config: RateLimitConfig): boolean {
-    const key = this.getKey(c, config.keyGenerator)
-    const now = Date.now()
-    
-    let entry = this.store.get(key)
-    
-    // Initialize entry if it doesn't exist
-    if (!entry) {
-      entry = {
-        count: 0,
-        resetTime: now + config.windowMs,
-        blocked: false
-      }
-      this.store.set(key, entry)
-    }
-    
-    // Check if currently blocked
-    if (entry.blocked && entry.blockUntil && entry.blockUntil > now) {
-      return false
-    }
-    
-    // Reset window if expired
-    if (entry.resetTime <= now) {
-      entry.count = 0
-      entry.resetTime = now + config.windowMs
-      entry.blocked = false
-      entry.blockUntil = undefined
-    }
-    
-    // Increment counter
-    entry.count++
-    
-    // Check if limit exceeded
-    if (entry.count > config.maxRequests) {
-      entry.blocked = true
-      if (config.blockDurationMs) {
-        entry.blockUntil = now + config.blockDurationMs
-      }
-      
-      // Log security event
-      const user = c.get('user')
-      const ip = c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP')
-      logSecurityEvent('rate_limit_exceeded', user?.id, ip, {
-        key,
-        count: entry.count,
-        limit: config.maxRequests,
-        path: c.req.path,
-        method: c.req.method
-      })
-      
-      if (config.onLimitReached) {
-        config.onLimitReached(c, key)
-      }
-      
-      return false
-    }
-    
-    return true
-  }
-
-  getStatus(c: Context, config: RateLimitConfig) {
-    const key = this.getKey(c, config.keyGenerator)
-    const entry = this.store.get(key)
-    
-    if (!entry) {
-      return {
-        remaining: config.maxRequests,
-        resetTime: Date.now() + config.windowMs,
-        blocked: false
-      }
-    }
-    
-    return {
-      remaining: Math.max(0, config.maxRequests - entry.count),
-      resetTime: entry.resetTime,
-      blocked: entry.blocked
-    }
-  }
-
-  destroy() {
-    if (this.cleanupInterval) {
-      clearInterval(this.cleanupInterval)
-      this.cleanupInterval = null
-    }
-    this.store.clear()
-  }
-}
-
-// Global rate limiter instance
-const globalRateLimiter = new RateLimiter()
+import { rateLimiter } from 'hono-rate-limiter'
+import type { Context } from 'hono'
 
 /**
- * General rate limiting middleware
+ * General API rate limiter
+ * 100 requests per 15 minutes per user/IP
  */
-export function rateLimitMiddleware(rateLimitConfig?: Partial<RateLimitConfig>) {
-  const config: RateLimitConfig = {
-    windowMs: rateLimitConfig?.windowMs || 15 * 60 * 1000, // 15 minutes
-    maxRequests: rateLimitConfig?.maxRequests || 100,
-    blockDurationMs: rateLimitConfig?.blockDurationMs || 5 * 60 * 1000, // 5 minutes
-    ...rateLimitConfig
-  }
-
-  return async (c: Context, next: Next) => {
-    const allowed = globalRateLimiter.check(c, config)
+export const apiRateLimit = rateLimiter({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  limit: 100, // max requests per window
+  standardHeaders: 'draft-6', // draft-6: `RateLimit-*` headers; draft-7: combined `RateLimit` header
+  keyGenerator: (c: Context) => {
+    // Use user ID if authenticated, otherwise IP
+    const userId = c.req.header('X-Appwrite-User-Id')
+    if (userId) return `user:${userId}`
     
-    if (!allowed) {
-      const status = globalRateLimiter.getStatus(c, config)
-      const retryAfter = status.blocked && status.resetTime 
-        ? Math.ceil((status.resetTime - Date.now()) / 1000)
-        : Math.ceil(config.windowMs / 1000)
-      
-      c.header('Retry-After', retryAfter.toString())
-      c.header('X-RateLimit-Limit', config.maxRequests.toString())
-      c.header('X-RateLimit-Remaining', '0')
-      c.header('X-RateLimit-Reset', status.resetTime.toString())
-      
-      throw new HTTPException(429, { 
-        message: 'Too many requests. Please try again later.',
-        cause: {
-          retryAfter,
-          limit: config.maxRequests,
-          windowMs: config.windowMs
-        }
-      })
-    }
-    
-    // Add rate limit headers
-    const status = globalRateLimiter.getStatus(c, config)
-    c.header('X-RateLimit-Limit', config.maxRequests.toString())
-    c.header('X-RateLimit-Remaining', status.remaining.toString())
-    c.header('X-RateLimit-Reset', status.resetTime.toString())
-    
-    await next()
-  }
-}
-
-/**
- * Strict rate limiting for authentication endpoints
- * More lenient in development for testing
- */
-export const authRateLimit = rateLimitMiddleware({
-  windowMs: process.env.NODE_ENV === 'production' ? 15 * 60 * 1000 : 60 * 1000, // 15 min prod, 1 min dev
-  maxRequests: process.env.NODE_ENV === 'production' ? 5 : 100, // 5 prod, 100 dev
-  blockDurationMs: process.env.NODE_ENV === 'production' ? 30 * 60 * 1000 : 60 * 1000, // 30 min prod, 1 min dev
-  keyGenerator: (c) => {
-    const ip = c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP') || 'unknown'
-    return `auth:${ip}`
-  }
+    // Fallback to IP address
+    const ip = c.req.header('x-real-ip') || 
+                c.req.header('x-forwarded-for') || 
+                'unknown'
+    return `ip:${ip}`
+  },
+  handler: (c: Context) => {
+    return c.json(
+      {
+        success: false,
+        error: 'Too many requests. Please try again later.',
+        retryAfter: c.res.headers.get('Retry-After'),
+      },
+      429
+    )
+  },
 })
 
 /**
- * Game action rate limiting
+ * Strict rate limiter for authentication endpoints
+ * 10 requests per 15 minutes per IP
  */
-export const gameRateLimit = rateLimitMiddleware({
+export const authRateLimit = rateLimiter({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  limit: 10,
+  standardHeaders: 'draft-6',
+  keyGenerator: (c: Context) => {
+    const ip = c.req.header('x-real-ip') || 
+                c.req.header('x-forwarded-for') || 
+                'unknown'
+    return `auth-ip:${ip}`
+  },
+  handler: (c: Context) => {
+    console.log('🚫 Auth Rate Limit Exceeded:', {
+      ip: c.req.header('x-real-ip') || c.req.header('x-forwarded-for'),
+      path: c.req.path,
+      timestamp: new Date().toISOString(),
+    })
+    
+    return c.json(
+      {
+        success: false,
+        error: 'Too many authentication attempts. Please try again later.',
+        retryAfter: c.res.headers.get('Retry-After'),
+      },
+      429
+    )
+  },
+})
+
+/**
+ * Strict rate limiter for game betting endpoints
+ * 30 requests per minute per user
+ */
+export const gameBetRateLimit = rateLimiter({
   windowMs: 60 * 1000, // 1 minute
-  maxRequests: 30, // 30 game actions per minute
-  blockDurationMs: 2 * 60 * 1000, // Block for 2 minutes
-  keyGenerator: (c) => {
-    const user = c.get('user')
-    return user?.id ? `game:${user.id}` : `game:${c.req.header('X-Forwarded-For') || 'unknown'}`
-  }
+  limit: 30,
+  standardHeaders: 'draft-6',
+  keyGenerator: (c: Context) => {
+    const userId = c.req.header('X-Appwrite-User-Id')
+    if (userId) return `bet:${userId}`
+    
+    const ip = c.req.header('x-real-ip') || 
+                c.req.header('x-forwarded-for') || 
+                'unknown'
+    return `bet-ip:${ip}`
+  },
+  handler: (c: Context) => {
+    console.log('🚫 Game Bet Rate Limit Exceeded:', {
+      userId: c.req.header('X-Appwrite-User-Id'),
+      ip: c.req.header('x-real-ip') || c.req.header('x-forwarded-for'),
+      path: c.req.path,
+      timestamp: new Date().toISOString(),
+    })
+    
+    return c.json(
+      {
+        success: false,
+        error: 'Too many bets placed. Please slow down.',
+        retryAfter: c.res.headers.get('Retry-After'),
+      },
+      429
+    )
+  },
 })
 
 /**
- * API rate limiting for general endpoints
+ * Moderate rate limiter for profile and balance queries
+ * 60 requests per minute per user
  */
-export function apiRateLimit() {
-  return rateLimitMiddleware({
-    windowMs: config.rateLimitWindow,
-    maxRequests: config.rateLimitMax,
-    blockDurationMs: 10 * 60 * 1000 // Block for 10 minutes
-  })
-}
-
-/**
- * Aggressive rate limiting for sensitive operations
- */
-export const sensitiveRateLimit = rateLimitMiddleware({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  maxRequests: 3, // 3 attempts per hour
-  blockDurationMs: 60 * 60 * 1000, // Block for 1 hour
-  keyGenerator: (c) => {
-    const ip = c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP') || 'unknown'
-    return `sensitive:${ip}`
-  }
+export const profileRateLimit = rateLimiter({
+  windowMs: 60 * 1000, // 1 minute
+  limit: 60,
+  standardHeaders: 'draft-6',
+  keyGenerator: (c: Context) => {
+    const userId = c.req.header('X-Appwrite-User-Id')
+    if (userId) return `profile:${userId}`
+    
+    const ip = c.req.header('x-real-ip') || 
+                c.req.header('x-forwarded-for') || 
+                'unknown'
+    return `profile-ip:${ip}`
+  },
+  handler: (c: Context) => {
+    return c.json(
+      {
+        success: false,
+        error: 'Too many requests. Please slow down.',
+        retryAfter: c.res.headers.get('Retry-After'),
+      },
+      429
+    )
+  },
 })
 
-// Export the rate limiter instance for testing
-export { globalRateLimiter }
+/**
+ * Very strict rate limiter for admin operations
+ * 5 requests per minute per user
+ */
+export const adminRateLimit = rateLimiter({
+  windowMs: 60 * 1000, // 1 minute
+  limit: 5,
+  standardHeaders: 'draft-6',
+  keyGenerator: (c: Context) => {
+    const userId = c.req.header('X-Appwrite-User-Id')
+    if (userId) return `admin:${userId}`
+    
+    const ip = c.req.header('x-real-ip') || 
+                c.req.header('x-forwarded-for') || 
+                'unknown'
+    return `admin-ip:${ip}`
+  },
+  handler: (c: Context) => {
+    console.log('🚫 Admin Rate Limit Exceeded:', {
+      userId: c.req.header('X-Appwrite-User-Id'),
+      ip: c.req.header('x-real-ip') || c.req.header('x-forwarded-for'),
+      path: c.req.path,
+      timestamp: new Date().toISOString(),
+    })
+    
+    return c.json(
+      {
+        success: false,
+        error: 'Admin rate limit exceeded.',
+        retryAfter: c.res.headers.get('Retry-After'),
+      },
+      429
+    )
+  },
+})

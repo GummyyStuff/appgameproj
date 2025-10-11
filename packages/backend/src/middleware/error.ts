@@ -1,4 +1,4 @@
-import { Context } from 'hono'
+import type { Context } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { env, isDevelopment, isTest } from '../config/env'
 import { logger } from './logger'

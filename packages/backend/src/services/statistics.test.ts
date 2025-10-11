@@ -127,10 +127,10 @@ describe('StatisticsService', () => {
       // Find roulette breakdown
       const rouletteBreakdown = breakdown.find(b => b.gameType === 'roulette')
       expect(rouletteBreakdown).toBeDefined()
-      expect(rouletteBreakdown!.statistics.totalGames).toBe(2)
-      expect(rouletteBreakdown!.statistics.totalWagered).toBe(300) // 100 + 200
-      expect(rouletteBreakdown!.statistics.totalWon).toBe(200) // 200 + 0
-      expect(rouletteBreakdown!.statistics.winRate).toBe(50) // 1 win out of 2 games
+      expect(rouletteBreakdown!.statistics.totalGames).toBe(3) // Games 1, 3, 4
+      expect(rouletteBreakdown!.statistics.totalWagered).toBe(325) // 100 + 25 + 200
+      expect(rouletteBreakdown!.statistics.totalWon).toBe(275) // 200 + 75 + 0
+      expect(rouletteBreakdown!.statistics.winRate).toBeCloseTo(66.67, 1) // 2 wins out of 3 games
 
       // Find blackjack breakdown
       const blackjackBreakdown = breakdown.find(b => b.gameType === 'blackjack')
@@ -212,10 +212,10 @@ describe('StatisticsService', () => {
       // Create a specific sequence for streak testing
       // Array is in DESC order (most recent first) - this is how games come from the database
       const streakTestGames: GameHistory[] = [
-        { ...mockGameHistory[0], win_amount: 200, bet_amount: 100, created_at: '2024-01-15T13:00:00Z' }, // Win (most recent)
-        { ...mockGameHistory[1], win_amount: 100, bet_amount: 50, created_at: '2024-01-15T12:00:00Z' }, // Win
-        { ...mockGameHistory[2], win_amount: 0, bet_amount: 25, created_at: '2024-01-15T11:00:00Z' }, // Loss
-        { ...mockGameHistory[3], win_amount: 0, bet_amount: 200, created_at: '2024-01-15T10:00:00Z' }, // Loss (oldest)
+        { ...mockGameHistory[0], winAmount: 200, betAmount: 100, createdAt: '2024-01-15T13:00:00Z' }, // Win (most recent)
+        { ...mockGameHistory[1], winAmount: 100, betAmount: 50, createdAt: '2024-01-15T12:00:00Z' }, // Win
+        { ...mockGameHistory[2], winAmount: 0, betAmount: 25, createdAt: '2024-01-15T11:00:00Z' }, // Loss
+        { ...mockGameHistory[3], winAmount: 0, betAmount: 200, createdAt: '2024-01-15T10:00:00Z' }, // Loss (oldest)
       ]
 
       const streaks = StatisticsService.calculateWinStreaks(streakTestGames)
@@ -228,7 +228,7 @@ describe('StatisticsService', () => {
     test('should handle all wins correctly', () => {
       const allWins = mockGameHistory.map(game => ({
         ...game,
-        win_amount: game.bet_amount * 2 // All games are wins
+        winAmount: game.betAmount * 2 // All games are wins
       }))
 
       const streaks = StatisticsService.calculateWinStreaks(allWins)
@@ -241,7 +241,7 @@ describe('StatisticsService', () => {
     test('should handle all losses correctly', () => {
       const allLosses = mockGameHistory.map(game => ({
         ...game,
-        win_amount: 0 // All games are losses
+        winAmount: 0 // All games are losses
       }))
 
       const streaks = StatisticsService.calculateWinStreaks(allLosses)
@@ -325,10 +325,10 @@ describe('StatisticsService', () => {
     test('should group games into sessions correctly', () => {
       // Create games with specific timing for session testing
       const sessionTestGames: GameHistory[] = [
-        { ...mockGameHistory[0], created_at: '2024-01-15T10:00:00Z' },
-        { ...mockGameHistory[1], created_at: '2024-01-15T10:30:00Z' }, // Same session (30 min gap)
-        { ...mockGameHistory[2], created_at: '2024-01-15T12:00:00Z' }, // New session (1.5 hour gap)
-        { ...mockGameHistory[3], created_at: '2024-01-15T12:15:00Z' }, // Same session (15 min gap)
+        { ...mockGameHistory[0], createdAt: '2024-01-15T10:00:00Z' },
+        { ...mockGameHistory[1], createdAt: '2024-01-15T10:30:00Z' }, // Same session (30 min gap)
+        { ...mockGameHistory[2], createdAt: '2024-01-15T12:00:00Z' }, // New session (1.5 hour gap)
+        { ...mockGameHistory[3], createdAt: '2024-01-15T12:15:00Z' }, // Same session (15 min gap)
       ]
 
       const sessions = StatisticsService.calculateSessions(sessionTestGames)
@@ -399,7 +399,7 @@ describe('StatisticsService', () => {
   describe('Edge Cases and Error Handling', () => {
     test('should handle games with zero bet amounts', () => {
       const zeroBetGames = [
-        { ...mockGameHistory[0], bet_amount: 0, win_amount: 0 }
+        { ...mockGameHistory[0], betAmount: 0, winAmount: 0 }
       ]
 
       const stats = StatisticsService.calculateOverviewStatistics(zeroBetGames)
@@ -410,7 +410,7 @@ describe('StatisticsService', () => {
 
     test('should handle games with negative win amounts', () => {
       const negativeWinGames = [
-        { ...mockGameHistory[0], bet_amount: 100, win_amount: -50 }
+        { ...mockGameHistory[0], betAmount: 100, winAmount: -50 }
       ]
 
       const stats = StatisticsService.calculateOverviewStatistics(negativeWinGames)
@@ -420,7 +420,7 @@ describe('StatisticsService', () => {
 
     test('should handle very large numbers correctly', () => {
       const largeNumberGames = [
-        { ...mockGameHistory[0], bet_amount: 1000000, win_amount: 2000000 }
+        { ...mockGameHistory[0], betAmount: 1000000, winAmount: 2000000 }
       ]
 
       const stats = StatisticsService.calculateOverviewStatistics(largeNumberGames)
@@ -433,7 +433,7 @@ describe('StatisticsService', () => {
     test('should handle games with same timestamps', () => {
       const sameTimeGames = mockGameHistory.map(game => ({
         ...game,
-        created_at: '2024-01-15T10:00:00Z'
+        createdAt: '2024-01-15T10:00:00Z'
       }))
 
       const timeSeries = StatisticsService.calculateTimeSeriesData(sameTimeGames)

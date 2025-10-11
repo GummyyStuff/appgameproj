@@ -1,6 +1,5 @@
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import { HTTPException } from 'hono/http-exception';
-import { Context } from 'hono';
 import { getCookie, deleteCookie } from 'hono/cookie';
 import { asyncHandler } from '../middleware/error';
 import { authRateLimit } from '../middleware/rate-limit';
@@ -64,6 +63,20 @@ authRoutes.get('/me',
         () => users.get(appwriteUserId),
         { maxRetries: 5, delayMs: 500 }
       );
+      
+      // Verify OAuth provider is Discord (security check)
+      // Check user's identities to ensure they used Discord OAuth
+      const identities = await users.listIdentities(appwriteUserId);
+      const hasDiscordIdentity = identities.identities.some(
+        (identity: any) => identity.provider === 'discord'
+      );
+      
+      if (!hasDiscordIdentity) {
+        console.log('❌ User does not have Discord identity');
+        throw new HTTPException(403, { 
+          message: 'Invalid authentication provider. Please log in with Discord.' 
+        });
+      }
       
       // If no profile exists, create it (first login)
       if (!profile) {

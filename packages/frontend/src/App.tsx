@@ -4,6 +4,7 @@ import ToastProvider from './components/providers/ToastProvider'
 import { PerformanceProvider } from './components/providers/PerformanceProvider'
 import AppRouter from './router/AppRouter'
 import ErrorBoundary from './components/ui/ErrorBoundary'
+import { AuthErrorBoundary } from './components/auth/AuthErrorBoundary'
 import { PerformanceToggle } from './components/ui/PerformanceMonitor'
 import { ChatDock } from './components/chat/ChatDock'
 import { useAuth } from './hooks/useAuth'
@@ -25,11 +26,13 @@ function App() {
   return (
     <ErrorBoundary>
       <QueryProvider>
-        <AuthProvider>
-          <ToastProvider>
-            <AppContent />
-          </ToastProvider>
-        </AuthProvider>
+        <AuthErrorBoundary>
+          <AuthProvider>
+            <ToastProvider>
+              <AppContent />
+            </ToastProvider>
+          </AuthProvider>
+        </AuthErrorBoundary>
       </QueryProvider>
     </ErrorBoundary>
   )

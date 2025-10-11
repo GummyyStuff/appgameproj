@@ -195,8 +195,8 @@ export const CAROUSEL_TIMING = {
 
   // Phase durations - optimized for smooth transitions
   FAST_SPIN_DURATION: 2400, // Initial fast spinning (50% of total)
-  DECELERATION_DURATION: 1920, // Smooth deceleration (40% of total)
-  SETTLE_DURATION: 480, // Final settling (10% of total)
+  DECELERATION_DURATION: 2000, // Smooth deceleration (increased for suspense)
+  SETTLE_DURATION: 400, // Final settling (adjusted to maintain total duration)
 
   // Phase timing ratios for programmatic use
   FAST_SPIN_RATIO: 0.5, // 50% of total duration

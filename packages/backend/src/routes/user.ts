@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { z } from 'zod'
-import { authMiddleware } from '../middleware/auth'
+import { authMiddleware, criticalAuthMiddleware } from '../middleware/auth'
 import { asyncHandler } from '../middleware/error'
 import { UserService } from '../services/user-service'
 import { CurrencyService } from '../services/currency-new'
@@ -21,6 +21,9 @@ const updateProfileSchema = z.object({
 
 // All user routes require authentication
 userRoutes.use('*', authMiddleware)
+
+// Profile update requires critical auth (with session validation)
+userRoutes.use('/profile', 'PUT', criticalAuthMiddleware)
 
 // Get user profile
 userRoutes.get('/profile', asyncHandler(async (c) => {

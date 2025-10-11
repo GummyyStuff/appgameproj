@@ -2,7 +2,7 @@
  * Integration tests for Blackjack API endpoints
  */
 
-import { describe, test, expect } from 'bun:test'
+import { describe, test, expect, beforeEach } from 'bun:test'
 import { Hono } from 'hono'
 import { gameRoutes } from './games'
 
@@ -41,8 +41,9 @@ describe('Blackjack API Endpoints', () => {
       })
       
       expect(res.status).toBe(401)
-      const data = await res.json()
-      expect(data.error).toBe('Authentication required')
+      // Auth middleware returns text, not JSON
+      const text = await res.text()
+      expect(text).toContain('Missing')
     })
 
     test('should validate required fields', async () => {
@@ -67,8 +68,9 @@ describe('Blackjack API Endpoints', () => {
       })
       
       expect(res.status).toBe(401)
-      const data = await res.json()
-      expect(data.error).toBe('Authentication required')
+      // Auth middleware returns text, not JSON
+      const text = await res.text()
+      expect(text).toContain('Missing')
     })
 
     test('should validate required fields', async () => {

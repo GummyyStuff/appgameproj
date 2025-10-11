@@ -1,7 +1,7 @@
 import { Hono, type Context } from 'hono'
-import { authMiddleware, optionalAuthMiddleware } from '../middleware/auth'
+import { authMiddleware, optionalAuthMiddleware, criticalAuthMiddleware } from '../middleware/auth'
 import { asyncHandler } from '../middleware/error'
-import { gameRateLimit } from '../middleware/rate-limit'
+import { gameBetRateLimit } from '../middleware/rate-limit'
 import { validationMiddleware, commonSchemas } from '../middleware/validation'
 import { auditGame, auditLog } from '../middleware/audit'
 import { z } from 'zod'
@@ -17,15 +17,19 @@ export const gameRoutes = new Hono()
 // Apply optional auth to all routes first (allows GET requests without auth)
 gameRoutes.use('*', optionalAuthMiddleware)
 
-// Apply strict auth only to game action routes that require authentication
-gameRoutes.use('/blackjack/start', authMiddleware)
-gameRoutes.use('/blackjack/action', authMiddleware)
-gameRoutes.use('/roulette/bet', authMiddleware)
-gameRoutes.use('/case-opening/open', authMiddleware)
-gameRoutes.use('/case-opening/purchase', authMiddleware)
+// Apply critical auth with session validation to game betting endpoints (money operations)
+gameRoutes.use('/blackjack/start', criticalAuthMiddleware)
+gameRoutes.use('/blackjack/action', criticalAuthMiddleware)
+gameRoutes.use('/roulette/bet', criticalAuthMiddleware)
+gameRoutes.use('/case-opening/open', criticalAuthMiddleware)
+gameRoutes.use('/case-opening/purchase', criticalAuthMiddleware)
 
-// Apply rate limiting to all routes
-gameRoutes.use('*', gameRateLimit)
+// Apply stricter rate limiting to betting routes
+gameRoutes.use('/blackjack/start', gameBetRateLimit)
+gameRoutes.use('/blackjack/action', gameBetRateLimit)
+gameRoutes.use('/roulette/bet', gameBetRateLimit)
+gameRoutes.use('/case-opening/open', gameBetRateLimit)
+gameRoutes.use('/case-opening/purchase', gameBetRateLimit)
 
 // Game validation schemas
 const rouletteBetSchema = z.object({

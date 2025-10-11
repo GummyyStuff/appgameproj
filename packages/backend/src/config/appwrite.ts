@@ -1,6 +1,6 @@
 import { Client, Account, Models } from 'node-appwrite';
 
-// Validate required environment variables
+// Validate required environment variables (skip in test mode)
 const requiredEnvVars = [
   'APPWRITE_ENDPOINT',
   'APPWRITE_PROJECT_ID',
@@ -8,9 +8,11 @@ const requiredEnvVars = [
   'FRONTEND_URL'
 ];
 
-for (const envVar of requiredEnvVars) {
-  if (!process.env[envVar]) {
-    throw new Error(`Missing required environment variable: ${envVar}`);
+if (process.env.NODE_ENV !== 'test') {
+  for (const envVar of requiredEnvVars) {
+    if (!process.env[envVar]) {
+      throw new Error(`Missing required environment variable: ${envVar}`);
+    }
   }
 }
 
@@ -18,9 +20,9 @@ for (const envVar of requiredEnvVars) {
 // Note: node-appwrite doesn't support custom fetch in the same way browser SDK does
 // We'll rely on Node's built-in HTTP agent configuration
 export const appwriteClient = new Client()
-  .setEndpoint(process.env.APPWRITE_ENDPOINT!)
-  .setProject(process.env.APPWRITE_PROJECT_ID!)
-  .setKey(process.env.APPWRITE_API_KEY!);
+  .setEndpoint(process.env.APPWRITE_ENDPOINT || 'http://localhost:80/v1')
+  .setProject(process.env.APPWRITE_PROJECT_ID || 'test-project')
+  .setKey(process.env.APPWRITE_API_KEY || 'test-api-key');
 
 // Log client configuration in development
 if (process.env.NODE_ENV !== 'production') {

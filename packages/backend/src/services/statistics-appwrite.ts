@@ -593,3 +593,7 @@ export class StatisticsServiceAppwrite {
   }
 }
 
+// Export as default and named export for compatibility
+export const StatisticsService = StatisticsServiceAppwrite;
+export default StatisticsServiceAppwrite;
+

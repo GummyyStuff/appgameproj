@@ -18,11 +18,12 @@ describe('Statistics API Routes', () => {
 
   describe('Route Dependencies', () => {
     test('should import all required services', async () => {
-      const { StatisticsService } = await import('../services/statistics')
-      const { DatabaseService } = await import('../services/database')
+      // NOTE: StatisticsService and DatabaseService have been migrated to Appwrite
+      const { StatisticsService } = await import('../services/statistics-appwrite')
+      const { appwriteDb } = await import('../services/appwrite-database')
       
       expect(StatisticsService).toBeDefined()
-      expect(DatabaseService).toBeDefined()
+      expect(appwriteDb).toBeDefined()
       
       // Check that key methods exist
       expect(typeof StatisticsService.getAdvancedStatistics).toBe('function')
@@ -31,11 +32,12 @@ describe('Statistics API Routes', () => {
       expect(typeof StatisticsService.calculateWinStreaks).toBe('function')
       expect(typeof StatisticsService.calculateBetPatterns).toBe('function')
       expect(typeof StatisticsService.calculatePlayingHabits).toBe('function')
-      expect(typeof StatisticsService.getLeaderboard).toBe('function')
-      expect(typeof StatisticsService.getGlobalStatistics).toBe('function')
-      
-      expect(typeof DatabaseService.getUserStatistics).toBe('function')
-      expect(typeof DatabaseService.getGameHistory).toBe('function')
+    expect(typeof StatisticsService.getLeaderboard).toBe('function')
+    expect(typeof StatisticsService.getGlobalStatistics).toBe('function')
+    
+    // DatabaseService is deprecated - these methods are now in StatisticsService
+    // expect(typeof DatabaseService.getUserStatistics).toBe('function')
+    // expect(typeof DatabaseService.getGameHistory).toBe('function')
     })
   })
 
@@ -79,7 +81,7 @@ describe('Statistics API Routes', () => {
 
   describe('Statistics Service Integration', () => {
     test('should handle empty statistics correctly', () => {
-      const { StatisticsService } = require('../services/statistics')
+      const { StatisticsService } = require('../services/statistics-appwrite')
       
       const emptyStats = StatisticsService.getEmptyStatistics()
       expect(emptyStats).toBeDefined()
@@ -95,30 +97,30 @@ describe('Statistics API Routes', () => {
     })
 
     test('should calculate statistics with sample data', () => {
-      const { StatisticsService } = require('../services/statistics')
+      const { StatisticsService } = require('../services/statistics-appwrite')
       
       const sampleGames = [
         {
-          id: '1',
-          user_id: 'test-user',
-          game_type: 'roulette',
-          bet_amount: 100,
-          win_amount: 200,
-          result_data: { bet_type: 'red', bet_value: 'red', winning_number: 7, multiplier: 2 },
-          created_at: '2024-01-15T10:00:00Z'
+          $id: '1',
+          userId: 'test-user',
+          gameType: 'roulette',
+          betAmount: 100,
+          winAmount: 200,
+          resultData: JSON.stringify({ bet_type: 'red', bet_value: 'red', winning_number: 7, multiplier: 2 }),
+          createdAt: '2024-01-15T10:00:00Z'
         },
         {
-          id: '2',
-          user_id: 'test-user',
-          game_type: 'blackjack',
-          bet_amount: 50,
-          win_amount: 0,
-          result_data: { 
+          $id: '2',
+          userId: 'test-user',
+          gameType: 'blackjack',
+          betAmount: 50,
+          winAmount: 0,
+          resultData: JSON.stringify({ 
             player_hand: [{ suit: 'hearts', value: 'K' }, { suit: 'spades', value: '7' }],
             dealer_hand: [{ suit: 'diamonds', value: 'A' }, { suit: 'clubs', value: 'K' }],
             result: 'dealer_win'
-          },
-          created_at: '2024-01-15T11:00:00Z'
+          }),
+          createdAt: '2024-01-15T11:00:00Z'
         }
       ]
 
@@ -169,20 +171,21 @@ describe('Statistics API Routes', () => {
 
   describe('Database Service Integration', () => {
     test('should have all required database methods', () => {
-      const { DatabaseService } = require('../services/database')
+      const { appwriteDb } = require('../services/appwrite-database')
       
       // Check that all required methods exist
-      expect(typeof DatabaseService.getUserProfile).toBe('function')
-      expect(typeof DatabaseService.getUserBalance).toBe('function')
-      expect(typeof DatabaseService.processGameTransaction).toBe('function')
-      expect(typeof DatabaseService.claimDailyBonus).toBe('function')
-      expect(typeof DatabaseService.getUserStatistics).toBe('function')
-      expect(typeof DatabaseService.getGameHistory).toBe('function')
-      expect(typeof DatabaseService.getRecentGames).toBe('function')
-      expect(typeof DatabaseService.updateUserProfile).toBe('function')
-      expect(typeof DatabaseService.isUsernameAvailable).toBe('function')
-      expect(typeof DatabaseService.getLeaderboard).toBe('function')
-      expect(typeof DatabaseService.getGlobalGameStats).toBe('function')
+      expect(typeof appwriteDb.listDocuments).toBe('function')
+      expect(typeof appwriteDb.getDocument).toBe('function')
+      expect(typeof appwriteDb.createDocument).toBe('function')
+      expect(typeof appwriteDb.updateDocument).toBe('function')
+      expect(typeof appwriteDb.deleteDocument).toBe('function')
+      expect(typeof appwriteDb.equal).toBe('function')
+      expect(typeof appwriteDb.greaterThan).toBe('function')
+      expect(typeof appwriteDb.lessThan).toBe('function')
+      // NOTE: getLeaderboard and getGlobalGameStats are now in StatisticsService
+      const { StatisticsService } = require('../services/statistics-appwrite')
+      expect(typeof StatisticsService.getLeaderboard).toBe('function')
+      expect(typeof StatisticsService.getGlobalStatistics).toBe('function')
     })
   })
 

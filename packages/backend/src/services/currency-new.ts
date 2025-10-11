@@ -348,7 +348,31 @@ export class CurrencyService {
    * Format currency amount
    */
   static formatCurrency(amount: number, currency: string = 'roubles'): string {
-    return `₽${amount.toLocaleString()}`;
+    const formattedAmount = amount.toLocaleString();
+    
+    switch (currency.toLowerCase()) {
+      case 'dollars':
+        return `$${formattedAmount}`;
+      case 'euros':
+        return `€${formattedAmount}`;
+      case 'roubles':
+      default:
+        return `₽${formattedAmount}`;
+    }
+  }
+
+  /**
+   * Get the configured starting balance for new users
+   */
+  static getStartingBalance(): number {
+    return this.STARTING_BALANCE;
+  }
+
+  /**
+   * Get the configured daily bonus amount
+   */
+  static getDailyBonusAmount(): number {
+    return this.DAILY_BONUS_AMOUNT;
   }
 }
 

@@ -1,11 +1,16 @@
 /**
- * Currency Service for Tarkov Casino Website
- * Handles all virtual currency operations including balance management,
- * atomic transactions, and daily bonuses
+ * Currency Service for Tarkov Casino Website - DEPRECATED
+ * 
+ * ⚠️ WARNING: This file is DEPRECATED and should not be used in new code.
+ * Please use currency-new.ts instead, which uses Appwrite.
+ * 
+ * This file is kept for reference only and imports non-existent modules.
+ * All production code has been migrated to currency-new.ts
  */
 
-import { DatabaseService } from './database'
-import { supabaseAdmin } from '../config/supabase'
+// DEPRECATED: These imports reference old Supabase-based services
+// import { DatabaseService } from './database'  // Does not exist
+// import { supabaseAdmin } from '../config/supabase'  // Deprecated
 import { env } from '../config/env'
 
 export interface CurrencyTransaction {

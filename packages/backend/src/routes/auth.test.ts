@@ -3,7 +3,7 @@
  * Tests for all authentication endpoints and middleware
  */
 
-import { describe, test, expect } from 'bun:test'
+import { describe, test, expect, beforeEach } from 'bun:test'
 import { Hono } from 'hono'
 
 // Mock environment variables

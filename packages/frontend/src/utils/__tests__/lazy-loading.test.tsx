@@ -1,13 +1,13 @@
-import { describe, test, expect } from 'bun:test';
+import { describe, test, expect, mock } from 'bun:test';
 
 describe('Lazy Loading Utilities', () => {
   describe('withLazyLoading', () => {
     test('should create a lazy wrapper component', async () => {
       const { withLazyLoading } = await import('../lazy-loading');
       
-      const mockImportFn = mock().mockResolvedValue({ 
+      const mockImportFn = mock(() => Promise.resolve({ 
         default: () => 'MockComponent' 
-      });
+      }));
       
       const LazyWrapper = withLazyLoading(mockImportFn);
       
@@ -28,7 +28,7 @@ describe('Lazy Loading Utilities', () => {
 
     test('should support preload on hover', async () => {
       const { preloadOnHover } = await import('../lazy-loading');
-      const mockImport = mock().mockResolvedValue({});
+      const mockImport = mock(() => Promise.resolve({}));
       
       const handlers = preloadOnHover(mockImport);
       

@@ -1,0 +1,69 @@
+---
+description: Prevent automatic creation of markdown documentation files
+globs: ["**/*.md", "**/*.markdown"]
+---
+
+# No Automatic Markdown File Creation
+
+**CRITICAL RULE**: Do NOT create markdown (.md) files unless explicitly requested by the user.
+
+## Rules
+
+### ❌ Never Do This (Without Explicit Request)
+- Creating summary/status files (e.g., `IMPLEMENTATION_SUMMARY.md`, `STATUS.md`)
+- Creating guide files (e.g., `DEPLOYMENT_GUIDE.md`, `SETUP_GUIDE.md`)
+- Creating documentation files (e.g., `SECURITY_GUIDE.md`, `API_DOCS.md`)
+- Creating any `.md` file in the project root
+- Creating changelog or migration files automatically
+
+### ✅ Always Do This Instead
+- **Provide information in chat responses** - Give summaries, explanations, and documentation directly in your response
+- **Use code comments** - For technical documentation, use inline code comments
+- **Wait for explicit request** - Only create markdown files when user says "create a markdown file" or "document this in a file"
+
+### ✅ Exceptions (Allowed)
+- `README.md` in appropriate directories (when creating new packages/modules and user approves)
+- Markdown files explicitly requested by the user
+- Modifying existing markdown files when asked
+
+## Examples
+
+### ❌ Bad - Don't Do This
+```
+User: "Implement the new auth system"
+AI: *implements code*
+AI: *creates AUTH_IMPLEMENTATION.md with details*  ← WRONG!
+```
+
+### ✅ Good - Do This
+```
+User: "Implement the new auth system"
+AI: *implements code*
+AI: *explains implementation in chat response*  ← CORRECT!
+```
+
+### ✅ When It's OK
+```
+User: "Implement auth and create a markdown file documenting it"
+AI: *implements code*
+AI: *creates AUTH_IMPLEMENTATION.md*  ← CORRECT! (explicit request)
+```
+
+## Why This Rule Exists
+
+1. **Keep project clean** - Avoid cluttering the repository with documentation files
+2. **Reduce noise** - Too many .md files make it hard to find important ones
+3. **Chat is better** - For most use cases, explaining in chat is more efficient
+4. **Version control** - Fewer files means cleaner git history
+
+## When User Asks for Documentation
+
+If user needs documentation:
+1. Ask: "Would you like me to create a markdown file for this, or explain it in chat?"
+2. Default to explaining in chat unless they specifically request a file
+3. If creating a file, ask for preferred location and filename
+
+## Summary
+
+**Default behavior**: Communicate all information in chat responses.
+**Only create .md files**: When explicitly requested by the user.
