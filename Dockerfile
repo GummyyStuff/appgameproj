@@ -13,7 +13,8 @@ RUN bun install --frozen-lockfile
 FROM base AS frontend-build
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-# Cache buster - change this to force rebuild: v1.3
+COPY --from=deps /app/packages/frontend/node_modules ./packages/frontend/node_modules
+# Cache buster - change this to force rebuild: v1.4
 COPY packages/frontend/ ./packages/frontend/
 WORKDIR /app/packages/frontend
 
@@ -45,13 +46,14 @@ ENV VITE_API_URL=${VITE_API_URL}
 ENV VITE_APPWRITE_ENDPOINT=${VITE_APPWRITE_ENDPOINT}
 ENV VITE_APPWRITE_PROJECT_ID=${VITE_APPWRITE_PROJECT_ID}
 
-# Run vite build with absolute path to avoid PATH issues
-RUN /app/node_modules/.bin/vite build
+# Run vite build using local node_modules (Bun workspace installs vite locally)
+RUN ./node_modules/.bin/vite build
 
 # Build backend stage
 FROM base AS backend-build
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/packages/backend/node_modules ./packages/backend/node_modules
 COPY packages/backend/ ./packages/backend/
 COPY package.json tsconfig.json ./
 WORKDIR /app/packages/backend
@@ -68,6 +70,7 @@ RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 # Copy built backend
 COPY --from=backend-build /app/packages/backend/dist ./dist
 COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/packages/backend/node_modules/* ./node_modules/
 COPY packages/backend/package.json ./
 
 # Copy built frontend (served by backend)
