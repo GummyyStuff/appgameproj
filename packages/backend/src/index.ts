@@ -163,7 +163,7 @@ app.get('/api/statistics/global', async (c) => {
 })
 
 // API routes with rate limiting and authentication middleware
-app.use('/api/*', apiRateLimit())
+app.use('/api/*', apiRateLimit)
 app.route('/api', apiRoutes)
 
 // Serve static files from public directory (built frontend)
