@@ -14,7 +14,7 @@ FROM base AS frontend-build
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/packages/frontend/node_modules ./packages/frontend/node_modules
-# Cache buster - change this to force rebuild: v1.4
+# Cache buster - change this to force rebuild: v1.5
 COPY packages/frontend/ ./packages/frontend/
 WORKDIR /app/packages/frontend
 
@@ -67,11 +67,13 @@ WORKDIR /app
 USER root
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
-# Copy built backend
-COPY --from=backend-build /app/packages/backend/dist ./dist
+# Copy all node_modules to maintain workspace structure
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/packages/backend/node_modules/* ./node_modules/
-COPY packages/backend/package.json ./
+COPY --from=deps /app/packages/backend/node_modules ./packages/backend/node_modules
+
+# Copy built backend in its package location
+COPY --from=backend-build /app/packages/backend/dist ./packages/backend/dist
+COPY packages/backend/package.json ./packages/backend/
 
 # Copy built frontend (served by backend)
 COPY --from=frontend-build /app/packages/frontend/dist ./public
@@ -87,7 +89,7 @@ EXPOSE ${PORT:-3000}
 
 # Enhanced health check for Coolify (uses PORT env var, defaults to 3000)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-  CMD curl -f http://localhost:${PORT:-3000}/api/health || exit 1
+    CMD curl -f http://localhost:${PORT:-3000}/api/health || exit 1
 
-# Start the application with proper signal handling
-CMD ["bun", "run", "dist/index.js"]
+# Start the application from the backend package directory
+CMD ["bun", "run", "packages/backend/dist/index.js"]
