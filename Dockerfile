@@ -13,11 +13,9 @@ RUN bun install --frozen-lockfile
 FROM base AS frontend-build
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-# Cache buster - change this to force rebuild: v1.2
+# Cache buster - change this to force rebuild: v1.3
 COPY packages/frontend/ ./packages/frontend/
 WORKDIR /app/packages/frontend
-# Add node_modules binaries to PATH early
-ENV PATH="/app/node_modules/.bin:$PATH"
 
 # Download and extract FontAwesome Pro from bucket (with proper permissions)
 USER root
@@ -47,7 +45,8 @@ ENV VITE_API_URL=${VITE_API_URL}
 ENV VITE_APPWRITE_ENDPOINT=${VITE_APPWRITE_ENDPOINT}
 ENV VITE_APPWRITE_PROJECT_ID=${VITE_APPWRITE_PROJECT_ID}
 
-RUN bun run build
+# Run vite build with absolute path to avoid PATH issues
+RUN /app/node_modules/.bin/vite build
 
 # Build backend stage
 FROM base AS backend-build
