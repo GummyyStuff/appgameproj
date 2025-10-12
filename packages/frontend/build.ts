@@ -13,6 +13,8 @@
  *   bun run build
  */
 
+import tailwind from 'bun-plugin-tailwind';
+
 // Load .env file if it exists (Bun automatically loads .env)
 const isDev = process.env.NODE_ENV !== 'production';
 
@@ -48,6 +50,7 @@ const result = await Bun.build({
   splitting: false, // Disabled due to duplicate export bug in Bun 1.3
   minify: !isDev,
   sourcemap: true,
+  plugins: [tailwind],
   define: {
     // Inline environment variables as string literals
     'import.meta.env.VITE_APPWRITE_ENDPOINT': JSON.stringify(VITE_APPWRITE_ENDPOINT),
