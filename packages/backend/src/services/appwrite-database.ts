@@ -130,9 +130,12 @@ export class AppwriteDatabaseService {
 
   /**
    * Query helper: Equal
+   * Note: Appwrite Query.equal expects value to be an array
    */
   equal(attribute: string, value: any) {
-    return Query.equal(attribute, value);
+    // Appwrite SDK Query.equal expects an array of values
+    const values = Array.isArray(value) ? value : [value];
+    return Query.equal(attribute, values);
   }
 
   /**
