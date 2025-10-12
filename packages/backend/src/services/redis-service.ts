@@ -47,12 +47,23 @@ class RedisService {
 
     try {
       console.log('🔄 Connecting to Redis...');
-      console.log(`   Host: ${config.redis.host}`);
-      console.log(`   Port: ${config.redis.port}`);
-      console.log(`   DB: ${config.redis.db}`);
-
-      // Build Redis URL
+      
+      // Build Redis URL - prioritize REDIS_URL over individual components
       const redisUrl = config.redis.url || this.buildRedisUrl();
+      
+      if (config.redis.url) {
+        console.log(`   Using REDIS_URL: ${redisUrl.replace(/:[^:@]+@/, ':****@')}`);
+      } else {
+        console.log(`   Host: ${config.redis.host}`);
+        console.log(`   Port: ${config.redis.port}`);
+        console.log(`   DB: ${config.redis.db}`);
+      }
+
+      // Warn if connecting to localhost in production
+      if (redisUrl.includes('localhost') || redisUrl.includes('127.0.0.1')) {
+        console.warn('⚠️  WARNING: Connecting to localhost Redis - this may not work in Docker!');
+        console.warn('⚠️  Set REDIS_URL or REDIS_HOST environment variable to the correct Redis service');
+      }
 
       // Create Redis client using Bun's native client
       this.client = new RedisClient(redisUrl, {
