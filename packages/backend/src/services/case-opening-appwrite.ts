@@ -118,60 +118,73 @@ export class CaseOpeningService {
   }
 
   /**
-   * Get item pool for a specific case type
+   * Get item pool for a specific case type (with caching)
    */
   static async getItemPool(caseTypeId: string): Promise<WeightedItem[]> {
-    try {
-      // Get all pool entries for this case
-      const { data: poolEntries, error: poolError } = await appwriteDb.listDocuments<CaseItemPool>(
-        COLLECTION_IDS.CASE_ITEM_POOLS,
-        [appwriteDb.equal('caseTypeId', caseTypeId)]
-      );
+    const { withCache } = await import('../utils/cache');
+    
+    return withCache(
+      `case_item_pool_${caseTypeId}`,
+      async () => {
+        try {
+          // Get all pool entries for this case
+          const { data: poolEntries, error: poolError } = await appwriteDb.listDocuments<CaseItemPool>(
+            COLLECTION_IDS.CASE_ITEM_POOLS,
+            [appwriteDb.equal('caseTypeId', caseTypeId)]
+          );
 
-      if (poolError || !poolEntries || poolEntries.length === 0) {
-        console.error('Error fetching item pool:', poolError);
-        throw new Error('No items found for this case type');
-      }
+          if (poolError || !poolEntries || poolEntries.length === 0) {
+            console.error('Error fetching item pool:', poolError);
+            throw new Error('No items found for this case type');
+          }
 
-      // Get all items referenced in the pool
-      const itemIds = poolEntries.map(p => p.itemId);
-      const items: Map<string, TarkovItem> = new Map();
+          // Get all items referenced in the pool - FETCH IN PARALLEL
+          const itemIds = poolEntries.map(p => p.itemId);
+          const items: Map<string, TarkovItem> = new Map();
 
-      // Fetch items in batches (Appwrite has query limits)
-      for (const itemId of itemIds) {
-        const { data: item, error: itemError } = await appwriteDb.getDocument<AppwriteTarkovItem>(
-          COLLECTION_IDS.TARKOV_ITEMS,
-          itemId
-        );
+          // Fetch all items in parallel instead of sequentially
+          const itemPromises = itemIds.map(itemId =>
+            appwriteDb.getDocument<AppwriteTarkovItem>(
+              COLLECTION_IDS.TARKOV_ITEMS,
+              itemId
+            )
+          );
 
-        if (!itemError && item && item.isActive) {
-          items.set(item.$id!, this.transformTarkovItem(item));
-        }
-      }
+          const itemResults = await Promise.all(itemPromises);
 
-      // Combine pool entries with items
-      const weightedItems: WeightedItem[] = [];
-      for (const poolEntry of poolEntries) {
-        const item = items.get(poolEntry.itemId);
-        if (item) {
-          weightedItems.push({
-            item,
-            weight: poolEntry.weight,
-            value_multiplier: poolEntry.valueMultiplier,
-            effective_value: item.base_value * poolEntry.valueMultiplier,
+          // Process results
+          itemResults.forEach(({ data: item, error: itemError }) => {
+            if (!itemError && item && item.isActive) {
+              items.set(item.$id!, this.transformTarkovItem(item));
+            }
           });
+
+          // Combine pool entries with items
+          const weightedItems: WeightedItem[] = [];
+          for (const poolEntry of poolEntries) {
+            const item = items.get(poolEntry.itemId);
+            if (item) {
+              weightedItems.push({
+                item,
+                weight: poolEntry.weight,
+                value_multiplier: poolEntry.valueMultiplier,
+                effective_value: item.base_value * poolEntry.valueMultiplier,
+              });
+            }
+          }
+
+          if (weightedItems.length === 0) {
+            throw new Error('No active items found for this case type');
+          }
+
+          return weightedItems;
+        } catch (error) {
+          console.error('Error in getItemPool:', error);
+          throw new Error('Failed to retrieve item pool');
         }
-      }
-
-      if (weightedItems.length === 0) {
-        throw new Error('No active items found for this case type');
-      }
-
-      return weightedItems;
-    } catch (error) {
-      console.error('Error in getItemPool:', error);
-      throw new Error('Failed to retrieve item pool');
-    }
+      },
+      3 * 60 * 1000 // Cache for 3 minutes
+    );
   }
 
   /**

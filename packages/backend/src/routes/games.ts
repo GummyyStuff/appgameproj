@@ -374,7 +374,7 @@ const simplifiedCaseOpeningSchema = z.object({
 
 gameRoutes.post('/cases/open',
   validationMiddleware(simplifiedCaseOpeningSchema),
-  auditGame('case_opening'),
+  // Removed auditGame middleware - using single audit log at completion
   asyncHandler(async (c: Context) => {
   const user = c.get('user')
   if (!user) {
@@ -428,18 +428,13 @@ gameRoutes.post('/cases/open',
       })
     }
 
-    // Log game start
     const ip = c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP')
-    await auditLog.gamePlayStarted(user.id, 'case_opening', caseType.price, ip)
 
-    // Open the case
+    // Open the case and process transaction in parallel where possible
     const openingResult = await CaseOpeningService.openCase(user.id, caseTypeId)
 
-    let transactionResult
-    let finalBalance = null
-
     // Process case opening as a single atomic transaction
-    transactionResult = await CurrencyService.processCaseOpening(
+    const transactionResult = await CurrencyService.processCaseOpening(
       user.id,
       caseType.price,
       openingResult.currency_awarded,
@@ -463,23 +458,23 @@ gameRoutes.post('/cases/open',
       return c.json({ error: 'Transaction failed' }, 500)
     }
 
-    // Log game completion
-    await auditLog.gameCompleted(
-      user.id,
-      'case_opening',
-      caseType.price,
-      openingResult.currency_awarded,
-      ip
-    )
-
-    // Broadcast balance update
-    await realtimeGameService.handleBalanceUpdate(
-      user.id,
-      transactionResult.newBalance,
-      transactionResult.previousBalance
-    )
-
-    finalBalance = transactionResult.newBalance
+    // Run non-critical operations in parallel (fire and forget)
+    Promise.all([
+      // Single audit log for completion (removed redundant start log)
+      auditLog.gameCompleted(
+        user.id,
+        'case_opening',
+        caseType.price,
+        openingResult.currency_awarded,
+        ip
+      ),
+      // Broadcast balance update
+      realtimeGameService.handleBalanceUpdate(
+        user.id,
+        transactionResult.newBalance,
+        transactionResult.previousBalance
+      )
+    ]).catch(err => console.error('Non-critical operation failed:', err))
 
     return c.json({
       success: true,
@@ -493,7 +488,7 @@ gameRoutes.post('/cases/open',
       case_price: caseType.price,
       currency_awarded: openingResult.currency_awarded,
       net_result: transactionResult.netResult,
-      new_balance: finalBalance,
+      new_balance: transactionResult.newBalance,
       transaction_id: transactionResult.gameId
     })
   } catch (error) {
