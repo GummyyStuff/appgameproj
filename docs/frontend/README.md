@@ -5,7 +5,7 @@ A React-based frontend application for the Tarkov Casino gaming platform, featur
 ## Features
 
 - **React 19** with TypeScript for type safety
-- **Vite 7** for ultra-fast development and building
+- **Bun Bundler** for ultra-fast building and native TypeScript/JSX support
 - **Tailwind CSS 4** with custom Tarkov theme colors
 - **React Router 7** for client-side routing
 - **Appwrite Client SDK** for authentication and database
@@ -36,17 +36,19 @@ cp .env.example .env
 ### Development
 
 ```bash
-# Start development server
+# Build frontend
+bun run build
+
+# Start development server (backend serves frontend)
+cd ../backend
+bun run dev
+
+# Or from root:
+cd ../..
 bun run dev
 
 # Run tests
 bun test
-
-# Build for production
-bun run build
-
-# Preview production build
-bun run preview
 ```
 
 ## Project Structure

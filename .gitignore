@@ -22,6 +22,9 @@ build/
 .next/
 out/
 
+# Backend public directory (built frontend assets - generated during build)
+packages/backend/public/
+
 # Runtime data
 pids
 *.pid

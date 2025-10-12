@@ -19,8 +19,6 @@
       "@types/react-dom": "^19.1.9",
       "hono": "^4.9.8",
       "zod": "^4.1.11",
-      "socket.io": "^4.8.1",
-      "socket.io-client": "^4.8.1",
       "@testing-library/react": "^16.3.0",
       "@testing-library/jest-dom": "^6.8.0",
       "happy-dom": "^18.0.1",
@@ -28,9 +26,11 @@
     }
   },
   "scripts": {
-    "dev": "bun run --watch index.ts",
+    "dev": "bun run --filter @tarkov-casino/backend dev",
     "dev:all": "bun --filter '*' dev",
-    "build": "bun build index.ts --outdir ./dist",
+    "build": "bun run build:frontend && bun run build:backend",
+    "build:frontend": "cd packages/frontend && bun run build",
+    "build:backend": "cd packages/backend && bun run build",
     "build:all": "bun --filter '*' build",
     "start": "bun run dist/index.js",
     "test": "bun test",

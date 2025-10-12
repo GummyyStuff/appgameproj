@@ -35,20 +35,17 @@ RUN apt-get update && apt-get install -y curl unzip && \
     chown -R bun:bun /app/packages/frontend
 USER bun
 
-# Set build-time environment variables for Vite
-ARG VITE_SUPABASE_URL
-ARG VITE_SUPABASE_ANON_KEY
-ARG VITE_API_URL
+# Set build-time environment variables (Bun auto-inlines them)
 ARG VITE_APPWRITE_ENDPOINT
 ARG VITE_APPWRITE_PROJECT_ID
-ENV VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
-ENV VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
-ENV VITE_API_URL=${VITE_API_URL}
+ARG VITE_API_URL
 ENV VITE_APPWRITE_ENDPOINT=${VITE_APPWRITE_ENDPOINT}
 ENV VITE_APPWRITE_PROJECT_ID=${VITE_APPWRITE_PROJECT_ID}
+ENV VITE_API_URL=${VITE_API_URL}
 
-# Run vite build using local node_modules (Bun workspace installs vite locally)
-RUN ./node_modules/.bin/vite build
+# Build with Bun using build script (properly inlines env vars as string literals)
+# Note: Code splitting disabled due to duplicate export bug in Bun 1.3
+RUN bun run build.ts
 
 # Build backend stage
 FROM base AS backend-build

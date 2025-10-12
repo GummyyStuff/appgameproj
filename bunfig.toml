@@ -64,3 +64,11 @@ testNamePattern = ["**/*.test.ts", "**/*.test.tsx"]
 # Set log level (debug, info, warn, error)
 logLevel = "info"
 
+[console]
+depth = 5
+
+# ====================
+# FULLSTACK DEV SERVER
+# ====================
+[serve.static]
+plugins = ["bun-plugin-tailwind"]

@@ -17,7 +17,7 @@ A Tarkov-themed casino gaming website offering classic casino games with virtual
 
 This is a monorepo containing:
 
-- **Frontend**: React 19 + TypeScript + Tailwind CSS 4 + Vite
+- **Frontend**: React 19 + TypeScript + Tailwind CSS 4 + Bun Bundler
 - **Backend**: Bun + Hono + TypeScript
 - **Database**: Appwrite (BaaS) - Authentication, Databases, Storage, Realtime
 - **Cache**: Dragonfly (Redis-compatible) for high-performance caching
@@ -109,33 +109,40 @@ tarkov-casino/
    bun run dev
    ```
 
-3. **Start frontend development server:**
+3. **Build frontend:**
    ```bash
    cd packages/frontend
+   bun run build
+   cd ../..
+   ```
+
+4. **Start unified development server:**
+   ```bash
    bun run dev
    ```
 
-4. **Access the application:**
-   - Frontend: http://localhost:5173
-   - Backend API: http://localhost:3000
+5. **Access the application:**
+   - Frontend + Backend: http://localhost:3000
    - API Health: http://localhost:3000/api/health
    - Detailed Health: http://localhost:3000/api/health/detailed
    - API Metrics: http://localhost:3000/api/metrics
 
 > **Note:** Dragonfly is optional for local development. The app works fine without caching (uses database fallback). See [Redis/Dragonfly documentation](./docs/backend/redis-README.md) for more details.
 
+> **Migration Note:** We've migrated from Vite to Bun's native bundler for faster builds and simpler deployment. The frontend now builds with `bun build index.html`, which processes all assets automatically.
+
 ### Building for Production
 
-1. **Build frontend:**
+1. **Build entire project:**
    ```bash
-   cd packages/frontend
    bun run build
+   # This builds both frontend (Bun bundler) and backend (Bun bytecode)
    ```
 
-2. **Build backend:**
+2. **Or build individually:**
    ```bash
-   cd packages/backend
-   bun run build
+   bun run build:frontend  # Bundles React app
+   bun run build:backend   # Compiles backend
    ```
 
 3. **Build Docker image:**
