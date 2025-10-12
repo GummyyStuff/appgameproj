@@ -22,6 +22,8 @@
     "test:database": "bun test src/services/database.test.ts src/database/database.test.ts",
     "test:currency": "bun test src/services/currency.test.ts src/integration/currency-api.test.ts",
     "test:statistics": "bun test src/services/statistics.test.ts src/services/statistics-integration.test.ts",
+    "test:balance": "bun test src/services/__tests__/balance-constraints.test.ts src/services/__tests__/currency-balance.test.ts src/services/__tests__/case-opening-balance.test.ts",
+    "test:constraints": "bun test src/services/__tests__/balance-constraints.test.ts",
     "test:ci": "bun test --coverage",
     "db:setup": "bun run src/database/setup.ts",
     "db:setup-with-seed": "bun run src/database/setup.ts --seed",
