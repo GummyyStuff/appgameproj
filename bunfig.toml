@@ -36,9 +36,6 @@ disableManifest = false
 # Save lockfile
 save = true
 
-# Print diff of lockfile changes
-print = "yarn"
-
 # ====================
 # TEST CONFIGURATION
 # ====================

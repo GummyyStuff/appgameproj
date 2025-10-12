@@ -7,6 +7,26 @@
   "workspaces": [
     "packages/*"
   ],
+  "catalogs": {
+    "default": {
+      "typescript": "^5.9.2",
+      "@types/bun": "latest",
+      "appwrite": "^18.0.0",
+      "node-appwrite": "^17.2.0",
+      "react": "^19.1.1",
+      "react-dom": "^19.1.1",
+      "@types/react": "^19.1.13",
+      "@types/react-dom": "^19.1.9",
+      "hono": "^4.9.8",
+      "zod": "^4.1.11",
+      "socket.io": "^4.8.1",
+      "socket.io-client": "^4.8.1",
+      "@testing-library/react": "^16.3.0",
+      "@testing-library/jest-dom": "^6.8.0",
+      "happy-dom": "^18.0.1",
+      "@happy-dom/global-registrator": "^18.0.1"
+    }
+  },
   "scripts": {
     "dev": "bun run --watch index.ts",
     "dev:all": "bun --filter '*' dev",
@@ -27,14 +47,14 @@
     "docker:test": "./scripts/deploy.sh test"
   },
   "devDependencies": {
-    "@happy-dom/global-registrator": "^20.0.0",
-    "@types/bun": "latest",
-    "typescript": "^5"
+    "@happy-dom/global-registrator": "catalog:default",
+    "@types/bun": "catalog:default",
+    "typescript": "catalog:default"
   },
   "peerDependencies": {
-    "typescript": "^5"
+    "typescript": "catalog:default"
   },
   "dependencies": {
-    "node-appwrite": "11.0.0"
+    "node-appwrite": "catalog:default"
   }
 }

@@ -2,14 +2,14 @@
  * Redis Service
  * ============
  * 
- * Bun 1.3 native Redis client wrapper with:
+ * Bun native Redis client wrapper with:
  * - Automatic connection management
  * - Graceful fallback if Redis unavailable
  * - Error handling and retry logic
  * - Connection health monitoring
  * 
- * Based on Bun 1.3 documentation:
- * https://bun.com/docs/api/redis
+ * Based on Bun Redis documentation:
+ * https://bun.sh/docs/api/redis
  */
 
 import { redis, RedisClient } from 'bun';
@@ -17,11 +17,11 @@ import { config } from '../config/env';
 
 class RedisService {
   private client: RedisClient | null = null;
-  private isConnected: boolean = false;
   private isConnecting: boolean = false;
   private connectionAttempts: number = 0;
   private readonly MAX_RETRIES = 5;
   private readonly RETRY_DELAY_MS = 1000;
+  private reconnectTimer: Timer | null = null;
 
   /**
    * Initialize Redis connection
@@ -32,7 +32,12 @@ class RedisService {
       return;
     }
 
-    if (this.isConnected || this.isConnecting) {
+    if (this.isConnecting) {
+      return;
+    }
+
+    // If we already have a connected client, don't reconnect
+    if (this.client && this.client.connected) {
       return;
     }
 
@@ -57,39 +62,48 @@ class RedisService {
         enableAutoPipelining: true,
       });
 
-      // Explicitly connect
-      await this.client.connect();
-
-      // Set up connection event handlers
+      // Set up connection event handlers BEFORE connecting
       this.client.onconnect = () => {
         console.log('✅ Redis connected successfully');
-        this.isConnected = true;
         this.connectionAttempts = 0;
+        if (this.reconnectTimer) {
+          clearTimeout(this.reconnectTimer);
+          this.reconnectTimer = null;
+        }
       };
 
       this.client.onclose = (error?: Error) => {
         console.warn('⚠️  Redis connection closed', error ? `: ${error.message}` : '');
-        this.isConnected = false;
         
-        // Attempt reconnection
+        // Attempt reconnection with exponential backoff
         if (config.redisEnabled && this.connectionAttempts < this.MAX_RETRIES) {
           this.connectionAttempts++;
-          console.log(`🔄 Attempting reconnection (${this.connectionAttempts}/${this.MAX_RETRIES})...`);
-          setTimeout(() => this.initialize(), this.RETRY_DELAY_MS * this.connectionAttempts);
+          const delay = this.RETRY_DELAY_MS * Math.pow(2, this.connectionAttempts - 1);
+          console.log(`🔄 Scheduling reconnection attempt ${this.connectionAttempts}/${this.MAX_RETRIES} in ${delay}ms...`);
+          
+          this.reconnectTimer = setTimeout(() => {
+            this.isConnecting = false;
+            this.initialize().catch(err => {
+              console.error('Reconnection failed:', err);
+            });
+          }, delay);
+        } else if (this.connectionAttempts >= this.MAX_RETRIES) {
+          console.error('❌ Max reconnection attempts reached. Redis is unavailable.');
         }
       };
+
+      // Explicitly connect
+      await this.client.connect();
 
       // Test connection with a ping
       await this.client.send('PING', []);
       
       console.log('✅ Redis service initialized');
-      this.isConnected = true;
       this.isConnecting = false;
 
     } catch (error) {
       console.error('❌ Redis connection failed:', error);
       console.warn('⚠️  Application will run without Redis caching');
-      this.isConnected = false;
       this.isConnecting = false;
       this.client = null;
       
@@ -112,9 +126,10 @@ class RedisService {
 
   /**
    * Check if Redis is available
+   * Uses Bun's client.connected property for accurate status
    */
   isAvailable(): boolean {
-    return this.isConnected && this.client !== null;
+    return this.client !== null && this.client.connected;
   }
 
   /**
@@ -128,8 +143,14 @@ class RedisService {
     try {
       const value = await this.client!.get(key);
       return value;
-    } catch (error) {
-      console.error(`Redis GET error for key ${key}:`, error);
+    } catch (error: any) {
+      if (error?.code === 'ERR_REDIS_CONNECTION_CLOSED') {
+        console.warn(`Redis connection closed during GET for key ${key}`);
+        // Trigger reconnection
+        this.initialize().catch(() => {});
+      } else {
+        console.error(`Redis GET error for key ${key}:`, error);
+      }
       return null;
     }
   }
@@ -149,8 +170,14 @@ class RedisService {
         await this.client!.set(key, value);
       }
       return true;
-    } catch (error) {
-      console.error(`Redis SET error for key ${key}:`, error);
+    } catch (error: any) {
+      if (error?.code === 'ERR_REDIS_CONNECTION_CLOSED') {
+        console.warn(`Redis connection closed during SET for key ${key}`);
+        // Trigger reconnection
+        this.initialize().catch(() => {});
+      } else {
+        console.error(`Redis SET error for key ${key}:`, error);
+      }
       return false;
     }
   }
@@ -166,8 +193,13 @@ class RedisService {
     try {
       await this.client!.del(key);
       return true;
-    } catch (error) {
-      console.error(`Redis DEL error for key ${key}:`, error);
+    } catch (error: any) {
+      if (error?.code === 'ERR_REDIS_CONNECTION_CLOSED') {
+        console.warn(`Redis connection closed during DEL for key ${key}`);
+        this.initialize().catch(() => {});
+      } else {
+        console.error(`Redis DEL error for key ${key}:`, error);
+      }
       return false;
     }
   }
@@ -208,8 +240,13 @@ class RedisService {
     try {
       const result = await this.client!.incr(key);
       return result as number;
-    } catch (error) {
-      console.error(`Redis INCR error for key ${key}:`, error);
+    } catch (error: any) {
+      if (error?.code === 'ERR_REDIS_CONNECTION_CLOSED') {
+        console.warn(`Redis connection closed during INCR for key ${key}`);
+        this.initialize().catch(() => {});
+      } else {
+        console.error(`Redis INCR error for key ${key}:`, error);
+      }
       return null;
     }
   }
@@ -339,12 +376,20 @@ class RedisService {
    * Gracefully close Redis connection
    */
   async close(): Promise<void> {
+    // Clear any pending reconnection timer
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+
     if (this.client) {
       console.log('🔒 Closing Redis connection...');
       this.client.close();
-      this.isConnected = false;
       this.client = null;
     }
+
+    this.connectionAttempts = 0;
+    this.isConnecting = false;
   }
 
   /**

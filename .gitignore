@@ -114,3 +114,6 @@ Thumbs.db
 
 # CS2 Case Simulator
 cs2-case-simulator/
+# Lock files
+package-lock.json
+yarn.lock
