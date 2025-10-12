@@ -1,5 +1,6 @@
-# Multi-stage Dockerfile optimized for Coolify deployment
-FROM oven/bun:1 AS base
+# Multi-stage Dockerfile optimized for Coolify deployment with Bun 1.3 features
+# Features: Bytecode compilation, minification, source maps
+FROM oven/bun:1.3 AS base
 WORKDIR /app
 
 # Install dependencies stage
@@ -60,7 +61,7 @@ WORKDIR /app/packages/backend
 RUN bun run build
 
 # Production stage
-FROM oven/bun:1-slim AS production
+FROM oven/bun:1.3-slim AS production
 WORKDIR /app
 
 # Install curl for health checks

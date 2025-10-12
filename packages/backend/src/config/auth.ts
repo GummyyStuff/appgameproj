@@ -1,9 +1,16 @@
 /**
  * Authentication configuration for Tarkov Casino Website
- * Configures Supabase Auth settings and middleware
+ * 
+ * ⚠️ MIGRATION NOTE: This file has been partially migrated from Supabase to Appwrite
+ * - Utility functions (validation, config) are still valid
+ * - Functions that depend on Supabase have been deprecated
+ * - For authentication, use:
+ *   - config/appwrite.ts for Appwrite client setup
+ *   - middleware/auth.ts for authentication middleware
  */
 
-import { supabaseAdmin } from './supabase'
+// DEPRECATED: Supabase has been replaced with Appwrite
+// import { supabaseAdmin } from './supabase'
 
 /**
  * Supabase Auth configuration settings
@@ -127,21 +134,18 @@ export function extractUserIdFromToken(authHeader?: string): string | null {
 }
 
 /**
- * Verify JWT token with Supabase
+ * Verify JWT token with Supabase - DEPRECATED
+ * 
+ * ⚠️ This function is deprecated. Use validateSession from config/appwrite.ts instead
+ * 
+ * @deprecated Use validateSession from config/appwrite.ts for Appwrite authentication
  */
 export async function verifyAuthToken(token: string): Promise<{ userId: string } | null> {
-  try {
-    const { data: { user }, error } = await supabaseAdmin.auth.getUser(token)
-    
-    if (error || !user) {
-      return null
-    }
-    
-    return { userId: user.id }
-  } catch (error) {
-    console.error('Error verifying auth token:', error)
-    return null
-  }
+  console.warn('verifyAuthToken is deprecated. Use validateSession from config/appwrite.ts instead');
+  
+  // This function no longer works as supabaseAdmin has been removed
+  // Keeping it for backward compatibility but it will always return null
+  return null;
 }
 
 /**

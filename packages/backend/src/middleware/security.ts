@@ -36,7 +36,7 @@ export function securityHeadersMiddleware() {
     c.header('Permissions-Policy', 'geolocation=(), microphone=(), camera=()')
     
     // HSTS header for production
-    if (isProduction) {
+    if (isProduction()) {
       c.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload')
     }
 
@@ -53,238 +53,15 @@ export function securityHeadersMiddleware() {
 }
 
 /**
- * Session timeout configuration
+ * NOTE: Session Management
+ * 
+ * Session management has been migrated to Appwrite and is handled by:
+ * - authMiddleware() in middleware/auth.ts for standard authentication
+ * - criticalAuthMiddleware() in middleware/auth.ts for sensitive operations
+ * 
+ * Appwrite manages sessions client-side with secure cookies and server-side validation.
+ * The old SessionManager class has been removed as it's no longer needed.
  */
-interface SessionConfig {
-  maxAge: number // Maximum session age in milliseconds
-  idleTimeout: number // Idle timeout in milliseconds
-  checkInterval: number // How often to check for expired sessions
-}
-
-const defaultSessionConfig: SessionConfig = {
-  maxAge: 24 * 60 * 60 * 1000, // 24 hours
-  idleTimeout: 2 * 60 * 60 * 1000, // 2 hours
-  checkInterval: 5 * 60 * 1000 // 5 minutes
-}
-
-/**
- * Session manager for tracking user sessions and timeouts
- */
-class SessionManager {
-  private sessions = new Map<string, {
-    userId: string
-    createdAt: number
-    lastActivity: number
-    ipAddress?: string
-    userAgent?: string
-  }>()
-  
-  private cleanupInterval: Timer | null = null
-  private config: SessionConfig
-
-  constructor(config: SessionConfig = defaultSessionConfig) {
-    this.config = config
-    this.startCleanup()
-  }
-
-  private startCleanup() {
-    this.cleanupInterval = setInterval(() => {
-      this.cleanupExpiredSessions()
-    }, this.config.checkInterval)
-  }
-
-  private cleanupExpiredSessions() {
-    const now = Date.now()
-    const expiredSessions: string[] = []
-
-    for (const [sessionId, session] of this.sessions.entries()) {
-      const isExpiredByAge = (now - session.createdAt) > this.config.maxAge
-      const isExpiredByIdle = (now - session.lastActivity) > this.config.idleTimeout
-
-      if (isExpiredByAge || isExpiredByIdle) {
-        expiredSessions.push(sessionId)
-        
-        // Log session expiration
-        logSecurityEvent('session_expired', session.userId, session.ipAddress, {
-          sessionId,
-          reason: isExpiredByAge ? 'max_age' : 'idle_timeout',
-          duration: now - session.createdAt,
-          idleTime: now - session.lastActivity
-        })
-      }
-    }
-
-    // Remove expired sessions
-    expiredSessions.forEach(sessionId => {
-      this.sessions.delete(sessionId)
-    })
-
-    if (expiredSessions.length > 0) {
-      console.log(`🧹 Cleaned up ${expiredSessions.length} expired sessions`)
-    }
-  }
-
-  /**
-   * Register a new session
-   */
-  registerSession(sessionId: string, userId: string, ipAddress?: string, userAgent?: string) {
-    const now = Date.now()
-    this.sessions.set(sessionId, {
-      userId,
-      createdAt: now,
-      lastActivity: now,
-      ipAddress,
-      userAgent
-    })
-  }
-
-  /**
-   * Update session activity
-   */
-  updateActivity(sessionId: string): boolean {
-    const session = this.sessions.get(sessionId)
-    if (session) {
-      session.lastActivity = Date.now()
-      return true
-    }
-    return false
-  }
-
-  /**
-   * Check if session is valid
-   */
-  isSessionValid(sessionId: string): boolean {
-    const session = this.sessions.get(sessionId)
-    if (!session) return false
-
-    const now = Date.now()
-    const isExpiredByAge = (now - session.createdAt) > this.config.maxAge
-    const isExpiredByIdle = (now - session.lastActivity) > this.config.idleTimeout
-
-    if (isExpiredByAge || isExpiredByIdle) {
-      this.sessions.delete(sessionId)
-      return false
-    }
-
-    return true
-  }
-
-  /**
-   * Remove a session
-   */
-  removeSession(sessionId: string): boolean {
-    return this.sessions.delete(sessionId)
-  }
-
-  /**
-   * Get session info
-   */
-  getSession(sessionId: string) {
-    return this.sessions.get(sessionId)
-  }
-
-  /**
-   * Get all sessions for a user
-   */
-  getUserSessions(userId: string) {
-    const userSessions: Array<{ sessionId: string; createdAt: number; lastActivity: number }> = []
-    
-    for (const [sessionId, session] of this.sessions.entries()) {
-      if (session.userId === userId) {
-        userSessions.push({
-          sessionId,
-          createdAt: session.createdAt,
-          lastActivity: session.lastActivity
-        })
-      }
-    }
-    
-    return userSessions
-  }
-
-  /**
-   * Revoke all sessions for a user
-   */
-  revokeUserSessions(userId: string): number {
-    let revokedCount = 0
-    
-    for (const [sessionId, session] of this.sessions.entries()) {
-      if (session.userId === userId) {
-        this.sessions.delete(sessionId)
-        revokedCount++
-      }
-    }
-    
-    return revokedCount
-  }
-
-  destroy() {
-    if (this.cleanupInterval) {
-      clearInterval(this.cleanupInterval)
-      this.cleanupInterval = null
-    }
-    this.sessions.clear()
-  }
-}
-
-// Global session manager instance
-const sessionManager = new SessionManager()
-
-/**
- * Session timeout middleware
- * Validates and manages user session timeouts
- */
-export function sessionTimeoutMiddleware() {
-  return async (c: Context, next: Next) => {
-    const authHeader = c.req.header('Authorization')
-    
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.substring(7)
-      const ip = c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP')
-      const userAgent = c.req.header('User-Agent')
-      
-      try {
-        // Verify token with Supabase
-        const { data: { user }, error } = await supabaseAdmin.auth.getUser(token)
-        
-        if (error || !user) {
-          throw new HTTPException(401, { message: 'Invalid or expired token' })
-        }
-
-        // Use token as session ID (or extract session ID from token)
-        const sessionId = token.substring(0, 32) // Use first 32 chars as session ID
-        
-        // Check if session exists and is valid
-        if (!sessionManager.isSessionValid(sessionId)) {
-          // Register new session
-          sessionManager.registerSession(sessionId, user.id, ip, userAgent)
-          
-          logSecurityEvent('session_created', user.id, ip, {
-            sessionId,
-            userAgent
-          })
-        } else {
-          // Update activity for existing session
-          sessionManager.updateActivity(sessionId)
-        }
-        
-        // Add session info to context
-        c.set('sessionId', sessionId)
-        c.set('sessionManager', sessionManager)
-        
-      } catch (error) {
-        if (error instanceof HTTPException) {
-          throw error
-        }
-        
-        console.error('Session validation error:', error)
-        throw new HTTPException(401, { message: 'Session validation failed' })
-      }
-    }
-    
-    await next()
-  }
-}
 
 /**
  * Request timeout middleware
@@ -433,5 +210,5 @@ export function ipSecurityMiddleware() {
   }
 }
 
-// Export instances for external use
-export { sessionManager, ipSecurityManager }
+// Export IP security manager for external use
+export { ipSecurityManager }

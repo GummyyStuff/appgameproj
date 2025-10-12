@@ -5,7 +5,7 @@ import { rateLimitMiddleware, globalRateLimiter } from '../middleware/rate-limit
 import { validationMiddleware, InputSanitizer, ThreatDetector } from '../middleware/validation'
 import { errorHandler } from '../middleware/error'
 import { AuditLogger } from '../middleware/audit'
-import { sessionManager, ipSecurityManager } from '../middleware/security'
+import { ipSecurityManager } from '../middleware/security'
 import { z } from 'zod'
 
 describe('Security Hardening', () => {
@@ -16,7 +16,6 @@ describe('Security Hardening', () => {
   afterAll(async () => {
     // Cleanup
     globalRateLimiter.destroy()
-    sessionManager.destroy()
     ipSecurityManager.destroy()
   })
 
@@ -333,84 +332,11 @@ describe('Security Hardening', () => {
     })
   })
 
-  describe('Session Management', () => {
-    beforeEach(() => {
-      // Clear sessions before each test
-      sessionManager.destroy()
-    })
-
-    test('should register and validate sessions', () => {
-      const sessionId = 'test-session-123'
-      const userId = 'user-123'
-      
-      sessionManager.registerSession(sessionId, userId, '192.168.1.1', 'test-agent')
-      
-      expect(sessionManager.isSessionValid(sessionId)).toBe(true)
-      
-      const session = sessionManager.getSession(sessionId)
-      expect(session?.userId).toBe(userId)
-      expect(session?.ipAddress).toBe('192.168.1.1')
-    })
-
-    test('should update session activity', () => {
-      const sessionId = 'test-session-456'
-      const userId = 'user-456'
-      
-      sessionManager.registerSession(sessionId, userId)
-      const initialActivity = sessionManager.getSession(sessionId)?.lastActivity
-      
-      // Wait a bit and update activity
-      setTimeout(() => {
-        sessionManager.updateActivity(sessionId)
-        const updatedActivity = sessionManager.getSession(sessionId)?.lastActivity
-        expect(updatedActivity).toBeGreaterThan(initialActivity!)
-      }, 10)
-    })
-
-    test('should remove expired sessions', () => {
-      const sessionId = 'test-session-expired'
-      const userId = 'user-expired'
-      
-      // Register session with very short timeout for testing
-      sessionManager.registerSession(sessionId, userId)
-      
-      // Manually expire the session by setting old timestamp
-      const session = sessionManager.getSession(sessionId)
-      if (session) {
-        session.createdAt = Date.now() - (25 * 60 * 60 * 1000) // 25 hours ago
-        session.lastActivity = Date.now() - (3 * 60 * 60 * 1000) // 3 hours ago
-      }
-      
-      expect(sessionManager.isSessionValid(sessionId)).toBe(false)
-    })
-
-    test('should get user sessions', () => {
-      const userId = 'user-multi-session'
-      
-      sessionManager.registerSession('session-1', userId)
-      sessionManager.registerSession('session-2', userId)
-      sessionManager.registerSession('session-3', 'other-user')
-      
-      const userSessions = sessionManager.getUserSessions(userId)
-      expect(userSessions).toHaveLength(2)
-      expect(userSessions.every(s => s.sessionId.startsWith('session-'))).toBe(true)
-    })
-
-    test('should revoke user sessions', () => {
-      const userId = 'user-revoke-test'
-      
-      sessionManager.registerSession('session-a', userId)
-      sessionManager.registerSession('session-b', userId)
-      sessionManager.registerSession('session-c', 'other-user')
-      
-      const revokedCount = sessionManager.revokeUserSessions(userId)
-      expect(revokedCount).toBe(2)
-      
-      expect(sessionManager.isSessionValid('session-a')).toBe(false)
-      expect(sessionManager.isSessionValid('session-b')).toBe(false)
-      expect(sessionManager.isSessionValid('session-c')).toBe(true)
-    })
-  })
+  // Session Management tests removed - migrated to Appwrite
+  // Session management is now handled by:
+  // - authMiddleware() in middleware/auth.ts
+  // - criticalAuthMiddleware() in middleware/auth.ts
+  // - Appwrite client-side session cookies
 
   describe('IP Security', () => {
     beforeEach(() => {

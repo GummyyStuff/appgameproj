@@ -93,8 +93,8 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
   // Track pending winnings to delay balance update until congratulations
   const [pendingWinnings, setPendingWinnings] = useState<number>(0)
 
-  // Calculate display balance (subtract pending winnings to show only deduction)
-  const displayBalance = balance - pendingWinnings
+  // Calculate display balance (with delayCredit, balance already only has deduction, no winnings yet)
+  const displayBalance = balance
 
   // Track credited openings to prevent duplicate credit calls
   const creditedOpeningsRef = useRef<Set<string>>(new Set())
@@ -341,10 +341,18 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
         transitionToPhase('revealing', 'Insufficient items for carousel, using reveal animation')
         recordFlowStep(flowId, 'reveal_phase_started', true)
 
+        const revealAnimationConfig: AnimationConfig = {
+          type: 'reveal',
+          duration: REVEAL_TIMING.DURATION,
+          easing: [0.25, 0.46, 0.45, 0.94],
+          items: itemPool
+        }
+
         setGameState(prev => ({
           ...prev,
           phase: 'revealing',
           result: caseResult,
+          animationConfig: revealAnimationConfig,
           pendingCompletion: {
             caseTypeId: selectedCase.id,
             openingId: caseResult.opening_id,
@@ -353,19 +361,8 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
           }
         }))
 
-        // Complete after reveal animation delay
-        setTimeout(() => {
-          recordFlowStep(flowId, 'reveal_delay_completed', true)
-          transitionToPhase('complete', 'Reveal animation completed')
-          // recordCaseOpening(caseResult) // TODO: Fix function signature
-          setGameState(prev => ({
-            ...prev,
-            phase: 'complete',
-            result: caseResult,
-            history: [caseResult, ...prev.history.slice(0, 9)],
-            pendingCompletion: undefined
-          }))
-        }, REVEAL_TIMING.DURATION) // Match reveal animation duration
+        // Note: completeAnimation will be called by the ItemReveal component
+        // when the animation completes, which will credit the winnings
 
         animationSetupTiming()
         recordFlowStep(flowId, 'animation_setup_completed', true)
@@ -452,26 +449,28 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
       transitionToPhase('revealing', 'Using reveal fallback')
       recordFlowStep(flowId, 'reveal_phase_started', true)
 
+      const revealAnimationConfig: AnimationConfig = {
+        type: 'reveal',
+        duration: REVEAL_TIMING.DURATION,
+        easing: [0.25, 0.46, 0.45, 0.94],
+        items: [result.item_won]
+      }
+
       setGameState(prev => ({
         ...prev,
         phase: 'revealing',
         result,
-        history: [result, ...prev.history.slice(0, 9)]
+        animationConfig: revealAnimationConfig,
+        pendingCompletion: {
+          caseTypeId: selectedCase.id,
+          openingId: result.opening_id,
+          token: '',
+          predeterminedWinner: result
+        }
       }))
 
-      // Complete the reveal animation after a short delay
-      setTimeout(() => {
-        recordFlowStep(flowId, 'reveal_delay_completed', true)
-        // Transition to complete phase after reveal animation
-        transitionToPhase('complete', 'Reveal animation completed')
-        // recordCaseOpening(result) // TODO: Fix function signature
-        setGameState(prev => ({
-          ...prev,
-          phase: 'complete',
-          result,
-          history: [result, ...prev.history.slice(0, 9)]
-        }))
-      }, 1000) // Give time for reveal animation to play
+      // Note: completeAnimation will be called by the ItemReveal component
+      // when the animation completes, which will credit the winnings
 
     } catch (error) {
       console.error('Reveal fallback error:', error)
@@ -500,8 +499,13 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
         throw new Error('Failed to complete case opening')
       }
 
-      // Clear pending winnings and show congratulations toast
-      if (pendingWinnings > 0) {
+      // Credit pending winnings to balance and show congratulations toast
+      if (pendingWinnings > 0 && user) {
+        // Update the balance cache to add the winnings
+        const cacheService = getCaseCacheService()
+        cacheService.creditWinnings(user.id, pendingWinnings)
+        
+        // Clear pending winnings
         setPendingWinnings(0)
         
         // Show winnings toast
@@ -540,7 +544,7 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
         }))
       }
     }
-  }, [gameState.pendingCompletion, gameState.selectedCase, caseOpening, errorHandling, transitionToPhase, toast, user?.id, balance, queryClient, pendingWinnings])
+  }, [gameState.pendingCompletion, gameState.selectedCase, caseOpening, errorHandling, transitionToPhase, toast, user, balance, queryClient, pendingWinnings])
 
 
   /**

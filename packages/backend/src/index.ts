@@ -5,7 +5,7 @@ import { serveStatic } from 'hono/bun'
 import { env, config, isProduction } from './config/env'
 import { errorHandler } from './middleware/error'
 import { requestLogger } from './middleware/logger'
-import { securityHeadersMiddleware, sessionTimeoutMiddleware, requestTimeoutMiddleware, ipSecurityMiddleware } from './middleware/security'
+import { securityHeadersMiddleware, requestTimeoutMiddleware, ipSecurityMiddleware } from './middleware/security'
 import { apiRateLimit } from './middleware/rate-limit'
 import { validateContentType, validateRequestSize } from './middleware/validation'
 import { apiRoutes } from './routes/api'
@@ -41,8 +41,10 @@ app.use('*', cors({
 app.use('/api/*', validateContentType(['application/json', 'text/plain']))
 app.use('/api/*', validateRequestSize(5 * 1024 * 1024)) // 5MB limit
 
-// Session management
-app.use('*', sessionTimeoutMiddleware())
+// Session management - DEPRECATED
+// sessionTimeoutMiddleware has been disabled (see security.ts)
+// Authentication is now handled by authMiddleware/criticalAuthMiddleware per-route
+// app.use('*', sessionTimeoutMiddleware())
 
 // Monitoring endpoints (no auth required)
 app.route('/api', monitoring)

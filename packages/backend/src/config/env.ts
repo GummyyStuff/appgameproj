@@ -32,6 +32,20 @@ const envSchema = z.object({
   // Monitoring Configuration
   HEALTH_CHECK_TIMEOUT: z.string().default('5000'),
   METRICS_ENABLED: z.string().default('true'),
+  
+  // Redis Configuration
+  REDIS_URL: z.string().url().optional(), // e.g., redis://localhost:6379
+  REDIS_HOST: z.string().default('localhost'),
+  REDIS_PORT: z.string().default('6379'),
+  REDIS_PASSWORD: z.string().optional(),
+  REDIS_DB: z.string().default('0'), // Database number (0-15)
+  REDIS_ENABLED: z.string().default('true'), // Enable/disable Redis
+  
+  // Cache Configuration
+  CACHE_USER_PROFILE_TTL: z.string().default('300'), // 5 minutes
+  CACHE_BALANCE_TTL: z.string().default('60'), // 1 minute
+  CACHE_LEADERBOARD_TTL: z.string().default('30'), // 30 seconds
+  CACHE_STATS_TTL: z.string().default('120'), // 2 minutes
 })
 
 export type Env = z.infer<typeof envSchema>
@@ -46,6 +60,7 @@ export function validateEnv(): Env {
       console.log(`   NODE_ENV: ${parsed.NODE_ENV}`)
       console.log(`   PORT: ${parsed.PORT}`)
       console.log(`   DATABASE: Appwrite`)
+      console.log(`   REDIS: ${parsed.REDIS_ENABLED === 'true' ? `${parsed.REDIS_HOST}:${parsed.REDIS_PORT}` : 'Disabled'}`)
       console.log(`   LOG_LEVEL: ${parsed.LOG_LEVEL}`)
       console.log(`   METRICS_ENABLED: ${parsed.METRICS_ENABLED}`)
     }
@@ -102,6 +117,24 @@ function getConfig(): any {
       enableGameLogging: env.ENABLE_GAME_LOGGING === 'true',
       enableSecurityLogging: env.ENABLE_SECURITY_LOGGING === 'true',
       metricsEnabled: env.METRICS_ENABLED === 'true',
+      redisEnabled: env.REDIS_ENABLED === 'true',
+      
+      // Redis configuration
+      redis: {
+        url: env.REDIS_URL,
+        host: env.REDIS_HOST,
+        port: parseInt(env.REDIS_PORT),
+        password: env.REDIS_PASSWORD,
+        db: parseInt(env.REDIS_DB),
+      },
+      
+      // Cache TTLs (in seconds)
+      cache: {
+        userProfileTtl: parseInt(env.CACHE_USER_PROFILE_TTL),
+        balanceTtl: parseInt(env.CACHE_BALANCE_TTL),
+        leaderboardTtl: parseInt(env.CACHE_LEADERBOARD_TTL),
+        statsTtl: parseInt(env.CACHE_STATS_TTL),
+      },
     }
   }
   return _config

@@ -5,7 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:bun": "bun run bun-dev-server.ts",
+    "dev:vite": "vite",
     "build": "vite build",
+    "build:bun": "bun build ./src/main.tsx --outdir=dist --target=browser --splitting --minify --sourcemap",
     "preview": "vite preview",
     "test": "bun test",
     "test:watch": "bun test --watch",

@@ -1,19 +1,31 @@
 /**
  * User Service
- * Handles user profile operations using Appwrite
+ * Handles user profile operations using Appwrite with Redis caching
+ * 
+ * Cache Strategy:
+ * - GET operations check cache first, fall back to Appwrite
+ * - UPDATE operations invalidate cache
+ * - Cache TTL: 5 minutes for profiles, 1 minute for balances
  */
 
 import { appwriteDb } from './appwrite-database';
 import { COLLECTION_IDS, UserProfile } from '../config/collections';
 import { Permission, Role, ID } from 'node-appwrite';
+import { CacheService } from './cache-service';
 
 export class UserService {
   /**
-   * Get user profile by user ID
+   * Get user profile by user ID (with caching)
    */
   static async getUserProfile(userId: string): Promise<UserProfile | null> {
     try {
-      // Query Appwrite to find user by userId field
+      // Try cache first
+      const cached = await CacheService.getUserProfile(userId);
+      if (cached) {
+        return cached;
+      }
+
+      // Cache miss - query Appwrite
       const { data, error } = await appwriteDb.listDocuments<UserProfile>(
         COLLECTION_IDS.USERS,
         [appwriteDb.equal('userId', userId)]
@@ -25,7 +37,12 @@ export class UserService {
       }
       
       if (data && data.length > 0) {
-        return data[0];
+        const profile = data[0];
+        
+        // Cache the result
+        await CacheService.setUserProfile(userId, profile);
+        
+        return profile;
       }
       
       return null;
@@ -36,11 +53,25 @@ export class UserService {
   }
 
   /**
-   * Get user balance
+   * Get user balance (with caching)
    */
   static async getUserBalance(userId: string): Promise<number> {
+    // Try cache first
+    const cachedBalance = await CacheService.getUserBalance(userId);
+    if (cachedBalance !== null) {
+      return cachedBalance;
+    }
+
+    // Cache miss - get from profile
     const profile = await this.getUserProfile(userId);
-    return profile?.balance ?? 0;
+    const balance = profile?.balance ?? 0;
+    
+    // Cache the balance
+    if (profile) {
+      await CacheService.setUserBalance(userId, balance);
+    }
+    
+    return balance;
   }
 
   /**
@@ -104,7 +135,7 @@ export class UserService {
   }
 
   /**
-   * Update user profile
+   * Update user profile (invalidates cache)
    */
   static async updateUserProfile(
     userId: string,
@@ -130,11 +161,19 @@ export class UserService {
       return { success: false, error };
     }
 
+    // Invalidate cache after update
+    await CacheService.invalidateUserProfile(userId);
+    
+    // If balance was updated, invalidate balance cache too
+    if (updates.balance !== undefined) {
+      await CacheService.invalidateUserBalance(userId);
+    }
+
     return { success: true, profile: data! };
   }
 
   /**
-   * Update user balance (internal use only)
+   * Update user balance (internal use only, with cache invalidation)
    */
   static async updateBalance(
     userId: string,
@@ -154,11 +193,19 @@ export class UserService {
       }
     );
 
+    if (!error) {
+      // Invalidate both caches after successful update
+      await Promise.all([
+        CacheService.invalidateUserBalance(userId),
+        CacheService.invalidateUserProfile(userId),
+      ]);
+    }
+
     return { success: !error, error: error || undefined };
   }
 
   /**
-   * Increment user statistics
+   * Increment user statistics (invalidates cache)
    */
   static async incrementStats(
     userId: string,
@@ -181,13 +228,28 @@ export class UserService {
       }
     );
 
+    if (!error) {
+      // Invalidate user caches after stats update
+      await Promise.all([
+        CacheService.invalidateUserProfile(userId),
+        CacheService.invalidateUserStats(userId),
+      ]);
+    }
+
     return { success: !error, error: error || undefined };
   }
 
   /**
-   * Get user statistics
+   * Get user statistics (with caching)
    */
   static async getUserStatistics(userId: string) {
+    // Try cache first
+    const cached = await CacheService.getUserStats(userId);
+    if (cached) {
+      return cached;
+    }
+
+    // Cache miss - compute from database
     const profile = await this.getUserProfile(userId);
     if (!profile) {
       return {
@@ -230,7 +292,7 @@ export class UserService {
       }
     }
 
-    return {
+    const stats = {
       success: true,
       balance: profile.balance,
       total_wagered: profile.totalWagered,
@@ -243,6 +305,12 @@ export class UserService {
         new Date(profile.lastDailyBonus).toDateString() !== new Date().toDateString(),
       game_statistics: gameStats,
     };
+
+    // Cache the computed stats
+    await CacheService.setUserStats(userId, stats);
+
+    return stats;
   }
 }
+
 

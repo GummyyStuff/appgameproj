@@ -5,12 +5,16 @@
  */
 
 import { afterEach } from 'bun:test';
-import { cleanup } from '@testing-library/react';
 
 // Global cleanup after each test to prevent interference
 afterEach(() => {
-  // Clean up React Testing Library (this also clears the DOM)
-  cleanup();
+  // Try to cleanup React Testing Library if available (frontend tests)
+  try {
+    const { cleanup } = require('@testing-library/react');
+    cleanup();
+  } catch {
+    // Not available in backend tests, that's fine
+  }
   
   // Note: Don't manually clear document.body as it can break Happy DOM
   // cleanup() from @testing-library/react handles this for us
@@ -20,12 +24,17 @@ afterEach(() => {
 (global as any).testUtils = {
   // Add any global test utilities here
   createMockQueryClient: () => {
-    const { QueryClient } = require('@tanstack/react-query');
-    return new QueryClient({
-      defaultOptions: {
-        queries: { retry: false },
-        mutations: { retry: false },
-      },
-    });
+    try {
+      const { QueryClient } = require('@tanstack/react-query');
+      return new QueryClient({
+        defaultOptions: {
+          queries: { retry: false },
+          mutations: { retry: false },
+        },
+      });
+    } catch {
+      // Not available in backend tests
+      return null;
+    }
   },
 };

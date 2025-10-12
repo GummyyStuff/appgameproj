@@ -249,7 +249,7 @@ Revealing your prize...
                   </motion.h3>
 
                   <CaseOpeningAnimation
-                    config={{ type: 'reveal', duration: REVEAL_TIMING.DURATION, easing: 'easeOut' }}
+                    config={gameState.animationConfig || { type: 'reveal', duration: REVEAL_TIMING.DURATION, easing: 'easeOut' }}
                     result={gameState.result}
                     onComplete={handleRevealComplete}
                   />

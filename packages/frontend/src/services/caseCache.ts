@@ -240,6 +240,19 @@ export class CaseCacheService {
   }
 
   /**
+   * Credit winnings to balance after animation completes
+   */
+  creditWinnings(userId: string, winnings: number): void {
+    const balanceQueryKey = ['balance', userId]
+    const currentBalance = this.queryClient.getQueryData<number>(balanceQueryKey)
+    
+    if (currentBalance !== undefined) {
+      const newBalance = currentBalance + winnings
+      this.queryClient.setQueryData(balanceQueryKey, newBalance)
+    }
+  }
+
+  /**
    * Invalidate all case-related caches
    */
   invalidateAllCaches(): void {
