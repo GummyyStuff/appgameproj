@@ -491,9 +491,11 @@ gameRoutes.post('/cases/open',
       new_balance: transactionResult.newBalance,
       transaction_id: transactionResult.gameId
     })
-  } catch (error) {
-    console.error('Case opening error:', error)
-    return c.json({ error: 'Internal server error' }, 500)
+  } catch (error: any) {
+    console.error('❌ Case opening error:', error)
+    console.error('Error message:', error?.message)
+    console.error('Error stack:', error?.stack)
+    return c.json({ error: error?.message || 'Internal server error' }, 500)
   }
 }))
 

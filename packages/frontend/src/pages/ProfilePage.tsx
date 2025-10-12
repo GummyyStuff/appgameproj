@@ -193,7 +193,7 @@ const ProfilePage: React.FC = () => {
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-4">
             <div className="w-16 h-16 bg-tarkov-accent rounded-full flex items-center justify-center text-2xl font-bold text-tarkov-dark">
-              {profile.username?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase()}
+              {profile.username?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || '?'}
             </div>
             <div>
               <h1 className="text-2xl font-tarkov font-bold text-white">

@@ -136,7 +136,12 @@ const StatisticsDashboard: React.FC = () => {
     const dailyData = new Map<string, { games: number; wagered: number; won: number; profit: number }>()
     
     gameHistory.forEach(game => {
-      const date = new Date(game.created_at).toISOString().split('T')[0]
+      // Skip games with invalid dates
+      if (!game.created_at) return
+      const dateObj = new Date(game.created_at)
+      if (isNaN(dateObj.getTime())) return
+      
+      const date = dateObj.toISOString().split('T')[0]
       
       if (!dailyData.has(date)) {
         dailyData.set(date, { games: 0, wagered: 0, won: 0, profit: 0 })

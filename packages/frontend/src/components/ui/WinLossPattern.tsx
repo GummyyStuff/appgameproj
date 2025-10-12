@@ -134,11 +134,11 @@ const WinLossPattern: React.FC<WinLossPatternProps> = ({
                 transition={{ delay: index * 0.02 }}
                 whileHover={{ scale: 1.2, zIndex: 10 }}
                 title={`
-                  ${game.game_type.charAt(0).toUpperCase() + game.game_type.slice(1)} - 
+                  ${game.game_type ? game.game_type.charAt(0).toUpperCase() + game.game_type.slice(1) : 'Unknown'} - 
                   ${resultType === 'win' ? 'Win' : resultType === 'loss' ? 'Loss' : 'Break Even'} - 
                   Bet: ₽${(game.bet_amount || 0).toLocaleString()} - 
                   Win: ₽${(game.win_amount || 0).toLocaleString()} - 
-                  ${new Date(game.created_at).toLocaleDateString()}
+                  ${game.created_at ? (() => { const d = new Date(game.created_at); return isNaN(d.getTime()) ? 'N/A' : d.toLocaleDateString(); })() : 'N/A'}
                 `}
               >
                 {getResultIcon(resultType)}

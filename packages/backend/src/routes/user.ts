@@ -38,8 +38,8 @@ userRoutes.get('/profile', asyncHandler(async (c) => {
       user: {
         id: user.id,
         email: user.email,
-        username: profile.username,
-        displayName: profile.displayName,
+        username: profile.username || user.email || `user_${user.id.substring(0, 8)}`,
+        displayName: profile.displayName || profile.username || user.email || 'Anonymous User',
         balance: profile.balance,
         created_at: profile.createdAt,
         is_moderator: profile.isModerator,

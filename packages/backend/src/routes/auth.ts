@@ -95,8 +95,8 @@ authRoutes.get('/me',
         }
         
         profile = await UserService.createUserProfile(appwriteUserId, {
-          username: appwriteUser.name || `user_${appwriteUserId.substring(0, 8)}`,
-          displayName: appwriteUser.name,
+          username: (appwriteUser.name && appwriteUser.name.trim()) || `user_${appwriteUserId.substring(0, 8)}`,
+          displayName: (appwriteUser.name && appwriteUser.name.trim()) || `user_${appwriteUserId.substring(0, 8)}`,
           email: appwriteUser.email,
           balance: parseInt(process.env.STARTING_BALANCE || '10000'),
           avatarUrl: avatarUrl,

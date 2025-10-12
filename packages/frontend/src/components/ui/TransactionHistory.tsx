@@ -67,7 +67,10 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
   }
 
   const formatDate = (dateString: string) => {
+    if (!dateString) return 'N/A'
     const date = new Date(dateString)
+    if (isNaN(date.getTime())) return 'Invalid Date'
+    
     if (compact) {
       return date.toLocaleDateString('en-US', { 
         month: 'short', 
@@ -100,7 +103,7 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
       case 'blackjack': return 'Blackjack'
 
       case 'admin': return 'Admin'
-      default: return gameType.charAt(0).toUpperCase() + gameType.slice(1)
+      default: return gameType ? gameType.charAt(0).toUpperCase() + gameType.slice(1) : 'Unknown'
     }
   }
 

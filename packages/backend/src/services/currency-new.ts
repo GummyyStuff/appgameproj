@@ -154,12 +154,16 @@ export class CurrencyService {
         netResult,
         gameId,
       };
-    } catch (error) {
+    } catch (error: any) {
       // Rollback on error
-      console.error('Transaction error, attempting rollback:', error);
+      console.error('❌ Transaction error, attempting rollback:', error);
+      console.error('Error message:', error?.message);
+      console.error('Error stack:', error?.stack);
+      console.error('Transaction state:', { balanceUpdated, statsUpdated, gameRecorded });
 
       if (balanceUpdated) {
         // Rollback balance
+        console.log('Rolling back balance to:', previousBalance);
         await UserService.updateBalance(userId, previousBalance);
       }
 
@@ -167,6 +171,7 @@ export class CurrencyService {
         // Rollback stats
         const profile = await UserService.getUserProfile(userId);
         if (profile) {
+          console.log('Rolling back stats');
           await appwriteDb.updateDocument(
             COLLECTION_IDS.USERS,
             profile.$id!,
@@ -181,6 +186,7 @@ export class CurrencyService {
 
       if (gameRecorded && gameId) {
         // Delete game record
+        console.log('Rolling back game record:', gameId);
         await appwriteDb.deleteDocument(COLLECTION_IDS.GAME_HISTORY, gameId);
       }
 

@@ -57,7 +57,7 @@ const ErrorDisplay: React.FC<{
                strategy.severity === 'high' ? '⚠️' :
                strategy.severity === 'medium' ? '🔔' : 'ℹ️'}
             </span>
-            {strategy.severity.charAt(0).toUpperCase() + strategy.severity.slice(1)} Priority
+            {strategy.severity ? strategy.severity.charAt(0).toUpperCase() + strategy.severity.slice(1) : 'Unknown'} Priority
           </div>
         </motion.div>
 

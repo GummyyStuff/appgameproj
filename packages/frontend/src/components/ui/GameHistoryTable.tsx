@@ -87,13 +87,25 @@ const GameHistoryTable: React.FC<GameHistoryTableProps> = ({
 
     if (filters.dateFrom) {
       const fromDate = new Date(filters.dateFrom)
-      filtered = filtered.filter(game => new Date(game.created_at) >= fromDate)
+      if (!isNaN(fromDate.getTime())) {
+        filtered = filtered.filter(game => {
+          if (!game.created_at) return false
+          const gameDate = new Date(game.created_at)
+          return !isNaN(gameDate.getTime()) && gameDate >= fromDate
+        })
+      }
     }
 
     if (filters.dateTo) {
       const toDate = new Date(filters.dateTo)
-      toDate.setHours(23, 59, 59, 999) // End of day
-      filtered = filtered.filter(game => new Date(game.created_at) <= toDate)
+      if (!isNaN(toDate.getTime())) {
+        toDate.setHours(23, 59, 59, 999) // End of day
+        filtered = filtered.filter(game => {
+          if (!game.created_at) return false
+          const gameDate = new Date(game.created_at)
+          return !isNaN(gameDate.getTime()) && gameDate <= toDate
+        })
+      }
     }
 
     if (filters.minBet) {
@@ -122,8 +134,11 @@ const GameHistoryTable: React.FC<GameHistoryTableProps> = ({
 
       switch (filters.sortBy) {
         case 'date':
-          aValue = new Date(a.created_at).getTime()
-          bValue = new Date(b.created_at).getTime()
+          aValue = a.created_at ? new Date(a.created_at).getTime() : 0
+          bValue = b.created_at ? new Date(b.created_at).getTime() : 0
+          // Handle invalid dates by treating them as 0
+          aValue = isNaN(aValue) ? 0 : aValue
+          bValue = isNaN(bValue) ? 0 : bValue
           break
         case 'bet':
           aValue = a.bet_amount
@@ -141,8 +156,11 @@ const GameHistoryTable: React.FC<GameHistoryTableProps> = ({
           bValue = isNaN(bValue) ? 0 : bValue
           break
         default:
-          aValue = new Date(a.created_at).getTime()
-          bValue = new Date(b.created_at).getTime()
+          aValue = a.created_at ? new Date(a.created_at).getTime() : 0
+          bValue = b.created_at ? new Date(b.created_at).getTime() : 0
+          // Handle invalid dates by treating them as 0
+          aValue = isNaN(aValue) ? 0 : aValue
+          bValue = isNaN(bValue) ? 0 : bValue
       }
 
       if (filters.sortOrder === 'asc') {
@@ -170,7 +188,11 @@ const GameHistoryTable: React.FC<GameHistoryTableProps> = ({
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('en-US', {
+    if (!dateString) return 'N/A'
+    const date = new Date(dateString)
+    if (isNaN(date.getTime())) return 'Invalid Date'
+    
+    return date.toLocaleString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -193,7 +215,7 @@ const GameHistoryTable: React.FC<GameHistoryTableProps> = ({
       case 'roulette': return 'Roulette'
       case 'blackjack': return 'Blackjack'
       case 'case_opening': return 'Case Opening'
-      default: return gameType.charAt(0).toUpperCase() + gameType.slice(1)
+      default: return gameType ? gameType.charAt(0).toUpperCase() + gameType.slice(1) : 'Unknown'
     }
   }
 
