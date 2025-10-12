@@ -1,0 +1,105 @@
+---
+description: Cursor can read git information but NEVER make changes (commit, push, merge, branch) without explicit user permission
+globs:
+  - "**/.git/**"
+  - "**/.gitignore"
+  - "**/.gitattributes"
+alwaysApply: true
+---
+
+# Git Usage Restrictions
+
+**CRITICAL**: Cursor must NEVER make changes to git without explicit user permission in the same prompt.
+
+## Allowed Git Operations (Read-Only)
+
+Cursor CAN use these commands to read repository information:
+
+- **View logs**: `git log`, `git log --oneline`, `git log --graph`
+- **View status**: `git status`
+- **View diffs**: `git diff`, `git diff --cached`, `git show`
+- **View branches**: `git branch`, `git branch -a`, `git branch -r`
+- **View remotes**: `git remote -v`
+- **View commits**: `git show <commit>`, `git log <file>`
+- **View stash**: `git stash list`, `git stash show`
+- **View tags**: `git tag`, `git tag -l`
+- **View config**: `git config --list`
+- **Blame**: `git blame <file>`
+- **Check repository**: `git rev-parse --git-dir`
+
+## Forbidden Git Operations (Unless Explicitly Requested)
+
+Cursor must NEVER use these commands without explicit user instruction in the same prompt:
+
+- **Commit operations**: `git commit`, `git commit -m`, `git commit --amend`, `git commit -a`
+- **Branch operations**: `git branch <name>`, `git checkout -b`, `git switch -c`, `git branch -d`
+- **Merge operations**: `git merge`, `git rebase`, `git cherry-pick`
+- **Push operations**: `git push`, `git push --force`, `git push --force-with-lease`
+- **Pull operations**: `git pull`, `git fetch && git merge`
+- **Reset operations**: `git reset`, `git reset --hard`, `git reset --soft`
+- **Stash operations**: `git stash`, `git stash pop`, `git stash apply`, `git stash drop`
+- **Tag operations**: `git tag <name>`, `git tag -d`
+- **Add operations**: `git add`, `git add .`, `git add -A`
+- **Remove operations**: `git rm`, `git rm --cached`
+- **Revert operations**: `git revert`
+- **Clean operations**: `git clean`
+- **Submodule operations**: `git submodule add`, `git submodule update`
+- **Config changes**: `git config --global`, `git config user.name`, `git config user.email`
+- **Any operation with --force, --no-verify, or --no-gpg-sign flags**
+
+## Rules for Git Changes
+
+1. **No automatic commits** - Never commit changes unless the user explicitly says "commit" or "git commit" in their message
+2. **No automatic pushes** - Never push to remote unless explicitly requested with "push" or "git push"
+3. **No destructive operations** - Never use reset, force push, or other destructive commands without explicit permission
+4. **No branch creation** - Never create, delete, or switch branches without explicit request
+5. **No merge operations** - Never merge or rebase without explicit user instruction
+6. **No hook bypassing** - Never use --no-verify, --no-gpg-sign, or similar flags without explicit request
+7. **Ask for confirmation on destructive operations** - If user requests a destructive operation on main/master, warn them first
+
+## Examples
+
+### ❌ Don't Do This
+
+- Automatically running `git add .` after making code changes
+- Running `git commit -m "Fixed bug"` after completing a task
+- Running `git push` after committing
+- Running `git commit --no-verify` to bypass hooks
+- Creating a new branch without being asked
+- Merging branches automatically
+- Running `git push --force` even if repository state seems wrong
+
+### ✅ Do This Instead
+
+- Make code changes and wait for user to commit
+- Read git status and git diff to understand repository state
+- Inform user of changes made and suggest they commit when ready
+- If user says "commit these changes", then run git commit
+- If user says "push to remote", then run git push
+
+## Valid User Instructions for Git Changes
+
+These phrases indicate the user wants git operations:
+
+- "commit these changes"
+- "git commit with message X"
+- "push to remote"
+- "create a new branch called X"
+- "merge branch X into Y"
+- "git add these files"
+- Any message containing explicit git commands
+
+## Integration with Workflow
+
+- After completing a task, summarize changes but DO NOT commit
+- Provide git status if helpful, but DO NOT run git add/commit
+- Let the user control when and how to commit their code
+- Respect that users may have specific commit conventions, hooks, or workflows
+
+## Why This Rule Exists
+
+1. **User control** - Users should control their git workflow and commit messages
+2. **Prevent accidents** - Avoid accidental commits, pushes, or destructive operations
+3. **Respect conventions** - Users may have commit message conventions, hooks, or team workflows
+4. **Safety** - Prevent force pushes, resets, and other operations that could lose work
+5. **Transparency** - Users should be aware of all git operations happening in their repository
