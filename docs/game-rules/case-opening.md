@@ -155,10 +155,12 @@ Case opening is a thrilling game where players purchase cases containing random 
 - Balance is checked before opening
 - Insufficient funds prevent case opening
 
-### Daily Limits
-- **Free Cases**: 3 per day (low-value cases)
-- **Purchase Limit**: No limit on paid cases
-- **Reset Time**: Midnight UTC
+### Opening Limits
+- **Rate Limiting**: To prevent abuse, case openings may be rate-limited
+- **Balance Requirement**: Must have sufficient balance to purchase case
+- **No Daily Limit**: Open as many cases as your balance allows
+
+> **Important**: All case opening results use cryptographically secure random generation and are provably fair.
 
 ## Payout System
 
@@ -174,9 +176,11 @@ Case opening is a thrilling game where players purchase cases containing random 
 - **Example**: 1,500 PMC case → Graphics Card (600₽) = -900 loss, or → Red Keycard (3,000₽) = +1,500 profit
 
 ### Expected Value
-- **Scav Case**: 85-95% return rate (safer, lower risk)
-- **PMC Case**: 90-100% return rate (balanced risk/reward)
-- **Labs Case**: 95-110% return rate (higher risk, potential for big wins)
+- **Scav Case**: ~85% return rate (safer, lower risk)
+- **PMC Case**: ~90% return rate (balanced risk/reward)
+- **Labs Case**: ~95% return rate (higher risk, potential for big wins)
+
+> **Note**: These are statistical averages. Individual results will vary. All values are in virtual currency with no real-world value.
 
 ## Strategy Tips
 

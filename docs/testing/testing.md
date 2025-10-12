@@ -4,13 +4,22 @@ This document describes the complete testing strategy and implementation for the
 
 ## Overview
 
-The testing suite covers all aspects of the application including:
+The testing suite uses **Bun Test** for all testing needs, covering:
 - Unit tests for individual components and functions
-- Integration tests for API endpoints and database operations
+- Integration tests for API endpoints and Appwrite operations
 - End-to-end tests for complete user workflows
 - Game fairness testing and statistical validation
 - Performance tests for concurrent user scenarios
 - Security and validation testing
+
+### Why Bun Test?
+
+- ⚡ **Fast**: 10x faster than Jest for TypeScript tests
+- 🎯 **Built-in**: No additional test framework needed
+- 🔄 **Compatible**: Works with React Testing Library
+- 📦 **Zero Config**: Works out of the box
+- 🎭 **Mocking**: Built-in mocking capabilities
+- 📊 **Coverage**: Built-in coverage reporting
 
 ## Test Structure
 
@@ -76,16 +85,17 @@ The testing suite covers all aspects of the application including:
 
 **API Integration:**
 - Authentication endpoints (register, login, logout, password reset)
-- Game endpoints (roulette, blackjack)
+- Game endpoints (roulette, blackjack, case opening)
 - User profile and statistics endpoints
-- Database operations with real data
+- Appwrite database operations
 - Error handling and validation
 
 **Service Integration:**
-- Game engine with database
-- Currency service with game transactions
+- Game engine with Appwrite database
+- Currency service with atomic balance operations
 - Statistics service with game history
-- Real-time updates and WebSocket communication
+- Appwrite Realtime subscriptions
+- Cache service (Dragonfly) integration
 
 ### 3. Game Fairness Testing
 
@@ -134,32 +144,17 @@ The testing suite covers all aspects of the application including:
 
 ## Running Tests
 
-### Using the Test Runner
-
-The project includes a comprehensive test runner script:
+### Root Level Testing
 
 ```bash
-# Run all tests
-node test-runner.js run
+# Run all tests (backend + frontend)
+bun test
 
-# Run all backend tests
-node test-runner.js run backend
+# Run all tests with coverage
+bun test --coverage
 
-# Run all frontend tests
-node test-runner.js run frontend
-
-# Run specific test suite
-node test-runner.js run backend unit
-node test-runner.js run frontend games
-
-# Run performance benchmarks
-node test-runner.js performance
-
-# Run game fairness tests
-node test-runner.js fairness
-
-# Run CI/CD test suite
-node test-runner.js ci
+# Watch mode for all packages
+bun test --watch
 ```
 
 ### Individual Package Testing
@@ -168,77 +163,123 @@ node test-runner.js ci
 ```bash
 cd packages/backend
 
+# All tests
+bun test
+
 # All tests with coverage
-bun run test:coverage
+bun test --coverage
 
 # Specific test suites
-bun run test:unit
-bun run test:integration
-bun run test:performance
-bun run test:fairness
-bun run test:game-engine
-bun run test:api
-bun run test:database
-bun run test:currency
-bun run test:statistics
+bun test:unit              # Unit tests only
+bun test:integration       # Integration tests
+bun test:performance       # Performance benchmarks
+bun test:fairness          # Game fairness validation
+bun test:game-engine       # Game engine tests
+bun test:api               # API endpoint tests
+bun test:database          # Database service tests
+bun test:currency          # Currency operation tests
+bun test:statistics        # Statistics service tests
 
 # Watch mode for development
-bun run test:watch
+bun test --watch
+
+# Run specific test file
+bun test src/services/database.test.ts
 ```
 
 **Frontend Testing:**
 ```bash
 cd packages/frontend
 
+# All tests
+bun test
+
 # All tests with coverage
-bun run test:coverage
+bun test --coverage
 
 # Specific test suites
-bun run test:unit
-bun run test:integration
-bun run test:e2e
-bun run test:components
-bun run test:hooks
-bun run test:auth
-bun run test:games
-bun run test:ui
+bun test:components        # Component tests
+bun test:hooks             # Hook tests
+bun test:auth              # Authentication tests
+bun test:games             # Game component tests
+bun test:integration       # Integration tests
+bun test:performance       # Performance tests
 
 # Watch mode for development
-bun run test:watch
+bun test --watch
+
+# Run specific test file
+bun test src/components/games/Roulette.test.tsx
 ```
 
 ## Test Configuration
 
 ### Backend Configuration (Bun Test)
 
-```typescript
-// No configuration file needed - Bun test works out of the box
-// Test files use: import { describe, it, expect } from 'bun:test'
+**No configuration file needed** - Bun test works out of the box!
 
-// Coverage and test settings are configured via package.json scripts:
-// "test": "bun test"
-// "test:coverage": "bun test --coverage"
-// "test:watch": "bun test --watch"
+```typescript
+// packages/backend/src/services/example.test.ts
+import { describe, test, expect } from 'bun:test';
+
+describe('Service Tests', () => {
+  test('should do something', () => {
+    expect(2 + 2).toBe(4);
+  });
+});
+```
+
+**Package.json scripts:**
+```json
+{
+  "scripts": {
+    "test": "bun test",
+    "test:watch": "bun test --watch",
+    "test:coverage": "bun test --coverage",
+    "test:unit": "bun test --test-name-pattern='.*\\.test\\.ts$'",
+    "test:integration": "bun test src/integration/",
+    "test:performance": "bun test src/test-utils/performance.test.ts"
+  }
+}
 ```
 
 ### Frontend Configuration (Bun Test)
 
+**Configuration:** `bunfig.toml` (root level)
+
 ```toml
-# bunfig.toml
 [test]
-preload = ["./src/test-utils/test-setup.ts"]
-env = "happy-dom"
-coverage = true
-coverageDir = "coverage"
-coverageReporter = ["text", "html", "json"]
-timeout = 10000
-testNamePattern = ".*\\.(test|spec)\\.(ts|tsx|js|jsx)$"
+preload = ["./packages/frontend/src/test-utils/test-setup.ts"]
 ```
 
+**Test setup file:**
 ```typescript
-// Test files use: import { describe, it, expect, mock } from 'bun:test'
-// DOM environment provided by happy-dom
-// React Testing Library works seamlessly with Bun test
+// packages/frontend/src/test-utils/test-setup.ts
+import { beforeAll, afterAll } from 'bun:test';
+import '@happy-dom/global-registrator';
+
+// Setup happy-dom for React component tests
+beforeAll(() => {
+  // Global test setup
+});
+
+afterAll(() => {
+  // Global test cleanup
+});
+```
+
+**Package.json scripts:**
+```json
+{
+  "scripts": {
+    "test": "bun test",
+    "test:watch": "bun test --watch",
+    "test:coverage": "bun test --coverage",
+    "test:components": "bun test src/components",
+    "test:hooks": "bun test src/hooks",
+    "test:integration": "bun test src/test-utils/integration"
+  }
+}
 ```
 
 ## Coverage Requirements
@@ -266,27 +307,53 @@ Coverage reports are generated in multiple formats:
 ```yaml
 name: Test Suite
 on: [push, pull_request]
+
 jobs:
   test:
     runs-on: ubuntu-latest
+    
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-      - run: npm install
-      - run: node test-runner.js ci
-      - uses: codecov/codecov-action@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+      
+      - name: Install dependencies
+        run: bun install
+      
+      - name: Run tests with coverage
+        run: bun test --coverage
+      
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage/coverage-final.json
 ```
 
 ### Pre-commit Hooks
 
 ```json
 {
-  "husky": {
-    "hooks": {
-      "pre-commit": "lint-staged && node test-runner.js run backend unit && node test-runner.js run frontend unit"
-    }
+  "scripts": {
+    "pre-commit": "bun test"
   }
 }
+```
+
+Or using Husky:
+
+```bash
+# Install husky
+bun add -D husky
+
+# Setup git hooks
+bunx husky install
+
+# Add pre-commit hook
+bunx husky add .husky/pre-commit "bun test"
 ```
 
 ## Test Data Management
@@ -472,4 +539,81 @@ jobs:
 
 ---
 
-This comprehensive testing suite ensures the reliability, security, and performance of the Tarkov Casino Website while maintaining high code quality and user experience standards.
+## Bun Test Features
+
+### Built-in Features
+
+```typescript
+import { describe, test, expect, beforeAll, afterAll, beforeEach, afterEach, mock, spyOn } from 'bun:test';
+
+describe('Bun Test Features', () => {
+  // Lifecycle hooks
+  beforeAll(() => console.log('Before all tests'));
+  afterAll(() => console.log('After all tests'));
+  beforeEach(() => console.log('Before each test'));
+  afterEach(() => console.log('After each test'));
+
+  // Basic test
+  test('basic assertion', () => {
+    expect(1 + 1).toBe(2);
+  });
+
+  // Async test
+  test('async operation', async () => {
+    const result = await someAsyncFunction();
+    expect(result).toBeDefined();
+  });
+
+  // Mocking
+  test('function mocking', () => {
+    const mockFn = mock((x) => x * 2);
+    expect(mockFn(5)).toBe(10);
+    expect(mockFn).toHaveBeenCalledWith(5);
+  });
+
+  // Spying
+  test('spy on object method', () => {
+    const obj = { method: () => 'original' };
+    const spy = spyOn(obj, 'method').mockReturnValue('mocked');
+    
+    expect(obj.method()).toBe('mocked');
+    expect(spy).toHaveBeenCalled();
+  });
+});
+```
+
+### Snapshot Testing
+
+```typescript
+import { test, expect } from 'bun:test';
+
+test('snapshot test', () => {
+  const data = {
+    user: 'test',
+    balance: 10000
+  };
+  
+  expect(data).toMatchSnapshot();
+});
+```
+
+### Performance Testing
+
+```typescript
+import { test, expect } from 'bun:test';
+
+test('performance benchmark', () => {
+  const start = performance.now();
+  
+  // Run operation
+  const result = expensiveOperation();
+  
+  const duration = performance.now() - start;
+  
+  expect(duration).toBeLessThan(100); // Should complete in < 100ms
+});
+```
+
+---
+
+This comprehensive testing suite ensures the reliability, security, and performance of the Tarkov Casino Website while maintaining high code quality and user experience standards. Powered by Bun Test for maximum speed and efficiency.

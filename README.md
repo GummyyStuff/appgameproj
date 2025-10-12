@@ -11,15 +11,17 @@ A Tarkov-themed casino gaming website offering classic casino games with virtual
 - **Tarkov Theming**: Immersive design with game assets and aesthetics
 - **Real-time Statistics**: Comprehensive game analytics and history
 - **Provably Fair Gaming**: Cryptographically secure random number generation
+- **High-Performance Caching**: Dragonfly (25x faster than Redis) for sub-millisecond response times
 
 ## 🏗️ Architecture
 
 This is a monorepo containing:
 
-- **Frontend**: React + TypeScript + Tailwind CSS + Vite
+- **Frontend**: React 19 + TypeScript + Tailwind CSS 4 + Vite
 - **Backend**: Bun + Hono + TypeScript
-- **Database**: Supabase (PostgreSQL)
-- **Real-time**: Socket.io + Supabase Realtime
+- **Database**: Appwrite (BaaS) - Authentication, Databases, Storage, Realtime
+- **Cache**: Dragonfly (Redis-compatible) for high-performance caching
+- **Real-time**: Appwrite Realtime via WebSocket
 - **Testing**: Bun Test with comprehensive test suites
 - **Security**: Provably fair algorithms with secure random generation
 - **Monitoring**: Performance metrics, health checks, and fairness validation
@@ -37,11 +39,20 @@ tarkov-casino/
 │   │   └── vite.config.ts
 │   └── backend/           # Bun + Hono backend API
 │       ├── src/
+│       │   ├── services/  # Redis, cache, game logic
+│       │   ├── routes/    # API endpoints
+│       │   ├── middleware/# Auth, validation, rate limiting
+│       │   └── config/    # Environment, Appwrite setup
 │       ├── package.json
 │       └── tsconfig.json
-├── docker-compose.yml     # Local development with Supabase
-├── Dockerfile            # Production deployment
-├── coolify.json          # Coolify deployment config
+├── docs/                  # Comprehensive documentation
+│   ├── backend/           # Backend guides (Redis, database, etc.)
+│   ├── frontend/          # Frontend architecture
+│   ├── api/               # API documentation
+│   ├── deployment/        # Deployment guides
+│   └── game-rules/        # Game mechanics and rules
+├── Dockerfile             # Production deployment
+├── coolify.json           # Coolify deployment config
 └── README.md
 ```
 
@@ -50,7 +61,7 @@ tarkov-casino/
 ### Prerequisites
 
 - [Bun](https://bun.sh/) (latest version)
-- [Docker](https://docker.com/) (for local Supabase)
+- [Docker](https://docker.com/) (for local Dragonfly cache - optional)
 
 ### Installation
 
@@ -76,14 +87,20 @@ tarkov-casino/
 3. **Set up environment variables:**
    ```bash
    cp .env.example .env
-   # Edit .env with your configuration
+   # Edit .env with your Appwrite credentials
    ```
+   
+   > Get your Appwrite credentials from your Appwrite project dashboard
 
 ### Development
 
-1. **Start local Supabase (optional):**
+1. **Start Dragonfly (optional, for caching):**
    ```bash
-   docker-compose up -d supabase-db supabase-auth supabase-rest
+   docker run -d \
+     --name dragonfly \
+     -p 6379:6379 \
+     --ulimit memlock=-1 \
+     docker.dragonflydb.io/dragonflydb/dragonfly
    ```
 
 2. **Start backend development server:**
@@ -104,6 +121,8 @@ tarkov-casino/
    - API Health: http://localhost:3000/api/health
    - Detailed Health: http://localhost:3000/api/health/detailed
    - API Metrics: http://localhost:3000/api/metrics
+
+> **Note:** Dragonfly is optional for local development. The app works fine without caching (uses database fallback). See [Redis/Dragonfly documentation](./docs/backend/redis-README.md) for more details.
 
 ### Building for Production
 
@@ -159,20 +178,37 @@ For detailed production deployment instructions, see [DEPLOYMENT.md](./docs/depl
    - Dockerfile: `Dockerfile`
    - Port: `3000`
 
-4. **Set environment variables in Coolify:**
+4. **Add Dragonfly service in Coolify:**
+   - Add a new service: Dragonfly
+   - Link it to your application
+   - Note the connection URL provided by Coolify
+
+5. **Set environment variables in Coolify:**
    ```env
    NODE_ENV=production
-   SUPABASE_URL=https://your-project.supabase.co
-   SUPABASE_ANON_KEY=your_production_anon_key
-   SUPABASE_SERVICE_ROLE_KEY=your_production_service_key
-   JWT_SECRET=your_secure_jwt_secret_32_chars_min
+   
+   # Appwrite Configuration
+   APPWRITE_ENDPOINT=https://<REGION>.cloud.appwrite.io/v1
+   APPWRITE_PROJECT_ID=your_project_id
+   APPWRITE_API_KEY=your_api_key
+   APPWRITE_DATABASE_ID=tarkov_casino
+   
+   # Dragonfly/Redis (Optional)
+   REDIS_ENABLED=true
+   REDIS_URL=redis://default:PASSWORD@dragonfly-service:6379/0
    ```
 
-5. **Deploy and monitor:**
+6. **Deploy and monitor:**
    ```bash
    # Check health after deployment
    bun run health:check:prod
    ```
+   
+   The health endpoint will show:
+   - ✅ Appwrite connectivity (Auth, Database, Storage)
+   - ✅ Dragonfly cache status (if enabled)
+   - ✅ Overall system health
+   - ✅ Game services status
 
 #### Deployment Scripts
 
@@ -189,31 +225,66 @@ For detailed production deployment instructions, see [DEPLOYMENT.md](./docs/depl
 
 #### Backend (.env)
 ```env
-# Supabase Configuration
-SUPABASE_URL=http://localhost:54321
-SUPABASE_ANON_KEY=your_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_service_key
-
 # Application
 PORT=3000
 NODE_ENV=development
-JWT_SECRET=your_jwt_secret
+
+# Appwrite Configuration (Primary Database & Services)
+APPWRITE_ENDPOINT=https://<REGION>.cloud.appwrite.io/v1
+APPWRITE_PROJECT_ID=your_project_id
+APPWRITE_API_KEY=your_api_key
+# Database and Table IDs
+APPWRITE_DATABASE_ID=tarkov_casino
+APPWRITE_USERS_TABLE_ID=user_profiles
+APPWRITE_GAMES_TABLE_ID=game_history
+APPWRITE_TRANSACTIONS_TABLE_ID=transactions
+
+# Redis/Dragonfly Configuration (Optional Caching)
+REDIS_ENABLED=true
+REDIS_URL=redis://default:PASSWORD@dragonfly:6379/0
+# Cache TTLs (seconds)
+CACHE_USER_PROFILE_TTL=300
+CACHE_BALANCE_TTL=60
+CACHE_LEADERBOARD_TTL=30
+CACHE_STATS_TTL=120
 
 # Game Settings
 STARTING_BALANCE=10000
 DAILY_BONUS=1000
-
-# Case Opening Configuration
-CASE_OPENING_ENABLED=true
-FAIRNESS_VERIFICATION=true
 ```
 
 #### Frontend (Vite)
 ```env
-VITE_SUPABASE_URL=http://localhost:54321
-VITE_SUPABASE_ANON_KEY=your_anon_key
+VITE_APPWRITE_ENDPOINT=https://<REGION>.cloud.appwrite.io/v1
+VITE_APPWRITE_PROJECT_ID=your_project_id
 VITE_API_URL=http://localhost:3000
 ```
+
+## 📚 Documentation
+
+Comprehensive documentation is available in the `/docs` directory:
+
+### Backend
+- [Appwrite Integration](./docs/backend/appwrite-README.md) - Complete Appwrite setup and usage guide
+- [Database Guide](./docs/backend/database-README.md) - Database schema and operations
+- [Appwrite Realtime](./docs/backend/appwrite-realtime.md) - Real-time features and subscriptions
+- [Redis/Dragonfly Caching](./docs/backend/redis-README.md) - Caching implementation and best practices
+- [Statistics System](./docs/backend/statistics-README.md) - Analytics and statistics
+
+### API
+- [API Reference](./docs/api/README.md) - Complete API endpoint documentation
+
+### Deployment
+- [Deployment Guide](./docs/deployment/deployment.md) - Production deployment with Coolify
+
+### Frontend
+- [Frontend Architecture](./docs/frontend/README.md) - Frontend structure and components
+- [Performance Optimization](./docs/frontend/performance-optimization.md) - Frontend performance tips
+
+### Game Rules
+- [Roulette](./docs/game-rules/roulette.md) - Roulette game mechanics
+- [Blackjack](./docs/game-rules/blackjack.md) - Blackjack rules and strategy
+- [Case Opening](./docs/game-rules/case-opening.md) - Provably fair case opening
 
 ## 🧪 Testing
 
@@ -291,14 +362,23 @@ The application uses a custom Tarkov-inspired theme with:
 
 ## 🔒 Security
 
-- JWT-based authentication via Supabase Auth
-- Row Level Security (RLS) for data protection
-- Input validation and sanitization
-- Rate limiting on API endpoints
-- Secure random number generation for games
-- Provably fair gaming algorithms
-- Cryptographic verification for case opening results
-- Comprehensive audit logging for all game transactions
+- **Appwrite Authentication**: Secure user sessions with built-in auth
+- **Role-based Access Control**: Appwrite permissions and teams
+- **Input Validation**: Zod schema validation on all endpoints
+- **Rate Limiting**: API endpoint protection (powered by Dragonfly cache)
+- **Secure RNG**: Cryptographically secure random number generation
+- **Provably Fair**: Transparent algorithms with verification
+- **Audit Logging**: Complete transaction history in Appwrite
+- **Data Isolation**: Row-level permissions via Appwrite
+
+## ⚡ Performance
+
+- **Dragonfly Cache**: Redis-compatible in-memory cache (25x faster than Redis)
+- **Bun Runtime**: Ultra-fast JavaScript/TypeScript runtime
+- **Native Redis Client**: Zero-dependency caching with automatic pipelining
+- **Connection Pooling**: Efficient database connection reuse
+- **Graceful Degradation**: Automatic fallback to database if cache unavailable
+- **Sub-millisecond Cache Hits**: Typical cache response time < 1ms
 
 ## 📈 Monitoring
 

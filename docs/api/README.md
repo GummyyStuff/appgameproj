@@ -13,11 +13,14 @@ Development: http://localhost:3000/api
 
 ## Authentication
 
-The API uses Supabase Auth with JWT tokens. Include the token in the Authorization header:
+The API uses Appwrite Authentication with session-based authentication. The Appwrite client SDK automatically handles session management. For direct API calls, you can include the session in headers:
 
 ```
-Authorization: Bearer <jwt_token>
+X-Appwrite-Project: <PROJECT_ID>
+X-Appwrite-JWT: <session_jwt>
 ```
+
+Alternatively, the backend API provides its own authentication layer that integrates with Appwrite sessions.
 
 ## Response Format
 
@@ -38,27 +41,32 @@ All API responses follow this structure:
 
 | Code | Description |
 |------|-------------|
-| `AUTH_REQUIRED` | Authentication token required |
-| `INVALID_TOKEN` | Invalid or expired token |
+| `AUTH_REQUIRED` | Authentication session required |
+| `INVALID_SESSION` | Invalid or expired session |
 | `INSUFFICIENT_BALANCE` | Not enough virtual currency |
 | `INVALID_BET` | Bet amount or type is invalid |
 | `GAME_ERROR` | Game logic error |
-| `VALIDATION_ERROR` | Input validation failed |
+| `VALIDATION_ERROR` | Input validation failed (Zod schema) |
+| `APPWRITE_ERROR` | Appwrite service error |
+| `CACHE_ERROR` | Cache service error (non-critical) |
 | `SERVER_ERROR` | Internal server error |
 
 ## Rate Limiting
 
-API endpoints are rate limited to prevent abuse:
-- Authentication endpoints: 5 requests per minute
-- Game endpoints: 30 requests per minute
-- General endpoints: 60 requests per minute
+API endpoints are rate limited to prevent abuse (powered by Dragonfly cache):
+- Authentication endpoints: 5 requests per minute per IP
+- Game endpoints: 30 requests per minute per user
+- General endpoints: 60 requests per minute per IP
+- Daily bonus: 1 request per 24 hours per user
+
+Rate limits automatically reset after the time window expires.
 
 ## Endpoints
 
 ### Authentication
 
 #### POST /auth/register
-Register a new user account.
+Register a new user account via Appwrite.
 
 **Request Body:**
 ```json
@@ -75,19 +83,26 @@ Register a new user account.
   "success": true,
   "data": {
     "user": {
-      "id": "uuid",
+      "$id": "unique_user_id",
       "username": "string",
       "email": "string",
       "balance": 10000,
-      "createdAt": "ISO date"
+      "$createdAt": "ISO date",
+      "$updatedAt": "ISO date"
     },
-    "token": "jwt_token"
+    "session": {
+      "$id": "session_id",
+      "userId": "unique_user_id",
+      "expire": "ISO date"
+    }
   }
 }
 ```
 
+> **Note**: Appwrite automatically creates a session upon registration. The session is stored client-side by the Appwrite SDK.
+
 #### POST /auth/login
-Authenticate user and get access token.
+Authenticate user and create session.
 
 **Request Body:**
 ```json
@@ -103,29 +118,40 @@ Authenticate user and get access token.
   "success": true,
   "data": {
     "user": {
-      "id": "uuid",
+      "$id": "unique_user_id",
       "username": "string",
       "email": "string",
       "balance": 10000,
-      "lastLogin": "ISO date"
+      "$updatedAt": "ISO date"
     },
-    "token": "jwt_token"
+    "session": {
+      "$id": "session_id",
+      "userId": "unique_user_id",
+      "provider": "email",
+      "expire": "ISO date"
+    }
   }
 }
 ```
 
-#### POST /auth/logout
-Invalidate current session.
+> **Note**: The session is automatically managed by the Appwrite SDK and stored in browser cookies/localStorage.
 
-**Headers:** `Authorization: Bearer <token>`
+#### POST /auth/logout
+Invalidate current Appwrite session.
+
+**Headers:** Session automatically included by Appwrite SDK
 
 **Response:**
 ```json
 {
   "success": true,
-  "data": null
+  "data": {
+    "message": "Session deleted successfully"
+  }
 }
 ```
+
+> **Note**: This endpoint deletes the active Appwrite session. The SDK clears client-side session storage automatically.
 
 #### POST /auth/reset-password
 Request password reset email.
@@ -152,19 +178,19 @@ Request password reset email.
 #### GET /user/profile
 Get current user profile information.
 
-**Headers:** `Authorization: Bearer <token>`
+**Headers:** Session automatically included by Appwrite SDK
 
 **Response:**
 ```json
 {
   "success": true,
   "data": {
-    "id": "uuid",
+    "$id": "unique_user_id",
     "username": "string",
     "email": "string",
     "balance": 10000,
-    "createdAt": "ISO date",
-    "lastLogin": "ISO date",
+    "$createdAt": "ISO date",
+    "$updatedAt": "ISO date",
     "stats": {
       "totalGamesPlayed": 150,
       "totalWagered": 50000,
@@ -175,10 +201,12 @@ Get current user profile information.
 }
 ```
 
+> **Note**: User data is fetched from Appwrite and cached for performance.
+
 #### GET /user/balance
 Get current virtual currency balance.
 
-**Headers:** `Authorization: Bearer <token>`
+**Headers:** Session automatically included by Appwrite SDK
 
 **Response:**
 ```json
@@ -186,10 +214,12 @@ Get current virtual currency balance.
   "success": true,
   "data": {
     "balance": 10000,
-    "lastUpdated": "ISO date"
+    "$updatedAt": "ISO date"
   }
 }
 ```
+
+> **Note**: Balance is cached in Dragonfly with 60-second TTL for optimal performance.
 
 #### GET /user/history
 Get game history with optional filtering.
@@ -383,92 +413,169 @@ Check API health status.
     "status": "healthy",
     "timestamp": "ISO date",
     "version": "1.0.0",
-    "database": "connected",
-    "supabase": "connected"
+    "uptime": 123456,
+    "services": {
+      "appwrite": "connected",
+      "cache": "connected",
+      "database": "connected"
+    }
   }
 }
 ```
 
-## WebSocket Events
+#### GET /health/detailed
+Get detailed system health information including memory usage and service status.
 
-The API also supports real-time updates via WebSocket connections.
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "status": "healthy",
+    "timestamp": "ISO date",
+    "uptime": 123456,
+    "memory": {
+      "heapUsed": 45678901,
+      "heapTotal": 89012345,
+      "external": 1234567
+    },
+    "services": {
+      "appwrite": {
+        "status": "connected",
+        "endpoint": "https://<REGION>.cloud.appwrite.io/v1"
+      },
+      "cache": {
+        "status": "connected",
+        "type": "dragonfly",
+        "onlinePlayers": 42
+      }
+    }
+  }
+}
+```
 
-### Connection
+## Real-time Updates
+
+The application supports real-time updates via Appwrite Realtime API.
+
+### Appwrite Realtime Channels
+
 ```javascript
-const socket = io('wss://your-domain.com', {
-  auth: {
-    token: 'jwt_token'
+import { Client } from 'appwrite';
+
+const client = new Client()
+  .setEndpoint('https://<REGION>.cloud.appwrite.io/v1')
+  .setProject('<PROJECT_ID>');
+
+// Subscribe to user balance updates
+client.subscribe('databases.<DATABASE_ID>.tables.<USERS_TABLE_ID>.rows.<USER_ID>', response => {
+  if (response.events.includes('databases.*.tables.*.rows.*.update')) {
+    console.log('Balance updated:', response.payload.balance);
   }
 });
 ```
 
+### Available Channels
+
+- `account` - User account updates (profile, preferences)
+- `databases.<DB_ID>.tables.<TABLE_ID>.rows.<ROW_ID>` - Specific user data updates
+- `databases.<DB_ID>.tables.<TABLE_ID>.rows` - All rows in a table (for leaderboards)
+
 ### Events
 
-#### Client to Server
-- `join-game`: Join a game room for real-time updates
-- `leave-game`: Leave a game room
+All Appwrite Realtime events follow the pattern:
+- `databases.*.tables.*.rows.*.create` - New row created
+- `databases.*.tables.*.rows.*.update` - Row updated  
+- `databases.*.tables.*.rows.*.delete` - Row deleted
 
-#### Server to Client
-- `balance-update`: Real-time balance changes
-- `game-result`: Game completion notifications
-- `system-message`: System announcements
+> **Permissions**: Users only receive updates for data they have read permissions for, enforced by Appwrite.
 
 ## SDK Examples
 
-### JavaScript/TypeScript
+### JavaScript/TypeScript with Appwrite
 ```typescript
-class TarkovCasinoAPI {
-  private baseUrl: string;
-  private token: string | null = null;
+import { Client, Account, TablesDB, ID } from 'appwrite';
 
-  constructor(baseUrl: string) {
-    this.baseUrl = baseUrl;
+class TarkovCasinoClient {
+  private client: Client;
+  private account: Account;
+  private databases: TablesDB;
+  private apiUrl: string;
+
+  constructor(endpoint: string, projectId: string, apiUrl: string) {
+    this.client = new Client()
+      .setEndpoint(endpoint)
+      .setProject(projectId);
+    
+    this.account = new Account(this.client);
+    this.databases = new TablesDB(this.client);
+    this.apiUrl = apiUrl;
+  }
+
+  async register(email: string, password: string, username: string) {
+    // Create Appwrite account
+    const user = await this.account.create({
+      userId: ID.unique(),
+      email,
+      password,
+      name: username
+    });
+    
+    // Create session
+    const session = await this.account.createEmailPasswordSession({
+      email,
+      password
+    });
+    
+    return { user, session };
   }
 
   async login(email: string, password: string) {
-    const response = await fetch(`${this.baseUrl}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
+    const session = await this.account.createEmailPasswordSession({
+      email,
+      password
     });
-    
-    const data = await response.json();
-    if (data.success) {
-      this.token = data.data.token;
-    }
-    return data;
+    return session;
   }
 
   async placeBet(gameType: string, betData: object) {
-    return fetch(`${this.baseUrl}/games/${gameType}/bet`, {
+    // Session is automatically included by Appwrite SDK
+    return fetch(`${this.apiUrl}/games/${gameType}/bet`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.token}`
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(betData)
     }).then(res => res.json());
+  }
+
+  async getProfile() {
+    // Get current user from Appwrite
+    return await this.account.get();
   }
 }
 ```
 
 ### cURL Examples
 ```bash
-# Login
+# Register (via backend API)
+curl -X POST https://your-domain.com/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"password123","username":"player1"}'
+
+# Login (via backend API)
 curl -X POST https://your-domain.com/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"user@example.com","password":"password123"}'
 
-# Place roulette bet
+# Place roulette bet (session handled by frontend SDK)
 curl -X POST https://your-domain.com/api/games/roulette/bet \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <token>" \
   -d '{"betAmount":100,"betType":"number","betValue":7}'
 
-# Get user profile
-curl -X GET https://your-domain.com/api/user/profile \
-  -H "Authorization: Bearer <token>"
+# Get user profile (session handled by frontend SDK)
+curl -X GET https://your-domain.com/api/user/profile
 ```
+
+> **Note**: When using the Appwrite client SDK, session management is automatic. Direct API calls may require session headers.
 
 ## Testing
 
@@ -496,9 +603,10 @@ For API support and questions:
 ### Common Issues
 
 **401 Unauthorized**
-- Check that JWT token is included in Authorization header
-- Verify token hasn't expired (tokens expire after 24 hours)
-- Ensure user account is active
+- Ensure user is logged in via Appwrite
+- Check that session hasn't expired (default: 365 days)
+- Verify Appwrite project ID is correct
+- Ensure user account is active and verified
 
 **400 Bad Request**
 - Validate request body format matches API specification

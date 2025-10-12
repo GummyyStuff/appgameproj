@@ -2,7 +2,7 @@
 
 ## Overview
 
-This guide covers deployment procedures, maintenance tasks, and operational procedures for the Tarkov Casino website. The application is designed for deployment on Coolify with Docker containers and uses Supabase for database services.
+This guide covers deployment procedures, maintenance tasks, and operational procedures for the Tarkov Casino website. The application is designed for deployment on Coolify with Docker containers and uses Appwrite for backend services.
 
 ## Table of Contents
 
@@ -35,8 +35,8 @@ graph TB
 - **Container Platform**: Docker with Coolify orchestration
 - **Backend**: Bun runtime with Hono framework
 - **Frontend**: React with Vite build system
-- **Database**: Supabase (PostgreSQL)
-- **Caching**: Redis (optional)
+- **Database**: Appwrite (BaaS)
+- **Caching**: Dragonfly (Redis-compatible, optional)
 - **Monitoring**: Built-in health checks and logging
 
 ## Environment Setup
@@ -47,7 +47,7 @@ graph TB
 ```bash
 # Install required tools
 curl -fsSL https://bun.sh/install | bash  # Bun runtime
-npm install -g @supabase/cli               # Supabase CLI
+npm install -g appwrite                    # Appwrite CLI (optional)
 docker --version                           # Docker
 git --version                             # Git
 ```
@@ -66,12 +66,12 @@ cd ../frontend && bun install
 cp packages/backend/.env.example packages/backend/.env
 cp packages/frontend/.env.example packages/frontend/.env
 
-# Start local Supabase
-supabase start
+# Configure Appwrite credentials in .env files
+# Get credentials from https://cloud.appwrite.io/console
 
-# Run database migrations
+# Test Appwrite connection
 cd packages/backend
-bun run db:migrate
+bun run db:test-connection
 
 # Start development servers
 bun run dev  # Backend on port 3000
@@ -84,8 +84,10 @@ cd ../frontend && bun run dev  # Frontend on port 5173
 
 **Backend (.env)**
 ```bash
-# Database Configuration
-SUPABASE_URL=https://your-project.supabase.co
+# Appwrite Configuration
+APPWRITE_ENDPOINT=https://<REGION>.cloud.appwrite.io/v1
+APPWRITE_PROJECT_ID=your_project_id
+APPWRITE_API_KEY=your_api_key
 SUPABASE_ANON_KEY=your_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 
@@ -113,7 +115,8 @@ HEALTH_CHECK_INTERVAL=30000
 ```bash
 # API Configuration
 VITE_API_URL=https://api.your-domain.com
-VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_APPWRITE_ENDPOINT=https://<REGION>.cloud.appwrite.io/v1
+VITE_APPWRITE_PROJECT_ID=your_project_id
 VITE_SUPABASE_ANON_KEY=your_anon_key
 
 # Application Configuration
@@ -458,8 +461,8 @@ app.get('/api/health', async (c) => {
   };
 
   try {
-    // Check database connection
-    await supabase.from('user_profiles').select('count').limit(1);
+    // Check Appwrite database connection
+    await databases.get({ databaseId: 'tarkov_casino' });
     health.database = 'connected';
   } catch (error) {
     health.database = 'disconnected';

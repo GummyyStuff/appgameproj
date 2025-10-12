@@ -1,6 +1,6 @@
 # Tarkov Casino Deployment Guide
 
-This document provides instructions for deploying the Tarkov Casino Website to production using Coolify v4 and the project's local Supabase instance.
+This document provides instructions for deploying the Tarkov Casino Website to production using Coolify v4 and Appwrite for backend services.
 
 ## Table of Contents
 
@@ -19,14 +19,19 @@ This document provides instructions for deploying the Tarkov Casino Website to p
    - Note: Coolify v3 is deprecated as of 2024
    - Use Coolify Cloud or self-hosted v4 installation
 
-2. **Local Supabase Instance**: Your project's Supabase running at `http://192.168.0.69:8001`
+2. **Appwrite Instance**: Appwrite Cloud or self-hosted
+   - **Option A (Recommended)**: Appwrite Cloud at https://cloud.appwrite.io
+   - **Option B**: Self-hosted Appwrite instance
    - Database configured with project schema
-   - Authentication and API services running
-   - All migrations applied from `packages/backend/src/database/migrations/`
-   - API keys accessible via Supabase dashboard
+   - Authentication service enabled
+   - API key created with proper scopes
 
-3. **Domain**: A domain name pointing to your Coolify instance
-4. **SSL Certificate**: Automatic via Coolify/Let's Encrypt (recommended but not mandatory for local testing)
+3. **Dragonfly Instance** (Optional but recommended): Redis-compatible cache
+   - Can be added as a Coolify service
+   - Improves performance with caching layer
+
+4. **Domain**: A domain name pointing to your Coolify instance
+5. **SSL Certificate**: Automatic via Coolify/Let's Encrypt
 
 ### System Requirements
 
@@ -45,67 +50,88 @@ Supported operating systems:
 
 ## Environment Configuration
 
-### 1. Supabase Local Instance Setup
+### 1. Appwrite Setup
 
-Ensure your local Supabase instance is properly configured and running:
+#### Option A: Appwrite Cloud (Recommended)
 
-1. **Verify Supabase Status**: Confirm your Supabase is accessible at `http://192.168.0.69:8001`
+1. **Create Appwrite Project:**
+   - Visit https://cloud.appwrite.io
+   - Sign up or log in
+   - Create a new project
+   - Note your Project ID
+
+2. **Create Database:**
+   - Navigate to Databases in Appwrite Console
+   - Create a database named `tarkov_casino`
+   - Create tables for: `user_profiles`, `game_history`, `transactions`, `case_types`, `tarkov_items`, etc.
+   - Configure permissions on each table
+
+3. **Generate API Key:**
+   - Go to Project Settings → API Keys
+   - Create a new API key with scopes:
+     - `databases.read`
+     - `databases.write`
+     - `users.read`
+     - `users.write`
+     - `sessions.write`
+   - Save the API key securely
+
+4. **Configure Storage Buckets:**
+   - Navigate to Storage in Appwrite Console
+   - Create buckets: `avatars`, `game_assets`
+   - Set appropriate permissions
+
+#### Option B: Self-Hosted Appwrite
+
+1. **Install Appwrite:**
    ```bash
-   curl -f http://192.168.0.69:8001/health
+   docker run -d \
+     --name appwrite \
+     -p 80:80 -p 443:443 \
+     -v appwrite-data:/storage \
+     appwrite/appwrite:latest
    ```
 
-2. **Apply Database Migrations**: Apply all migrations through the Supabase SQL Editor
-   ```bash
-   # Open your browser and navigate to: http://192.168.0.69:8001
-   # Go to SQL Editor in the left sidebar
-   ```
+2. **Complete Setup:**
+   - Access http://localhost
+   - Complete setup wizard
+   - Create project and generate API key
 
-   **Apply migrations in order** (check filenames for numbering):
-   - Open each `.sql` file from `packages/backend/src/database/migrations/`
-   - Copy the SQL content
-   - Paste into Supabase SQL Editor
-   - Click "Run" for each migration
-
-   **Recommended migration order**:
-   1. `001_initial_schema_v2.sql` (core tables)
-   2. `002_rpc_functions_v2.sql` (stored procedures)
-   3. `003_fix_leaderboard.sql` through `027_fix_game_history_constraints.sql` (fixes and features)
-
-   **Alternative using Supabase CLI** (if properly configured):
-   ```bash
-   # Link to local Supabase instance
-   supabase link --project-ref local
-
-   # Apply all migrations
-   supabase migration up
-   ```
-
-3. **Security Configuration**:
-   - Ensure Row Level Security (RLS) is enabled on all tables
-   - Verify security policies are properly applied
-   - Confirm API keys are accessible via dashboard
-
-4. **Test Connectivity**: Use the project's setup script to verify connection
-   ```bash
-   ./scripts/setup-supabase.sh
-   ```
+3. **Configure Databases:**
+   - Follow same steps as Appwrite Cloud
+   - Create database, tables, and configure permissions
 
 ### 2. Environment Variables
 
-Configure the following environment variables in Coolify. Get the Supabase keys from `http://192.168.0.69:8001` → Settings → API:
+Configure the following environment variables in Coolify. Get credentials from your Appwrite project dashboard:
 
 ```bash
 # Application Configuration
 NODE_ENV=production
 PORT=3000
 
-# Supabase Configuration (Local Instance)
-SUPABASE_URL=http://192.168.0.69:8001
-SUPABASE_ANON_KEY=your_anon_key_from_supabase_dashboard
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_from_supabase_dashboard
+# Appwrite Configuration
+APPWRITE_ENDPOINT=https://<REGION>.cloud.appwrite.io/v1
+APPWRITE_PROJECT_ID=your_project_id
+APPWRITE_API_KEY=your_api_key_with_proper_scopes
 
-# Security Configuration
-JWT_SECRET=your_secure_random_jwt_secret_32_chars_minimum
+# Appwrite Database IDs (from your Appwrite Console)
+APPWRITE_DATABASE_ID=tarkov_casino
+APPWRITE_USERS_TABLE_ID=user_profiles
+APPWRITE_GAMES_TABLE_ID=game_history
+APPWRITE_TRANSACTIONS_TABLE_ID=transactions
+APPWRITE_CASES_TABLE_ID=case_types
+APPWRITE_ITEMS_TABLE_ID=tarkov_items
+
+# Dragonfly/Redis Configuration (Optional)
+REDIS_ENABLED=true
+REDIS_URL=redis://default:PASSWORD@dragonfly-service:6379/0
+
+# Cache TTLs (seconds)
+CACHE_USER_PROFILE_TTL=300
+CACHE_BALANCE_TTL=60
+CACHE_LEADERBOARD_TTL=30
+CACHE_STATS_TTL=120
 
 # Game Configuration
 STARTING_BALANCE=10000
@@ -120,29 +146,33 @@ ENABLE_SECURITY_LOGGING=true
 # Performance Configuration
 MAX_REQUEST_SIZE=10mb
 REQUEST_TIMEOUT=30000
-RATE_LIMIT_WINDOW=900000
-RATE_LIMIT_MAX=100
 
 # Monitoring Configuration
 HEALTH_CHECK_TIMEOUT=5000
 METRICS_ENABLED=true
 
 # Frontend Environment Variables (for build time)
-VITE_SUPABASE_URL=http://192.168.0.69:8001
-VITE_SUPABASE_ANON_KEY=your_anon_key_from_supabase_dashboard
-# Note: VITE_API_URL is optional and only used for debugging in error boundaries
+VITE_APPWRITE_ENDPOINT=https://<REGION>.cloud.appwrite.io/v1
+VITE_APPWRITE_PROJECT_ID=your_project_id
+VITE_API_URL=http://localhost:3000
 ```
 
 ### 3. Security Considerations
 
-**For Local Supabase Setup**:
-- **API Keys**: Use keys from your local Supabase dashboard
-- **Network Security**: Ensure your Supabase server (192.168.0.69) is on a secure network
-- **CORS**: Configure origins appropriately for your domain
-- **Rate Limiting**: Implement rate limits suitable for your expected user load
-- **JWT_SECRET**: Generate a secure random secret for session management
+**For Appwrite Setup**:
+- **API Keys**: Secure your Appwrite API key - never expose in frontend code
+- **API Key Scopes**: Only grant necessary scopes (databases.read, databases.write, users.read, users.write)
+- **Permissions**: Configure row-level permissions on all tables
+- **CORS**: Appwrite handles CORS - add your domain to allowed origins in Appwrite Console
+- **Rate Limiting**: Appwrite has built-in rate limiting + additional backend rate limiting via Dragonfly
+- **HTTPS**: Appwrite Cloud uses HTTPS by default; self-hosted requires SSL certificate
 
-**Note**: This project uses local Supabase hosting, so cloud-specific security features like SSL enforcement and network restrictions are not applicable. The application is designed to work with HTTP connections to the local Supabase instance.
+**Appwrite Cloud Security:**
+- ✅ Automatic HTTPS/TLS encryption
+- ✅ DDoS protection
+- ✅ Geographic distribution
+- ✅ Automatic backups
+- ✅ SOC 2 Type II compliance
 
 ## Coolify Deployment
 
@@ -393,11 +423,11 @@ docker logs <container-id>
 **Symptoms**: Login failures, session errors
 
 **Solutions**:
-- **Supabase auth status**: Check if auth service is running at `http://192.168.0.69:8001`
-- **JWT secrets**: Verify JWT secret matches between Supabase and application
-- **Session handling**: Check session cookie settings for production
-- **Auth redirects**: Update redirect URLs to match your domain
-- **API keys**: Ensure correct anon key is used for authentication
+- **Appwrite auth status**: Check Appwrite Console → Auth section is enabled
+- **Session management**: Appwrite handles sessions automatically via SDK
+- **CORS configuration**: Add your domain to Appwrite Console → Settings → Platforms
+- **Auth redirects**: Configure success/failure URLs in Appwrite Console
+- **Project ID**: Verify VITE_APPWRITE_PROJECT_ID matches in frontend env
 
 ### Debug Commands
 
@@ -433,31 +463,39 @@ curl -f https://your-domain.com/api/health
 # Test detailed health check
 curl https://your-domain.com/api/health/detailed
 
-# Test API endpoints
-curl https://your-domain.com/api/user/profile \
-  -H "Authorization: Bearer YOUR_TOKEN"
+# Test Appwrite connectivity
+curl https://<REGION>.cloud.appwrite.io/v1/health
 
-# Test Supabase connectivity
-curl https://your-project-ref.supabase.co/rest/v1/ \
-  -H "apikey: YOUR_ANON_KEY"
+# Test database access (requires backend to be running)
+curl https://your-domain.com/api/user/balance
+
+# Test Appwrite API directly
+curl https://<REGION>.cloud.appwrite.io/v1/databases/<DB_ID> \
+  -H "X-Appwrite-Project: <PROJECT_ID>" \
+  -H "X-Appwrite-Key: <API_KEY>"
 ```
 
 #### Database Debugging
 ```bash
-# Test local Supabase connection
-curl -f http://192.168.0.69:8001/health
+# Test Appwrite connection
+curl https://<REGION>.cloud.appwrite.io/v1/health
 
-# Check Supabase dashboard
-# Open browser to: http://192.168.0.69:8001
+# Check Appwrite Console
+# Open browser to: https://cloud.appwrite.io/console
 
-# Test database connectivity from application
-curl -X POST http://your-domain.com/api/health \
-  -H "Content-Type: application/json"
+# List databases (requires API key)
+curl https://<REGION>.cloud.appwrite.io/v1/databases \
+  -H "X-Appwrite-Project: <PROJECT_ID>" \
+  -H "X-Appwrite-Key: <API_KEY>"
 
-# Check migration status
-# Open Supabase dashboard: http://192.168.0.69:8001
-# Go to SQL Editor and run:
-SELECT * FROM information_schema.tables WHERE table_schema = 'public';
+# Check table exists
+curl https://<REGION>.cloud.appwrite.io/v1/databases/<DB_ID>/tables/<TABLE_ID> \
+  -H "X-Appwrite-Project: <PROJECT_ID>" \
+  -H "X-Appwrite-Key: <API_KEY>"
+
+# Test from backend
+cd packages/backend
+bun run db:test-connection
 ```
 
 ## Maintenance
@@ -486,18 +524,26 @@ SELECT * FROM information_schema.tables WHERE table_schema = 'public';
 
 #### 2. Database Maintenance
 
-**Local Supabase Tasks**:
-- Monitor Supabase service logs on the host server (192.168.0.69)
-- Ensure Supabase containers are running and healthy
-- Check database disk usage on the Supabase server
-- Apply new migrations through SQL Editor when deploying updates
-- Monitor database performance through Supabase dashboard
+**Appwrite Cloud Tasks**:
+- Monitor Appwrite Console for service status
+- Check database usage and limits in Appwrite Console
+- Review query performance in Appwrite Analytics
+- Monitor API usage and rate limits
+- Keep track of storage usage
+
+**Appwrite Self-Hosted Tasks**:
+- Monitor Appwrite container health
+- Check disk usage for database and storage
+- Apply Appwrite version updates via Docker
+- Monitor logs: `docker logs appwrite`
+- Backup Appwrite data volumes
 
 **Application Data Management**:
 - Implement data retention policies for game history
 - Archive old logs and analytics data
-- Monitor database growth trends
+- Monitor database row counts and storage
 - Optimize indexes based on query patterns
+- Use bulk operations for data cleanup
 
 #### 3. Security Maintenance
 
@@ -567,17 +613,18 @@ SELECT * FROM information_schema.tables WHERE table_schema = 'public';
 ### Documentation Links
 
 - [Coolify v4 Documentation](https://coolify.io/docs)
-- [Supabase Production Docs](https://supabase.com/docs/guides/platform/going-into-prod)
+- [Appwrite Documentation](https://appwrite.io/docs)
+- [Appwrite Self-Hosting Guide](https://appwrite.io/docs/advanced/self-hosting)
+- [Appwrite Coolify Deployment](https://appwrite.io/docs/advanced/self-hosting/platforms/coolify)
 - [Bun Runtime Documentation](https://bun.sh/docs)
 - [Docker Best Practices](https://docs.docker.com/develop/dev-best-practices/)
-- [Supabase Performance Advisor](https://supabase.com/docs/guides/database/database-advisors)
 
 ### Community Resources
 
 - [Coolify Discord Community](https://coolify.io/discord)
-- [Supabase Discord Community](https://supabase.com/docs/guides/platform/discord)
-- [GitHub Issues](https://github.com/coollabsio/coolify/issues) for Coolify
-- [Supabase GitHub Discussions](https://github.com/supabase/supabase/discussions)
+- [Appwrite Discord Community](https://appwrite.io/discord)
+- [Appwrite GitHub](https://github.com/appwrite/appwrite)
+- [Coolify GitHub Issues](https://github.com/coollabsio/coolify/issues)
 
 ### Monitoring and Observability
 
@@ -590,50 +637,71 @@ SELECT * FROM information_schema.tables WHERE table_schema = 'public';
 
 **Built-in Monitoring**:
 - Coolify dashboard logs and metrics
-- Application health endpoints (`/api/health`, `/api/metrics`)
-- Supabase dashboard monitoring
+- Application health endpoints (`/api/health`, `/api/health/detailed`, `/api/metrics`)
+- Appwrite Console analytics and monitoring
+- Dragonfly cache statistics
 - Docker container metrics
 
 ### Security Resources
 
 - [OWASP Cheat Sheet](https://cheatsheetseries.owasp.org/)
-- [Supabase Security Best Practices](https://supabase.com/docs/guides/platform/security)
+- [Appwrite Security Documentation](https://appwrite.io/docs/advanced/security)
+- [Appwrite Permissions Guide](https://appwrite.io/docs/advanced/platform/permissions)
 - [Docker Security Best Practices](https://docs.docker.com/develop/dev-best-practices/security/)
 - [SSL/TLS Deployment Best Practices](https://ssl-config.mozilla.org/)
 
 ### Performance Optimization
 
-- [Supabase Performance Guide](https://supabase.com/docs/guides/database/query-optimization)
+- [Appwrite Performance Best Practices](https://appwrite.io/docs/advanced/platform)
+- [Appwrite Database Queries](https://appwrite.io/docs/products/databases/queries)
 - [Bun Performance Tips](https://bun.sh/docs/runtime/performance)
 - [Docker Performance Tuning](https://docs.docker.com/config/containers/resource_constraints/)
 - [Web Vitals](https://web.dev/vitals/) for frontend performance
 
 ## Tarkov Casino Specific Deployment Notes
 
-### Local Supabase Configuration
-- **Supabase URL**: `http://192.168.0.69:8001` (local instance)
-- **Dashboard Access**: Available at the Supabase URL for key management
-- **Migration Scripts**: Located in `packages/backend/src/database/migrations/`
-- **Setup Scripts**: Use `scripts/setup-supabase.sh` for initial configuration
+### Appwrite Configuration
+- **Appwrite Cloud**: Recommended for production (https://cloud.appwrite.io)
+- **Self-Hosted**: Alternative for on-premise deployments
+- **Database**: Create `tarkov_casino` database in Appwrite Console
+- **Tables**: Set up tables via Appwrite Console or automation scripts
+- **API Keys**: Generate with proper scopes for backend access
 
 ### Project-Specific Scripts
 ```bash
-# Setup Supabase connection
-./scripts/setup-supabase.sh
-
-# Apply database migrations
+# Test Appwrite connection
 cd packages/backend
-bun run src/scripts/apply-security-migration.ts
-bun run src/scripts/apply-realtime-migration.ts
+bun run db:test-connection
 
-# Update Supabase keys
-./scripts/update-keys.sh
+# Populate case opening items
+bun run db:populate-items
+
+# Test database setup
+bun run db:verify
 ```
 
-### SSL Enforcement Note
-SSL enforcement is **not mandatory** for local Supabase instances but is recommended for production HTTPS deployments. The application will work without SSL for local development and testing.
+### Required Appwrite Setup
+
+1. **Create Database:**
+   - Name: `tarkov_casino`
+   - Create tables: `user_profiles`, `game_history`, `transactions`, `case_types`, `tarkov_items`
+
+2. **Configure Permissions:**
+   - Set appropriate read/write permissions on each table
+   - User profiles: Users can read/update own profile
+   - Game history: Users can read own history
+   - Public data: Anyone can read active cases and items
+
+3. **Create Storage Buckets:**
+   - `avatars`: For user profile pictures
+   - `game_assets`: For game-related files
+
+4. **Add Platform:**
+   - Add your frontend domain in Appwrite Console → Settings → Platforms
+   - This enables CORS for your domain
 
 ### Environment Setup
-1. Get API keys from `http://192.168.0.69:8001` → Settings → API
-2. Configure environment variables in Coolify
-3. Ensure network connectivity between Coolify server and Supabase server (192.168.0.69)
+1. Get credentials from Appwrite Console → Settings
+2. Generate API key with required scopes
+3. Configure environment variables in Coolify
+4. Deploy and verify health endpoints
