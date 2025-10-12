@@ -66,7 +66,10 @@ authRoutes.get('/me',
       
       // Verify OAuth provider is Discord (security check)
       // Check user's identities to ensure they used Discord OAuth
-      const identities = await users.listIdentities(appwriteUserId);
+      const { Query } = await import('node-appwrite');
+      const identities = await users.listIdentities(
+        [Query.equal('userId', [appwriteUserId])] // queries parameter
+      );
       const hasDiscordIdentity = identities.identities.some(
         (identity: any) => identity.provider === 'discord'
       );

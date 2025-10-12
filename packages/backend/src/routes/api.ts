@@ -4,6 +4,7 @@ import { userRoutes } from './user'
 import { gameRoutes } from './games'
 import { statisticsRoutes } from './statistics'
 import { chatRoutes } from './chat'
+import { analyticsRoutes } from './analytics'
 
 export const apiRoutes = new Hono()
 
@@ -18,6 +19,7 @@ apiRoutes.get('/', (c) => {
       games: '/api/games',
       statistics: '/api/statistics',
       chat: '/api/chat',
+      analytics: '/api/analytics',
       health: '/api/health'
     }
   })
@@ -29,3 +31,4 @@ apiRoutes.route('/user', userRoutes)
 apiRoutes.route('/games', gameRoutes)
 apiRoutes.route('/statistics', statisticsRoutes)
 apiRoutes.route('/chat', chatRoutes)
+apiRoutes.route('/analytics', analyticsRoutes)
