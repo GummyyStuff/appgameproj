@@ -66,9 +66,11 @@ class RedisService {
       }
 
       // Create Redis client using Bun's native client
+      // NOTE: idleTimeout removed due to Bun issue #20836
+      // Setting idleTimeout causes connection to close and fail to reconnect
       this.client = new RedisClient(redisUrl, {
         connectionTimeout: 5000,
-        idleTimeout: 30000,
+        idleTimeout: 0, // 0 = no timeout (Bun default)
         autoReconnect: true,
         maxRetries: this.MAX_RETRIES,
         enableOfflineQueue: true,
