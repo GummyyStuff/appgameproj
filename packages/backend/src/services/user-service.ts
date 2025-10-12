@@ -181,8 +181,15 @@ export class UserService {
   ): Promise<{ success: boolean; error?: string }> {
     const profile = await this.getUserProfile(userId);
     if (!profile) {
+      console.error('❌ User profile not found for userId:', userId);
       return { success: false, error: 'User profile not found' };
     }
+
+    console.log(`💰 Updating balance for user ${userId}:`, {
+      currentBalance: profile.balance,
+      newBalance,
+      documentId: profile.$id
+    });
 
     const { error } = await appwriteDb.updateDocument<UserProfile>(
       COLLECTION_IDS.USERS,
@@ -193,7 +200,10 @@ export class UserService {
       }
     );
 
-    if (!error) {
+    if (error) {
+      console.error('❌ Failed to update balance in Appwrite:', error);
+    } else {
+      console.log('✅ Balance updated successfully');
       // Invalidate both caches after successful update
       await Promise.all([
         CacheService.invalidateUserBalance(userId),

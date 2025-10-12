@@ -66,6 +66,11 @@ export class AppwriteDatabaseService {
     permissions?: string[]
   ) {
     try {
+      console.log(`📝 Updating document in ${collectionId}/${documentId}:`, {
+        dataKeys: Object.keys(data),
+        hasPermissions: !!permissions
+      });
+      
       const response = await this.databases.updateDocument(
         DATABASE_ID,
         collectionId,
@@ -73,9 +78,16 @@ export class AppwriteDatabaseService {
         data,
         permissions
       );
+      
+      console.log(`✅ Document updated successfully in ${collectionId}/${documentId}`);
       return { data: response as unknown as T & { $id: string }, error: null };
     } catch (error: any) {
-      console.error(`Error updating document in ${collectionId}:`, error);
+      console.error(`❌ Error updating document in ${collectionId}/${documentId}:`, {
+        message: error.message,
+        code: error.code,
+        type: error.type,
+        response: error.response
+      });
       return { data: null, error: error.message || 'Failed to update document' };
     }
   }
