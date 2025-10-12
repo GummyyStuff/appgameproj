@@ -84,8 +84,8 @@ class RedisService {
           this.reconnectTimer = null;
         }
         
-        // Start keepalive pings to maintain connection
-        this.startKeepalive();
+        // NOTE: Keepalive disabled - might interfere with Bun's Redis auth
+        // this.startKeepalive();
       };
 
       this.client.onclose = (error?: Error) => {
@@ -132,11 +132,13 @@ class RedisService {
 
   /**
    * Build Redis URL from configuration
+   * Note: Redis URL format is redis://:password@host:port/db (no username for standard Redis)
    */
   private buildRedisUrl(): string {
     const { host, port, password, db } = config.redis;
     
     if (password) {
+      // Standard Redis format: no username, just :password@
       return `redis://:${password}@${host}:${port}/${db}`;
     }
     
