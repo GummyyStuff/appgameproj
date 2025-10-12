@@ -43,7 +43,7 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
         params.append('gameType', gameFilter);
       }
       
-      const response = await fetch(`/api/games/history?${params}`, {
+      const response = await fetch(`/api/user/history?${params}`, {
         credentials: 'include',
         headers: {
           'X-Appwrite-User-Id': user.id,

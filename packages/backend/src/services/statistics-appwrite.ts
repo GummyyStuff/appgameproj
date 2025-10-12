@@ -458,6 +458,8 @@ export class StatisticsServiceAppwrite {
     limit: number = 10
   ) {
     try {
+      console.log(`📊 Fetching leaderboard for metric: ${metric}, limit: ${limit}`);
+      
       // Map metric to actual attribute name
       const attributeMap = {
         balance: 'balance',
@@ -467,6 +469,7 @@ export class StatisticsServiceAppwrite {
       };
 
       const attribute = attributeMap[metric];
+      console.log(`📊 Mapped attribute: ${attribute}`);
 
       const queries = [
         appwriteDb.orderDesc(attribute),
@@ -478,11 +481,19 @@ export class StatisticsServiceAppwrite {
         queries
       );
 
-      if (error || !data) {
-        console.error('Error fetching leaderboard:', error);
+      if (error) {
+        console.error('❌ Error fetching leaderboard from Appwrite:', error);
+        console.error('Error details:', JSON.stringify(error, null, 2));
         return [];
       }
 
+      if (!data || data.length === 0) {
+        console.log('⚠️ No leaderboard data returned');
+        return [];
+      }
+
+      console.log(`✅ Fetched ${data.length} leaderboard entries`);
+      
       return data.map((user: any, index: number) => ({
         rank: index + 1,
         userId: user.userId,
@@ -494,7 +505,8 @@ export class StatisticsServiceAppwrite {
         gamesPlayed: user.gamesPlayed
       }));
     } catch (error) {
-      console.error('Error fetching leaderboard:', error);
+      console.error('❌ Exception in getLeaderboard:', error);
+      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
       return [];
     }
   }

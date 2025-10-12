@@ -58,7 +58,7 @@ const GameHistoryTable: React.FC<GameHistoryTableProps> = ({
     queryFn: async () => {
       if (!user) return []
       
-      const response = await fetch('/api/games/history?limit=1000&order=desc', {
+      const response = await fetch('/api/user/history?limit=1000&order=desc', {
         credentials: 'include',
         headers: {
           'X-Appwrite-User-Id': user.id,

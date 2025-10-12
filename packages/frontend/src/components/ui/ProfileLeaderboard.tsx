@@ -108,10 +108,10 @@ const ProfileLeaderboard: React.FC<ProfileLeaderboardProps> = ({
     `${CACHE_KEYS.LEADERBOARD}_${selectedCategory}`,
     async () => {
       const metricMap = {
-        'winnings': 'total_won',
+        'winnings': 'totalWon',
         'winrate': 'balance', // We'll use balance for now since win rate isn't available
-        'games': 'games_played',
-        'biggest': 'total_won' // We'll use total_won for biggest win for now
+        'games': 'gamesPlayed',
+        'biggest': 'totalWon' // We'll use totalWon for biggest win for now
       }
       const metric = metricMap[selectedCategory as keyof typeof metricMap] || 'balance'
       const response = await fetch(`/api/statistics/leaderboard?metric=${metric}`)

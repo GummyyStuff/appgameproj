@@ -8,6 +8,7 @@ import { requestLogger } from './middleware/logger'
 import { securityHeadersMiddleware, requestTimeoutMiddleware, ipSecurityMiddleware } from './middleware/security'
 import { apiRateLimit } from './middleware/rate-limit'
 import { validateContentType, validateRequestSize } from './middleware/validation'
+import { performanceMiddleware } from './middleware/performance'
 import { apiRoutes } from './routes/api'
 import { monitoring } from './routes/monitoring'
 // Supabase realtime service removed - now using Appwrite realtime
@@ -18,6 +19,9 @@ const app = new Hono()
 app.use('*', securityHeadersMiddleware())
 app.use('*', ipSecurityMiddleware())
 app.use('*', requestTimeoutMiddleware())
+
+// Performance monitoring middleware
+app.use('*', performanceMiddleware)
 
 // Global middleware
 if (!isProduction()) {
@@ -49,7 +53,7 @@ app.use('/api/*', validateRequestSize(5 * 1024 * 1024)) // 5MB limit
 // Monitoring endpoints (no auth required)
 app.route('/api', monitoring)
 
-// Public leaderboard endpoint (no rate limiting)
+// Public leaderboard endpoint (no rate limiting, cached)
 app.get('/api/statistics/leaderboard', async (c) => {
   const { z } = await import('zod')
   const { HTTPException } = await import('hono/http-exception')
@@ -70,9 +74,13 @@ app.get('/api/statistics/leaderboard', async (c) => {
 
     const leaderboard = await StatisticsService.getLeaderboard(params.metric, params.limit)
 
+    // Cache-Control: public data, cache for 2 minutes
+    c.header('Cache-Control', 'public, max-age=120, s-maxage=120')
+
     return c.json({
       success: true,
-      ...leaderboard,
+      leaderboard: leaderboard,
+      metric: params.metric,
       generated_at: new Date().toISOString()
     })
 
@@ -118,6 +126,9 @@ app.get('/api/statistics/global', async (c) => {
     );
     
     console.log('✅ Global statistics fetched successfully')
+
+    // Cache-Control: public data, cache for 2 minutes
+    c.header('Cache-Control', 'public, max-age=120, s-maxage=120')
 
     return c.json({
       success: true,

@@ -81,7 +81,7 @@ const StatisticsDashboard: React.FC = () => {
         params.append('days', days.toString());
       }
       
-      const response = await fetch(`/api/games/history?${params}`, {
+      const response = await fetch(`/api/user/history?${params}`, {
         credentials: 'include',
         headers: {
           'X-Appwrite-User-Id': user.id,

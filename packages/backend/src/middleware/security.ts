@@ -43,8 +43,12 @@ export function securityHeadersMiddleware() {
     // Remove server information
     c.header('Server', 'TarkovCasino')
     
-    // Prevent caching of sensitive responses
-    if (c.req.path.includes('/api/')) {
+    // Prevent caching of sensitive responses (only if not explicitly set)
+    // Check if Cache-Control header is already set by the route handler
+    const existingCacheControl = c.res.headers.get('Cache-Control')
+    
+    if (c.req.path.includes('/api/') && !existingCacheControl) {
+      // Only set no-cache headers if the route hasn't set custom cache headers
       c.header('Cache-Control', 'no-store, no-cache, must-revalidate, private')
       c.header('Pragma', 'no-cache')
       c.header('Expires', '0')

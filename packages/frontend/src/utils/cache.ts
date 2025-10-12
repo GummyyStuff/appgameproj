@@ -1,5 +1,6 @@
 /**
  * Client-side caching utilities for game data and user information
+ * Optimized for Bun 1.3 with native Map performance
  */
 
 interface CacheItem<T> {
@@ -10,6 +11,7 @@ interface CacheItem<T> {
 
 class GameDataCache {
   private cache = new Map<string, CacheItem<any>>();
+  private pendingRequests = new Map<string, Promise<any>>();
   private readonly DEFAULT_TTL = 5 * 60 * 1000; // 5 minutes
 
   /**
@@ -47,6 +49,43 @@ class GameDataCache {
   }
 
   /**
+   * Get or fetch data with caching and deduplication
+   * Prevents multiple simultaneous requests for the same data
+   */
+  async getOrFetch<T>(
+    key: string,
+    fetcher: () => Promise<T>,
+    ttl: number = this.DEFAULT_TTL
+  ): Promise<T> {
+    // Check cache first
+    const cached = this.get<T>(key);
+    if (cached !== null) {
+      return cached;
+    }
+
+    // Check if there's a pending request for this key
+    const pending = this.pendingRequests.get(key);
+    if (pending) {
+      return pending;
+    }
+
+    // Create new request
+    const request = fetcher()
+      .then((data) => {
+        this.set(key, data, ttl);
+        this.pendingRequests.delete(key);
+        return data;
+      })
+      .catch((error) => {
+        this.pendingRequests.delete(key);
+        throw error;
+      });
+
+    this.pendingRequests.set(key, request);
+    return request;
+  }
+
+  /**
    * Clear expired items
    */
   cleanup(): void {
@@ -63,6 +102,7 @@ class GameDataCache {
    */
   clear(): void {
     this.cache.clear();
+    this.pendingRequests.clear();
   }
 
   /**
@@ -70,6 +110,17 @@ class GameDataCache {
    */
   size(): number {
     return this.cache.size;
+  }
+
+  /**
+   * Get cache statistics
+   */
+  getStats() {
+    return {
+      size: this.cache.size,
+      pendingRequests: this.pendingRequests.size,
+      keys: Array.from(this.cache.keys()),
+    };
   }
 }
 

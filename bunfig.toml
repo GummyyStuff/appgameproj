@@ -7,14 +7,17 @@
 # INSTALL SETTINGS
 # ====================
 [install]
-# Enable production optimizations in CI
+# Enable production optimizations in CI (set via env: BUN_ENV=production)
 production = false
 
 # Faster installs with auto-install
 auto = true
 
-# Use exact versions (set to true for deterministic builds)
-exact = false
+# Use exact versions for deterministic builds
+exact = true
+
+# Optimize registry fetching
+registry = "https://registry.npmjs.org/"
 
 # ====================
 # INSTALL.CACHE
@@ -26,8 +29,11 @@ dir = "~/.bun/install/cache"
 # Enable cache for faster installs
 disable = false
 
-# Disable manifest cache to always get latest versions (set true for offline)
+# Enable manifest cache for faster subsequent installs
 disableManifest = false
+
+# Scope hoisting for smaller bundles and faster installs
+scopeHoist = true
 
 # ====================
 # INSTALL.LOCKFILE
@@ -59,6 +65,16 @@ bail = false
 testNamePattern = ["**/*.test.ts", "**/*.test.tsx"]
 
 # ====================
+# RUNTIME OPTIMIZATIONS
+# ====================
+[runtime]
+# Use Bun's optimized JSC engine
+useJIT = true
+
+# Optimize startup time
+preload = []
+
+# ====================
 # LOGGING
 # ====================
 # Set log level (debug, info, warn, error)
@@ -70,5 +86,35 @@ depth = 5
 # ====================
 # FULLSTACK DEV SERVER
 # ====================
+[serve]
+# Static file serving optimizations
 [serve.static]
 plugins = ["bun-plugin-tailwind"]
+
+# Development settings
+[serve.development]
+# Enable hot module replacement
+hmr = true
+
+# Log browser console to terminal
+console = true
+
+# ====================
+# BUILD OPTIMIZATIONS
+# ====================
+[build]
+# Default target
+target = "browser"
+
+# Enable sourcemaps by default
+sourcemap = "external"
+
+# ====================
+# PERFORMANCE TUNING
+# ====================
+[performance]
+# Parallel processing (use all CPU cores)
+parallel = true
+
+# Memory limits (in MB, 0 = unlimited)
+memoryLimit = 0

@@ -7,9 +7,15 @@
     <title>Tarkov Casino - Virtual Gaming Experience</title>
     <meta name="description" content="Experience classic casino games with Escape from Tarkov theming. Play roulette and blackjack with virtual currency." />
     
-    <!-- Preconnect to external resources -->
+    <!-- Preconnect to external resources for faster DNS resolution -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="dns-prefetch" href="https://db.juanis.cool">
+    
+    <!-- Preload critical resources for faster initial load -->
+    <link rel="modulepreload" href="/src/main.tsx" />
+    <link rel="preload" href="./public/fa-v5-pro/css/all.min.css" as="style" />
+    <link rel="preload" href="./public/fa-v5-pro/webfonts/fa-solid-900.woff2" as="font" type="font/woff2" crossorigin />
     
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="./public/favicon.ico">

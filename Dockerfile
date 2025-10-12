@@ -15,7 +15,7 @@ FROM base AS frontend-build
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/packages/frontend/node_modules ./packages/frontend/node_modules
-# Cache buster - change this to force rebuild: v1.5
+# Cache buster - change this to force rebuild: v1.6-bun1.3-optimized
 COPY packages/frontend/ ./packages/frontend/
 WORKDIR /app/packages/frontend
 
@@ -42,9 +42,10 @@ ARG VITE_API_URL
 ENV VITE_APPWRITE_ENDPOINT=${VITE_APPWRITE_ENDPOINT}
 ENV VITE_APPWRITE_PROJECT_ID=${VITE_APPWRITE_PROJECT_ID}
 ENV VITE_API_URL=${VITE_API_URL}
+ENV NODE_ENV=production
 
-# Build with Bun using build script (properly inlines env vars as string literals)
-# Note: Code splitting disabled due to duplicate export bug in Bun 1.3
+# Build with Bun 1.3 optimizations enabled (code splitting + minification)
+# Uses granular minification and external sourcemaps
 RUN bun run build.ts
 
 # Build backend stage
@@ -82,6 +83,12 @@ RUN useradd --system --uid 1001 --gid nodejs bunjs
 RUN chown -R bunjs:nodejs /app
 USER bunjs
 
+# Set Bun 1.3 runtime optimizations
+ENV BUN_RUNTIME_TRANSPILER=0
+ENV BUN_JSC_useJIT=1
+ENV NODE_ENV=production
+ENV BUN_ENV=production
+
 # Expose port (dynamic based on env)
 EXPOSE ${PORT:-3000}
 
@@ -89,5 +96,5 @@ EXPOSE ${PORT:-3000}
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:${PORT:-3000}/api/health || exit 1
 
-# Start the application from the backend package directory
+# Start the application from the backend package directory with Bun optimizations
 CMD ["bun", "run", "packages/backend/dist/index.js"]
