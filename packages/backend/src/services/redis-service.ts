@@ -22,6 +22,8 @@ class RedisService {
   private readonly MAX_RETRIES = 5;
   private readonly RETRY_DELAY_MS = 1000;
   private reconnectTimer: Timer | null = null;
+  private keepaliveTimer: Timer | null = null;
+  private readonly KEEPALIVE_INTERVAL_MS = 10000; // Ping every 10 seconds
 
   /**
    * Initialize Redis connection
@@ -70,10 +72,16 @@ class RedisService {
           clearTimeout(this.reconnectTimer);
           this.reconnectTimer = null;
         }
+        
+        // Start keepalive pings to maintain connection
+        this.startKeepalive();
       };
 
       this.client.onclose = (error?: Error) => {
         console.warn('⚠️  Redis connection closed', error ? `: ${error.message}` : '');
+        
+        // Stop keepalive when connection closes
+        this.stopKeepalive();
         
         // Attempt reconnection with exponential backoff
         if (config.redisEnabled && this.connectionAttempts < this.MAX_RETRIES) {
@@ -382,6 +390,9 @@ class RedisService {
       this.reconnectTimer = null;
     }
 
+    // Stop keepalive
+    this.stopKeepalive();
+
     if (this.client) {
       console.log('🔒 Closing Redis connection...');
       this.client.close();
@@ -390,6 +401,37 @@ class RedisService {
 
     this.connectionAttempts = 0;
     this.isConnecting = false;
+  }
+
+  /**
+   * Start keepalive pings to maintain connection
+   */
+  private startKeepalive(): void {
+    // Clear any existing keepalive
+    this.stopKeepalive();
+
+    // Ping Redis periodically to keep connection alive
+    this.keepaliveTimer = setInterval(async () => {
+      if (this.client && this.client.connected) {
+        try {
+          await this.client.send('PING', []);
+          // Successful ping - connection is healthy
+        } catch (error) {
+          console.warn('⚠️  Keepalive ping failed, connection may be dead');
+          // Connection is dead, let onclose handler deal with it
+        }
+      }
+    }, this.KEEPALIVE_INTERVAL_MS);
+  }
+
+  /**
+   * Stop keepalive pings
+   */
+  private stopKeepalive(): void {
+    if (this.keepaliveTimer) {
+      clearInterval(this.keepaliveTimer);
+      this.keepaliveTimer = null;
+    }
   }
 
   /**
