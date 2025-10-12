@@ -224,68 +224,21 @@ INSERT INTO case_types (name, price, description, image_url, rarity_distribution
     "legendary": 3
 }'::jsonb);
 
--- Create case-item pool relationships
--- For simplicity, we'll add all items to all cases but with different weights based on rarity
-
--- Scav Case (focuses on common/uncommon items)
-INSERT INTO case_item_pools (case_type_id, item_id, weight, value_multiplier)
-SELECT 
-    (SELECT id FROM case_types WHERE name = 'Scav Case'),
-    ti.id,
-    CASE ti.rarity
-        WHEN 'common' THEN 10.0
-        WHEN 'uncommon' THEN 5.0
-        WHEN 'rare' THEN 2.0
-        WHEN 'epic' THEN 0.8
-        WHEN 'legendary' THEN 0.2
-    END,
-    CASE ti.rarity
-        WHEN 'common' THEN 1.0
-        WHEN 'uncommon' THEN 1.2
-        WHEN 'rare' THEN 1.5
-        WHEN 'epic' THEN 2.0
-        WHEN 'legendary' THEN 3.0
-    END
-FROM tarkov_items ti;
-
--- PMC Case (balanced distribution)
-INSERT INTO case_item_pools (case_type_id, item_id, weight, value_multiplier)
-SELECT 
-    (SELECT id FROM case_types WHERE name = 'PMC Case'),
-    ti.id,
-    CASE ti.rarity
-        WHEN 'common' THEN 6.0
-        WHEN 'uncommon' THEN 8.0
-        WHEN 'rare' THEN 5.0
-        WHEN 'epic' THEN 2.5
-        WHEN 'legendary' THEN 0.5
-    END,
-    CASE ti.rarity
-        WHEN 'common' THEN 1.2
-        WHEN 'uncommon' THEN 1.5
-        WHEN 'rare' THEN 2.0
-        WHEN 'epic' THEN 2.5
-        WHEN 'legendary' THEN 4.0
-    END
-FROM tarkov_items ti;
-
--- Labs Case (focuses on rare/epic/legendary items)
-INSERT INTO case_item_pools (case_type_id, item_id, weight, value_multiplier)
-SELECT 
-    (SELECT id FROM case_types WHERE name = 'Labs Case'),
-    ti.id,
-    CASE ti.rarity
-        WHEN 'common' THEN 3.0
-        WHEN 'uncommon' THEN 4.0
-        WHEN 'rare' THEN 8.0
-        WHEN 'epic' THEN 6.0
-        WHEN 'legendary' THEN 2.0
-    END,
-    CASE ti.rarity
-        WHEN 'common' THEN 1.5
-        WHEN 'uncommon' THEN 2.0
-        WHEN 'rare' THEN 3.0
-        WHEN 'epic' THEN 4.0
-        WHEN 'legendary' THEN 6.0
-    END
-FROM tarkov_items ti;
+-- Create case-item pool relationships (OPTIONAL)
+-- By default, ALL items from tarkov_items are available to ALL cases (global pool)
+-- Cases differ by:
+--   1. rarity_distribution (% chance for each rarity tier)
+--   2. value_multiplier (stored on case_types table)
+--
+-- Only add entries to case_item_pools if you want case-EXCLUSIVE items
+-- Example: If you want a specific item to ONLY appear in Labs Case
+--
+-- INSERT INTO case_item_pools (case_type_id, item_id, weight, value_multiplier)
+-- SELECT 
+--     (SELECT id FROM case_types WHERE name = 'Labs Case'),
+--     (SELECT id FROM tarkov_items WHERE name = 'Red Keycard'),
+--     1.0,  -- Weight (not used in rarity-based selection)
+--     2.0   -- Optional: Override case's default value_multiplier for this item
+--
+-- If case_item_pools has NO entries for a case, it uses ALL items (global pool)
+-- If case_item_pools HAS entries for a case, it uses ONLY those items (exclusive)

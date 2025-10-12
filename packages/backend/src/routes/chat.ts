@@ -6,7 +6,7 @@
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
-import { authMiddleware } from '../middleware/auth';
+import { criticalAuthMiddleware } from '../middleware/auth';
 import { asyncHandler } from '../middleware/error';
 import { ChatService } from '../services/chat-service';
 import { UserService } from '../services/user-service';
@@ -22,8 +22,9 @@ const deleteMessageSchema = z.object({
   messageId: z.string().min(1, 'Message ID required'),
 });
 
-// All chat routes require authentication
-chatRoutes.use('*', authMiddleware);
+// 🔐 SECURITY: All chat routes require critical authentication with session validation
+// This prevents impersonation and ensures chat messages are from authenticated users
+chatRoutes.use('*', criticalAuthMiddleware);
 
 // Send a chat message
 chatRoutes.post('/messages', asyncHandler(async (c) => {

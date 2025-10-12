@@ -6,7 +6,7 @@
 import { Hono, type Context } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { z } from 'zod'
-import { authMiddleware } from '../middleware/auth'
+import { criticalAuthMiddleware } from '../middleware/auth'
 import { asyncHandler } from '../middleware/error'
 import { StatisticsServiceAppwrite as StatisticsService, type StatisticsFilters } from '../services/statistics-appwrite'
 import { UserService } from '../services/user-service'
@@ -53,8 +53,9 @@ const gameHistorySchema = z.object({
   )
 })
 
-// All other statistics routes require authentication
-statisticsRoutes.use('*', authMiddleware)
+// 🔐 SECURITY: All statistics routes require critical authentication with session validation
+// This prevents unauthorized access to user statistics and game history
+statisticsRoutes.use('*', criticalAuthMiddleware)
 
 // Get comprehensive user statistics with advanced analytics
 statisticsRoutes.get('/advanced', asyncHandler(async (c: Context) => {

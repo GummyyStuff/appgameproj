@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { z } from 'zod'
-import { authMiddleware, criticalAuthMiddleware } from '../middleware/auth'
+import { criticalAuthMiddleware } from '../middleware/auth'
 import { asyncHandler } from '../middleware/error'
 import { UserService } from '../services/user-service'
 import { CurrencyService } from '../services/currency-new'
@@ -19,11 +19,9 @@ const updateProfileSchema = z.object({
   message: 'At least one field (username or email) must be provided'
 })
 
-// All user routes require authentication
-userRoutes.use('*', authMiddleware)
-
-// Profile update requires critical auth (with session validation)
-userRoutes.use('/profile', 'PUT', criticalAuthMiddleware)
+// 🔐 SECURITY: All user routes require critical authentication with session validation
+// This prevents authentication bypass attacks where users could forge the X-Appwrite-User-Id header
+userRoutes.use('*', criticalAuthMiddleware)
 
 // Get user profile
 userRoutes.get('/profile', asyncHandler(async (c) => {

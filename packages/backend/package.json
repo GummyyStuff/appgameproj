@@ -24,7 +24,10 @@
     "db:setup": "bun run src/database/setup.ts",
     "db:setup-with-seed": "bun run src/database/setup.ts --seed",
     "db:verify": "bun run src/database/setup.ts --verify",
-    "db:test-connection": "bun run src/scripts/test-connection.ts"
+    "db:test-connection": "bun run src/scripts/test-connection.ts",
+    "db:populate-items": "bun run src/scripts/populate-global-item-pool.ts",
+    "db:cleanup-pools": "bun run src/scripts/cleanup-case-item-pools.ts",
+    "db:test-items": "bun run src/scripts/test-global-item-pool.ts"
   },
   "dependencies": {
     "@types/pg": "^8.15.5",

@@ -4,7 +4,7 @@
  */
 
 import { appwriteDb } from './appwrite-database';
-import { COLLECTION_IDS, CaseType as AppwriteCaseType, TarkovItem as AppwriteTarkovItem, CaseItemPool } from '../config/collections';
+import { COLLECTION_IDS, CaseType as AppwriteCaseType, TarkovItem as AppwriteTarkovItem, CaseItemPool, GameHistory } from '../config/collections';
 import { SecureRandomGenerator } from './game-engine/random-generator';
 
 export interface CaseType {
@@ -14,6 +14,7 @@ export interface CaseType {
   description: string;
   image_url?: string;
   rarity_distribution: RarityDistribution;
+  value_multiplier: number; // Default reward multiplier for this case
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -119,6 +120,11 @@ export class CaseOpeningService {
 
   /**
    * Get item pool for a specific case type (with caching)
+   * 
+   * Strategy:
+   * 1. Check if case has exclusive items in case_item_pools
+   * 2. If YES: Use only those specific items (case-exclusive)
+   * 3. If NO: Use ALL active items from tarkov_items (global pool)
    */
   static async getItemPool(caseTypeId: string): Promise<WeightedItem[]> {
     const { withCache } = await import('../utils/cache');
@@ -127,54 +133,82 @@ export class CaseOpeningService {
       `case_item_pool_${caseTypeId}`,
       async () => {
         try {
-          // Get all pool entries for this case
+          // Get the case to access its value_multiplier
+          const caseType = await this.getCaseType(caseTypeId);
+          if (!caseType) {
+            throw new Error('Case type not found');
+          }
+
+          // Check if this case has exclusive items defined in case_item_pools
           const { data: poolEntries, error: poolError } = await appwriteDb.listDocuments<CaseItemPool>(
             COLLECTION_IDS.CASE_ITEM_POOLS,
             [appwriteDb.equal('caseTypeId', caseTypeId)]
           );
 
-          if (poolError || !poolEntries || poolEntries.length === 0) {
-            console.error('Error fetching item pool:', poolError);
-            throw new Error('No items found for this case type');
+          // If case has exclusive items, use only those
+          if (!poolError && poolEntries && poolEntries.length > 0) {
+            console.log(`Using ${poolEntries.length} case-exclusive items for ${caseType.name}`);
+            
+            // Fetch the specific items
+            const itemIds = poolEntries.map(p => p.itemId);
+            const items: Map<string, TarkovItem> = new Map();
+
+            const itemPromises = itemIds.map(itemId =>
+              appwriteDb.getDocument<AppwriteTarkovItem>(
+                COLLECTION_IDS.TARKOV_ITEMS,
+                itemId
+              )
+            );
+
+            const itemResults = await Promise.all(itemPromises);
+            itemResults.forEach(({ data: item, error: itemError }) => {
+              if (!itemError && item && item.isActive) {
+                items.set(item.$id!, this.transformTarkovItem(item));
+              }
+            });
+
+            // Use case_item_pools value_multiplier if specified
+            const weightedItems: WeightedItem[] = [];
+            for (const poolEntry of poolEntries) {
+              const item = items.get(poolEntry.itemId);
+              if (item) {
+                const valueMultiplier = poolEntry.valueMultiplier || caseType.value_multiplier;
+                weightedItems.push({
+                  item,
+                  weight: 1.0, // Weight not used in rarity-based selection
+                  value_multiplier: valueMultiplier,
+                  effective_value: item.base_value * valueMultiplier,
+                });
+              }
+            }
+
+            return weightedItems;
           }
 
-          // Get all items referenced in the pool - FETCH IN PARALLEL
-          const itemIds = poolEntries.map(p => p.itemId);
-          const items: Map<string, TarkovItem> = new Map();
-
-          // Fetch all items in parallel instead of sequentially
-          const itemPromises = itemIds.map(itemId =>
-            appwriteDb.getDocument<AppwriteTarkovItem>(
-              COLLECTION_IDS.TARKOV_ITEMS,
-              itemId
-            )
+          // Otherwise, use ALL active items (global pool)
+          console.log(`Using global item pool for ${caseType.name}`);
+          const { data: allItems, error: itemsError } = await appwriteDb.listDocuments<AppwriteTarkovItem>(
+            COLLECTION_IDS.TARKOV_ITEMS,
+            [appwriteDb.equal('isActive', true)]
           );
 
-          const itemResults = await Promise.all(itemPromises);
-
-          // Process results
-          itemResults.forEach(({ data: item, error: itemError }) => {
-            if (!itemError && item && item.isActive) {
-              items.set(item.$id!, this.transformTarkovItem(item));
-            }
-          });
-
-          // Combine pool entries with items
-          const weightedItems: WeightedItem[] = [];
-          for (const poolEntry of poolEntries) {
-            const item = items.get(poolEntry.itemId);
-            if (item) {
-              weightedItems.push({
-                item,
-                weight: poolEntry.weight,
-                value_multiplier: poolEntry.valueMultiplier,
-                effective_value: item.base_value * poolEntry.valueMultiplier,
-              });
-            }
+          if (itemsError || !allItems || allItems.length === 0) {
+            throw new Error('No active items found in global pool');
           }
 
+          // Transform all items to weighted items using case's value_multiplier
+          const weightedItems: WeightedItem[] = allItems.map(appwriteItem => {
+            const item = this.transformTarkovItem(appwriteItem);
+            return {
+              item,
+              weight: 1.0, // Weight not used in rarity-based selection
+              value_multiplier: caseType.value_multiplier,
+              effective_value: item.base_value * caseType.value_multiplier,
+            };
+          });
+
           if (weightedItems.length === 0) {
-            throw new Error('No active items found for this case type');
+            throw new Error('No active items found');
           }
 
           return weightedItems;
@@ -188,34 +222,68 @@ export class CaseOpeningService {
   }
 
   /**
-   * Select a random item from the pool using provably fair algorithm
+   * Select a random item from the pool using rarity-based algorithm
+   * First selects a rarity tier based on case's rarity_distribution,
+   * then randomly picks an item of that rarity from the global pool
    */
   static async selectRandomItem(
     caseType: CaseType,
     itemPool: WeightedItem[]
   ): Promise<WeightedItem> {
-    // Calculate total weight
-    const totalWeight = itemPool.reduce((sum, item) => sum + item.weight, 0);
+    // Step 1: Select rarity tier based on case's rarity distribution
+    const rarityDistribution = caseType.rarity_distribution;
+    const totalPercentage = 
+      rarityDistribution.common + 
+      rarityDistribution.uncommon + 
+      rarityDistribution.rare + 
+      rarityDistribution.epic + 
+      rarityDistribution.legendary;
 
-    if (totalWeight === 0) {
-      throw new Error('Invalid item pool: total weight is zero');
-    }
-
-    // Generate secure random number
+    // Generate secure random number between 0 and total percentage
     const random = await this.randomGenerator.generateSecureRandom();
-    const selectedValue = random * totalWeight;
+    const selectedValue = random * totalPercentage;
 
-    // Select item based on weighted random selection
-    let cumulativeWeight = 0;
-    for (const weightedItem of itemPool) {
-      cumulativeWeight += weightedItem.weight;
-      if (selectedValue <= cumulativeWeight) {
-        return weightedItem;
+    // Determine which rarity tier was selected
+    let selectedRarity: ItemRarity;
+    let cumulativePercentage = 0;
+
+    cumulativePercentage += rarityDistribution.common;
+    if (selectedValue <= cumulativePercentage) {
+      selectedRarity = 'common';
+    } else {
+      cumulativePercentage += rarityDistribution.uncommon;
+      if (selectedValue <= cumulativePercentage) {
+        selectedRarity = 'uncommon';
+      } else {
+        cumulativePercentage += rarityDistribution.rare;
+        if (selectedValue <= cumulativePercentage) {
+          selectedRarity = 'rare';
+        } else {
+          cumulativePercentage += rarityDistribution.epic;
+          if (selectedValue <= cumulativePercentage) {
+            selectedRarity = 'epic';
+          } else {
+            selectedRarity = 'legendary';
+          }
+        }
       }
     }
 
-    // Fallback to last item (shouldn't happen but safety)
-    return itemPool[itemPool.length - 1];
+    // Step 2: Filter items by selected rarity
+    const itemsOfRarity = itemPool.filter(wi => wi.item.rarity === selectedRarity);
+
+    if (itemsOfRarity.length === 0) {
+      // Fallback: if no items of selected rarity, try to find any item
+      console.warn(`No items of rarity ${selectedRarity} found in pool, using fallback`);
+      if (itemPool.length > 0) {
+        return itemPool[Math.floor(Math.random() * itemPool.length)];
+      }
+      throw new Error('No items available in pool');
+    }
+
+    // Step 3: Randomly select one item from the filtered rarity tier
+    const randomItemIndex = Math.floor(Math.random() * itemsOfRarity.length);
+    return itemsOfRarity[randomItemIndex];
   }
 
   /**
@@ -325,12 +393,12 @@ export class CaseOpeningService {
   static async getCaseOpeningStats(userId: string) {
     try {
       // Get all case opening games for user
-      const { data: games, error } = await appwriteDb.listDocuments(
+      const { data: gamesData, error } = await appwriteDb.listDocuments(
         COLLECTION_IDS.GAME_HISTORY,
         [appwriteDb.equal('userId', userId), appwriteDb.equal('gameType', 'case_opening')]
       );
 
-      if (error || !games) {
+      if (error || !gamesData) {
         return {
           total_opened: 0,
           total_spent: 0,
@@ -341,9 +409,12 @@ export class CaseOpeningService {
         };
       }
 
+      // Type cast to GameHistory[]
+      const games = gamesData as GameHistory[];
+
       const totalOpened = games.length;
-      const totalSpent = games.reduce((sum: number, g: any) => sum + g.betAmount, 0);
-      const totalWon = games.reduce((sum: number, g: any) => sum + g.winAmount, 0);
+      const totalSpent = games.reduce((sum: number, g) => sum + g.betAmount, 0);
+      const totalWon = games.reduce((sum: number, g) => sum + g.winAmount, 0);
       const netResult = totalWon - totalSpent;
 
       // Parse result data to find favorite case and best opening
@@ -402,6 +473,7 @@ export class CaseOpeningService {
       description: appwriteCase.description,
       image_url: appwriteCase.imageUrl,
       rarity_distribution: JSON.parse(appwriteCase.rarityDistribution),
+      value_multiplier: (appwriteCase as any).valueMultiplier || 1.0, // Default to 1.0 for backward compatibility
       is_active: appwriteCase.isActive,
       created_at: appwriteCase.createdAt,
       updated_at: appwriteCase.updatedAt,
