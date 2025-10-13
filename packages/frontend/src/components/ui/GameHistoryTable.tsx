@@ -8,13 +8,18 @@ import { useToastContext } from '../providers/ToastProvider'
 import { FontAwesomeSVGIcons } from './FontAwesomeSVG'
 
 interface GameHistory {
-  id: string
-  game_type: string
-  bet_amount: number
-  win_amount: number
-  net_result: number
-  created_at: string
-  result_data?: any
+  $id?: string
+  id?: string
+  userId: string
+  gameType: string
+  betAmount: number
+  winAmount: number
+  resultData?: string
+  result_data?: any // Parsed result data
+  gameDuration?: number
+  createdAt: string
+  // Computed fields
+  net_result?: number
 }
 
 interface GameHistoryFilters {
@@ -61,6 +66,7 @@ const GameHistoryTable: React.FC<GameHistoryTableProps> = ({
       const response = await fetch('/api/user/history?limit=1000&order=desc', {
         credentials: 'include',
         headers: {
+          'Content-Type': 'application/json',
           'X-Appwrite-User-Id': user.id,
         },
       });
@@ -82,15 +88,15 @@ const GameHistoryTable: React.FC<GameHistoryTableProps> = ({
 
     // Apply filters
     if (filters.gameType !== 'all') {
-      filtered = filtered.filter(game => game.game_type === filters.gameType)
+      filtered = filtered.filter(game => game.gameType === filters.gameType)
     }
 
     if (filters.dateFrom) {
       const fromDate = new Date(filters.dateFrom)
       if (!isNaN(fromDate.getTime())) {
         filtered = filtered.filter(game => {
-          if (!game.created_at) return false
-          const gameDate = new Date(game.created_at)
+          if (!game.createdAt) return false
+          const gameDate = new Date(game.createdAt)
           return !isNaN(gameDate.getTime()) && gameDate >= fromDate
         })
       }
@@ -101,8 +107,8 @@ const GameHistoryTable: React.FC<GameHistoryTableProps> = ({
       if (!isNaN(toDate.getTime())) {
         toDate.setHours(23, 59, 59, 999) // End of day
         filtered = filtered.filter(game => {
-          if (!game.created_at) return false
-          const gameDate = new Date(game.created_at)
+          if (!game.createdAt) return false
+          const gameDate = new Date(game.createdAt)
           return !isNaN(gameDate.getTime()) && gameDate <= toDate
         })
       }
@@ -111,21 +117,21 @@ const GameHistoryTable: React.FC<GameHistoryTableProps> = ({
     if (filters.minBet) {
       const minBet = parseFloat(filters.minBet)
       if (!isNaN(minBet)) {
-        filtered = filtered.filter(game => game.bet_amount >= minBet)
+        filtered = filtered.filter(game => game.betAmount >= minBet)
       }
     }
 
     if (filters.maxBet) {
       const maxBet = parseFloat(filters.maxBet)
       if (!isNaN(maxBet)) {
-        filtered = filtered.filter(game => game.bet_amount <= maxBet)
+        filtered = filtered.filter(game => game.betAmount <= maxBet)
       }
     }
 
     if (filters.resultType === 'wins') {
-      filtered = filtered.filter(game => game.win_amount > game.bet_amount)
+      filtered = filtered.filter(game => game.winAmount > game.betAmount)
     } else if (filters.resultType === 'losses') {
-      filtered = filtered.filter(game => game.win_amount <= game.bet_amount)
+      filtered = filtered.filter(game => game.winAmount <= game.betAmount)
     }
 
     // Apply sorting
@@ -134,30 +140,30 @@ const GameHistoryTable: React.FC<GameHistoryTableProps> = ({
 
       switch (filters.sortBy) {
         case 'date':
-          aValue = a.created_at ? new Date(a.created_at).getTime() : 0
-          bValue = b.created_at ? new Date(b.created_at).getTime() : 0
+          aValue = a.createdAt ? new Date(a.createdAt).getTime() : 0
+          bValue = b.createdAt ? new Date(b.createdAt).getTime() : 0
           // Handle invalid dates by treating them as 0
           aValue = isNaN(aValue) ? 0 : aValue
           bValue = isNaN(bValue) ? 0 : bValue
           break
         case 'bet':
-          aValue = a.bet_amount
-          bValue = b.bet_amount
+          aValue = a.betAmount
+          bValue = b.betAmount
           break
         case 'win':
-          aValue = a.win_amount
-          bValue = b.win_amount
+          aValue = a.winAmount
+          bValue = b.winAmount
           break
         case 'profit':
-          aValue = a.net_result ?? (a.win_amount - a.bet_amount)
-          bValue = b.net_result ?? (b.win_amount - b.bet_amount)
+          aValue = a.net_result ?? (a.winAmount - a.betAmount)
+          bValue = b.net_result ?? (b.winAmount - b.betAmount)
           // Handle NaN values by treating them as 0
           aValue = isNaN(aValue) ? 0 : aValue
           bValue = isNaN(bValue) ? 0 : bValue
           break
         default:
-          aValue = a.created_at ? new Date(a.created_at).getTime() : 0
-          bValue = b.created_at ? new Date(b.created_at).getTime() : 0
+          aValue = a.createdAt ? new Date(a.createdAt).getTime() : 0
+          bValue = b.createdAt ? new Date(b.createdAt).getTime() : 0
           // Handle invalid dates by treating them as 0
           aValue = isNaN(aValue) ? 0 : aValue
           bValue = isNaN(bValue) ? 0 : bValue
@@ -228,11 +234,11 @@ const GameHistoryTable: React.FC<GameHistoryTableProps> = ({
     try {
       const headers = ['Date', 'Game', 'Bet Amount', 'Win Amount', 'Net Result', 'Details']
       const csvData = filteredData.map(game => [
-        formatDate(game.created_at),
-        getGameName(game.game_type),
-        game.bet_amount,
-        game.win_amount,
-        game.net_result ?? (game.win_amount - game.bet_amount),
+        formatDate(game.createdAt),
+        getGameName(game.gameType),
+        game.betAmount,
+        game.winAmount,
+        game.net_result ?? (game.winAmount - game.betAmount),
         JSON.stringify(game.result_data || {})
       ])
 
@@ -494,22 +500,22 @@ const GameHistoryTable: React.FC<GameHistoryTableProps> = ({
                   >
                     <td className="py-3 px-2">
                       <div className="flex items-center space-x-2">
-                        <span className="text-lg">{getGameIcon(game.game_type)}</span>
-                        <span className="text-white font-medium">{getGameName(game.game_type)}</span>
+                        <span className="text-lg">{getGameIcon(game.gameType)}</span>
+                        <span className="text-white font-medium">{getGameName(game.gameType)}</span>
                       </div>
                     </td>
                     <td className="py-3 px-2 text-gray-400 text-sm">
-                      {formatDate(game.created_at)}
+                      {formatDate(game.createdAt)}
                     </td>
                     <td className="py-3 px-2 text-right text-white">
-                      ₽{formatCurrency(game.bet_amount)}
+                      ₽{formatCurrency(game.betAmount)}
                     </td>
                     <td className="py-3 px-2 text-right text-white">
-                      ₽{formatCurrency(game.win_amount)}
+                      ₽{formatCurrency(game.winAmount)}
                     </td>
                     <td className={`py-3 px-2 text-right font-bold ${
                       (() => {
-                        const netResult = game.net_result ?? (game.win_amount - game.bet_amount)
+                        const netResult = game.net_result ?? (game.winAmount - game.betAmount)
                         return netResult > 0 
                           ? 'text-tarkov-success' 
                           : netResult < 0 
@@ -518,7 +524,7 @@ const GameHistoryTable: React.FC<GameHistoryTableProps> = ({
                       })()
                     }`}>
                       {(() => {
-                        const netResult = game.net_result ?? (game.win_amount - game.bet_amount)
+                        const netResult = game.net_result ?? (game.winAmount - game.betAmount)
                         const safeNetResult = isNaN(netResult) ? 0 : netResult
                         return `${safeNetResult > 0 ? '+' : ''}₽${formatCurrency(safeNetResult)}`
                       })()}
@@ -526,13 +532,13 @@ const GameHistoryTable: React.FC<GameHistoryTableProps> = ({
                     <td className="py-3 px-2 text-gray-400 text-sm">
                       {game.result_data && (
                         <>
-                          {game.game_type === 'roulette' && game.result_data.winning_number !== undefined && (
+                          {game.gameType === 'roulette' && game.result_data.winning_number !== undefined && (
                             <span>Number: {game.result_data.winning_number}</span>
                           )}
-                          {game.game_type === 'blackjack' && game.result_data.player_hand && (
+                          {game.gameType === 'blackjack' && game.result_data.player_hand && (
                             <span>Player: {game.result_data.player_hand.join(', ')}</span>
                           )}
-                          {game.game_type === 'case_opening' && game.result_data.item_name && (
+                          {game.gameType === 'case_opening' && game.result_data.item_name && (
                             <span>Item: {game.result_data.item_name}</span>
                           )}
                         </>

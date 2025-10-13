@@ -98,6 +98,7 @@ const ProfilePage: React.FC = () => {
         method: 'POST',
         credentials: 'include',
         headers: {
+          'Content-Type': 'application/json',
           'X-Appwrite-User-Id': user.id,
         },
       });

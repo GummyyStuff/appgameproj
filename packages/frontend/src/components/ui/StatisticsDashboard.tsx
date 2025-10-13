@@ -20,13 +20,18 @@ import WinLossPattern from './WinLossPattern'
 import CaseItemStatistics from '../statistics/CaseItemStatistics'
 
 interface GameHistory {
-  id: string
-  game_type: string
-  bet_amount: number
-  win_amount: number
-  net_result: number
-  created_at: string
-  result_data?: any
+  $id?: string
+  id?: string
+  userId: string
+  gameType: string
+  betAmount: number
+  winAmount: number
+  resultData?: string
+  result_data?: any // Parsed result data
+  gameDuration?: number
+  createdAt: string
+  // Computed fields
+  net_result?: number
 }
 
 interface StatisticsData {
@@ -66,7 +71,30 @@ const StatisticsDashboard: React.FC = () => {
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d' | 'all'>('30d')
   const [selectedChart, setSelectedChart] = useState<'profit' | 'volume' | 'games'>('profit')
 
-  const { data: gameHistory, isLoading } = useQuery({
+  // Fetch user statistics from backend
+  const { data: userStats, isLoading: statsLoading } = useQuery({
+    queryKey: ['userStats', user?.id],
+    queryFn: async () => {
+      if (!user) return null
+      
+      const response = await fetch('/api/user/stats', {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Appwrite-User-Id': user.id,
+        },
+      });
+      
+      if (!response.ok) throw new Error('Failed to fetch user statistics');
+      
+      const result = await response.json();
+      return result.stats;
+    },
+    enabled: !!user,
+    staleTime: 60000, // Cache for 1 minute
+  })
+
+  const { data: gameHistory, isLoading: historyLoading } = useQuery({
     queryKey: ['gameHistory', user?.id, timeRange],
     queryFn: async () => {
       if (!user) return []
@@ -85,6 +113,7 @@ const StatisticsDashboard: React.FC = () => {
       const response = await fetch(`/api/user/history?${params}`, {
         credentials: 'include',
         headers: {
+          'Content-Type': 'application/json',
           'X-Appwrite-User-Id': user.id,
         },
       });
@@ -92,6 +121,13 @@ const StatisticsDashboard: React.FC = () => {
       if (!response.ok) throw new Error('Failed to fetch game history');
       
       const result = await response.json();
+      
+      // Ensure we have valid game history data
+      if (!result.history || !Array.isArray(result.history)) {
+        console.warn('Invalid game history data:', result);
+        return [];
+      }
+      
       return result.history as GameHistory[];
     },
     enabled: !!user,
@@ -100,46 +136,86 @@ const StatisticsDashboard: React.FC = () => {
 
   // Calculate statistics from game history
   const statistics: StatisticsData | null = React.useMemo(() => {
-    if (!gameHistory || gameHistory.length === 0) return null
+    if (!userStats || !gameHistory) {
+      console.log('Waiting for user stats and game history');
+      return null;
+    }
 
-    // Overview calculations
-    const totalGames = gameHistory.length
-    const totalWagered = gameHistory.reduce((sum, game) => sum + game.bet_amount, 0)
-    const totalWon = gameHistory.reduce((sum, game) => sum + game.win_amount, 0)
-    const netProfit = totalWon - totalWagered
-    const wins = gameHistory.filter(game => game.win_amount > game.bet_amount).length
-    const winRate = (wins / totalGames) * 100
-    const biggestWin = Math.max(...gameHistory.map(game => game.win_amount))
-    const biggestLoss = Math.max(...gameHistory.map(game => game.bet_amount - game.win_amount))
+    if (gameHistory.length === 0) {
+      console.log('No game history available for statistics calculation');
+      return null;
+    }
 
-    // Game type breakdown
-    const gameTypes = ['roulette', 'blackjack', 'case_opening']
-    const gameBreakdown = gameTypes.map(gameType => {
-      const games = gameHistory.filter(game => game.game_type === gameType)
-      const gamesCount = games.length
-      const wagered = games.reduce((sum, game) => sum + game.bet_amount, 0)
-      const won = games.reduce((sum, game) => sum + game.win_amount, 0)
-      const profit = won - wagered
-      const gameWins = games.filter(game => game.win_amount > game.bet_amount).length
-      const gameWinRate = gamesCount > 0 ? (gameWins / gamesCount) * 100 : 0
+    console.log('Calculating statistics from', gameHistory.length, 'games');
+    console.log('User stats from backend:', userStats);
 
-      return {
+    // Use backend stats for overview (more accurate)
+    const totalGames = userStats.games_played || 0
+    const totalWagered = userStats.total_wagered || 0
+    const totalWon = userStats.total_won || 0
+    const netProfit = userStats.net_profit || 0
+    
+    // Calculate wins/losses from game history
+    const wins = gameHistory.filter(game => (game.winAmount || 0) > (game.betAmount || 0)).length
+    const losses = gameHistory.filter(game => (game.winAmount || 0) < (game.betAmount || 0)).length
+    const winRate = totalGames > 0 ? (wins / totalGames) * 100 : 0
+    const biggestWin = gameHistory.length > 0 ? Math.max(...gameHistory.map(game => game.winAmount || 0)) : 0
+    const biggestLoss = gameHistory.length > 0 ? Math.max(...gameHistory.map(game => (game.betAmount || 0) - (game.winAmount || 0))) : 0
+    
+    console.log('Calculated stats:', { totalGames, totalWagered, totalWon, netProfit, wins, losses, winRate, biggestWin, biggestLoss });
+
+    // Game type breakdown - use backend game_breakdown if available
+    let gameBreakdown: Array<{
+      gameType: string
+      games: number
+      wagered: number
+      won: number
+      profit: number
+      winRate: number
+    }> = []
+    
+    if (userStats.game_breakdown && typeof userStats.game_breakdown === 'object') {
+      // Use backend breakdown data
+      gameBreakdown = Object.entries(userStats.game_breakdown).map(([gameType, stats]: [string, any]) => ({
         gameType,
-        games: gamesCount,
-        wagered,
-        won,
-        profit,
-        winRate: gameWinRate
-      }
-    }).filter(item => item.games > 0)
+        games: stats.games_played || 0,
+        wagered: stats.total_wagered || 0,
+        won: stats.total_won || 0,
+        profit: (stats.total_won || 0) - (stats.total_wagered || 0),
+        winRate: stats.win_rate || 0
+      })).filter(item => item.games > 0)
+    } else {
+      // Fallback to calculating from game history
+      const gameTypes = ['roulette', 'blackjack', 'case_opening']
+      gameBreakdown = gameTypes.map(gameType => {
+        const games = gameHistory.filter(game => game.gameType === gameType)
+        const gamesCount = games.length
+        const wagered = games.reduce((sum, game) => sum + (game.betAmount || 0), 0)
+        const won = games.reduce((sum, game) => sum + (game.winAmount || 0), 0)
+        const profit = won - wagered
+        const gameWins = games.filter(game => (game.winAmount || 0) > (game.betAmount || 0)).length
+        const gameWinRate = gamesCount > 0 ? (gameWins / gamesCount) * 100 : 0
+
+        return {
+          gameType,
+          games: gamesCount,
+          wagered,
+          won,
+          profit,
+          winRate: gameWinRate
+        }
+      }).filter(item => item.games > 0)
+    }
+    
+    console.log('Game breakdown:', gameBreakdown);
 
     // Time series data (daily aggregation)
     const dailyData = new Map<string, { games: number; wagered: number; won: number; profit: number }>()
     
     gameHistory.forEach(game => {
       // Skip games with invalid dates
-      if (!game.created_at) return
-      const dateObj = new Date(game.created_at)
+      if (!game.createdAt) return
+      const dateObj = new Date(game.createdAt)
       if (isNaN(dateObj.getTime())) return
       
       const date = dateObj.toISOString().split('T')[0]
@@ -150,9 +226,9 @@ const StatisticsDashboard: React.FC = () => {
       
       const dayData = dailyData.get(date)!
       dayData.games += 1
-      dayData.wagered += game.bet_amount
-      dayData.won += game.win_amount
-      dayData.profit += game.net_result
+      dayData.wagered += (game.betAmount || 0)
+      dayData.won += (game.winAmount || 0)
+      dayData.profit += ((game.winAmount || 0) - (game.betAmount || 0))
     })
 
     const timeSeriesData = Array.from(dailyData.entries())
@@ -160,7 +236,7 @@ const StatisticsDashboard: React.FC = () => {
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
       .slice(-30) // Last 30 days
 
-    console.log('Time series data:', timeSeriesData) // Debug log
+    console.log('Time series data:', timeSeriesData); // Debug log
 
     // Win streaks calculation
     let currentStreak = 0
@@ -170,11 +246,11 @@ const StatisticsDashboard: React.FC = () => {
     let tempLossStreak = 0
 
     const sortedGames = [...gameHistory].sort((a, b) => 
-      new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
     )
 
     sortedGames.forEach((game) => {
-      const isWin = game.win_amount > game.bet_amount
+      const isWin = game.winAmount > game.betAmount
 
       if (isWin) {
         tempWinStreak += 1
@@ -190,7 +266,7 @@ const StatisticsDashboard: React.FC = () => {
     // Calculate current streak from most recent games
     for (let i = 0; i < Math.min(gameHistory.length, 10); i++) {
       const game = gameHistory[i]
-      const isWin = game.win_amount > game.bet_amount
+      const isWin = game.winAmount > game.betAmount
       
       if (i === 0) {
         currentStreak = isWin ? 1 : -1
@@ -222,7 +298,7 @@ const StatisticsDashboard: React.FC = () => {
         longestLoss: longestLossStreak
       }
     }
-  }, [gameHistory])
+  }, [gameHistory, userStats])
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -251,7 +327,7 @@ const StatisticsDashboard: React.FC = () => {
 
   if (!user) return null
 
-  if (isLoading) {
+  if (statsLoading || historyLoading) {
     return (
       <div className="bg-tarkov-dark rounded-lg p-6">
         <div className="text-center py-8">
