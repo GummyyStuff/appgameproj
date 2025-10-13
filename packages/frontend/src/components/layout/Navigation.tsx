@@ -157,7 +157,7 @@ const Navigation: React.FC = () => {
                   size="sm"
                   onClick={() => playGameSound('click')}
                 >
-                  <Link to="/login">Login with Discord</Link>
+                  <Link to="/login">Login</Link>
                 </TarkovButton>
               </div>
             )}
@@ -273,7 +273,7 @@ const Navigation: React.FC = () => {
                         setIsMobileMenuOpen(false)
                       }}
                     >
-                      <Link to="/login">Login with Discord</Link>
+                      <Link to="/login">Login</Link>
                     </TarkovButton>
                   </div>
                 )}

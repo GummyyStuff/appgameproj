@@ -75,7 +75,7 @@ const HomePage: React.FC = () => {
                 onClick={() => playGameSound('click')}
                 icon={<FontAwesomeSVGIcons.Key size={20} color="white" />}
               >
-                <Link to="/login">Return to Base</Link>
+                <Link to="/login">Enter Hideout</Link>
               </TarkovButton>
             </div>
           )}
