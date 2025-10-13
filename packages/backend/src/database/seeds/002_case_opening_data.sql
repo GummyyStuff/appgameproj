@@ -198,36 +198,46 @@ INSERT INTO tarkov_items (name, rarity, base_value, category, description) VALUE
 ('Marked Room Key', 'legendary', 10000, 'keycards', 'Special marked room access'),
 ('Reserve Marked Key', 'legendary', 12000, 'keycards', 'Military base marked room access');
 
--- Insert Case Types
+-- Insert Case Types (Balanced for 93-98% RTP)
+-- Prices and distributions mathematically optimized for fair gameplay
 INSERT INTO case_types (name, price, description, image_url, rarity_distribution) VALUES
-('Scav Case', 500, 'Basic case containing common items found by Scavengers. Perfect for beginners looking to try their luck.', '/images/cases/scav-case.png', '{
-    "common": 60,
+('Starter Case', 500, 'Basic case for beginners. Perfect for trying your luck with common and uncommon items.', '/images/cases/starter-case.png', '{
+    "common": 70,
     "uncommon": 25,
-    "rare": 10,
-    "epic": 4,
-    "legendary": 1
+    "rare": 5,
+    "epic": 0,
+    "legendary": 0
 }'::jsonb),
 
-('PMC Case', 1500, 'Military-grade case with better odds for valuable items. Contains equipment used by Private Military Contractors.', '/images/cases/pmc-case.png', '{
-    "common": 45,
-    "uncommon": 30,
-    "rare": 15,
-    "epic": 8,
-    "legendary": 2
+('Military Case', 1200, 'Military-grade case with balanced odds. Good chance for rare items at a fair price.', '/images/cases/military-case.png', '{
+    "common": 25,
+    "uncommon": 50,
+    "rare": 25,
+    "epic": 0,
+    "legendary": 0
 }'::jsonb),
 
-('Labs Case', 5000, 'Premium case from TerraGroup Labs with the highest chance for legendary items. Only for serious players.', '/images/cases/labs-case.png', '{
-    "common": 30,
-    "uncommon": 35,
+('Premium Case', 2500, 'High-quality tactical case with excellent odds. First chance at epic items!', '/images/cases/premium-case.png', '{
+    "common": 20,
+    "uncommon": 45,
     "rare": 20,
-    "epic": 12,
-    "legendary": 3
+    "epic": 15,
+    "legendary": 0
+}'::jsonb),
+
+('Legendary Case', 5500, 'Elite case with the best loot. Highest RTP and 5% legendary drop rate!', '/images/cases/legendary-case.png', '{
+    "common": 20,
+    "uncommon": 20,
+    "rare": 25,
+    "epic": 30,
+    "legendary": 5
 }'::jsonb);
 
 -- Create case-item pool relationships (OPTIONAL)
 -- By default, ALL items from tarkov_items are available to ALL cases (global pool)
 -- Cases differ by rarity_distribution (% chance for each rarity tier)
--- Item values are boosted via base_value, not multipliers
+-- Item values are stored in base_value (already balanced for 93-98% RTP)
+-- Case prices and distributions mathematically optimized for fair gameplay
 --
 -- Only add entries to case_item_pools if you want case-EXCLUSIVE items
 -- Example: If you want a specific item to ONLY appear in Labs Case
