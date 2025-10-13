@@ -14,6 +14,7 @@ import {
 } from '../../types/caseStatistics'
 import { formatCurrency } from '../../utils/currency'
 import { FontAwesomeSVGIcons } from '../ui'
+import { useAuth } from '../../hooks/useAuth'
 
 interface CaseItemStatisticsProps {
   isLoading?: boolean
@@ -32,34 +33,57 @@ interface CaseItemStatisticsProps {
  * Uses Recharts for data visualization
  */
 const CaseItemStatistics: React.FC<CaseItemStatisticsProps> = ({ isLoading: isLoadingProp }) => {
+  const { user } = useAuth()
   const [statistics, setStatistics] = useState<CaseStatistics | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'frequency' | 'value' | 'rarity' | 'category'>('frequency')
 
   useEffect(() => {
-    fetchStatistics()
-  }, [])
+    if (user) {
+      fetchStatistics()
+    }
+  }, [user])
 
   const fetchStatistics = async () => {
+    if (!user?.id) {
+      console.warn('CaseItemStatistics: User not ready yet')
+      setIsLoading(false)
+      return
+    }
+
     try {
       setIsLoading(true)
       setError(null)
 
+      console.log('Fetching case statistics for user:', user.id)
+
       const response = await fetch('/api/case-statistics', {
-        credentials: 'include',
+        credentials: 'include', // Send session cookies
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'X-Appwrite-User-Id': user.id // Required by backend auth middleware
         }
       })
 
       if (!response.ok) {
+        const errorText = await response.text().catch(() => response.statusText)
+        console.error('Case statistics API error:', response.status, errorText)
+        
+        if (response.status === 401) {
+          throw new Error('Authentication required. Please log in again.')
+        }
+        
         throw new Error(`Failed to fetch statistics: ${response.statusText}`)
       }
 
       const data = await response.json()
 
       if (data.success && data.statistics) {
+        console.log('Case statistics loaded successfully:', {
+          total_cases: data.statistics.total_cases_opened,
+          unique_items: data.statistics.items_by_frequency?.length
+        })
         setStatistics(data.statistics)
       } else {
         throw new Error('Invalid statistics response')
@@ -70,6 +94,11 @@ const CaseItemStatistics: React.FC<CaseItemStatisticsProps> = ({ isLoading: isLo
     } finally {
       setIsLoading(false)
     }
+  }
+
+  // Don't render if user isn't authenticated
+  if (!user) {
+    return null
   }
 
   if (isLoading || isLoadingProp) {
