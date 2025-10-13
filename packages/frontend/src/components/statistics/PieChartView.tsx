@@ -52,31 +52,35 @@ const PieChartView: React.FC<PieChartViewProps> = ({
       <h3 className="text-xl font-semibold text-white mb-4">{title}</h3>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Pie Chart Container */}
-        <ChartContainer
-          config={chartConfig}
-          className="mx-auto aspect-square max-h-[350px] w-full"
-        >
-          <PieChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
-            <ChartTooltip 
-              content={
-                <ChartTooltipContent 
-                  hideLabel 
-                  className="bg-tarkov-secondary border-tarkov-primary text-white"
-                />
-              } 
-            />
-            <Pie
-              data={data}
-              dataKey={dataKey}
-              nameKey={nameKey}
-              cx="50%"
-              cy="50%"
-              outerRadius={80}
-              innerRadius={0}
-              label={false}
-            />
-          </PieChart>
-        </ChartContainer>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <ChartContainer
+            config={chartConfig}
+            className="aspect-square w-full max-w-[400px]"
+          >
+            <PieChart>
+              <ChartTooltip 
+                content={
+                  <ChartTooltipContent 
+                    hideLabel 
+                    className="bg-tarkov-secondary border-tarkov-primary text-white shadow-xl"
+                  />
+                } 
+              />
+              <Pie
+                data={data}
+                dataKey={dataKey}
+                nameKey={nameKey}
+                cx="50%"
+                cy="50%"
+                outerRadius={140}
+                innerRadius={60}
+                paddingAngle={2}
+                label={false}
+                strokeWidth={2}
+              />
+            </PieChart>
+          </ChartContainer>
+        </div>
 
         {/* Details List */}
         <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">

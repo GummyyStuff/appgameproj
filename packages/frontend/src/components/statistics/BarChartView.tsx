@@ -45,8 +45,9 @@ const BarChartView: React.FC<BarChartViewProps> = ({
   formatValue,
   renderDetails
 }) => {
-  // Calculate dynamic height based on number of items (30px per bar + padding)
-  const chartHeight = Math.max(300, data.length * 35 + 40)
+  // Calculate dynamic height based on number of items
+  // Each bar needs about 40px of space (bar + gap)
+  const chartHeight = Math.max(400, data.length * 40)
 
   return (
     <motion.div
@@ -57,61 +58,65 @@ const BarChartView: React.FC<BarChartViewProps> = ({
       <h3 className="text-xl font-semibold text-white mb-4">{title}</h3>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Horizontal Bar Chart */}
-        <div className="w-full overflow-y-auto max-h-[500px]" style={{ height: `${chartHeight}px` }}>
-          <ChartContainer
-            config={chartConfig}
-            className="w-full h-full"
-          >
-            <BarChart 
-              data={data} 
-              layout="horizontal"
-              margin={{ top: 10, right: 50, left: 10, bottom: 10 }}
-              barSize={20}
+        <div className="w-full max-h-[600px] overflow-y-auto">
+          <div style={{ height: `${chartHeight}px`, minHeight: '400px' }}>
+            <ChartContainer
+              config={chartConfig}
+              className="w-full h-full"
             >
-              <XAxis type="number" stroke="#9ca3af" fontSize={12} />
-              <YAxis 
-                dataKey={nameKey} 
-                type="category" 
-                width={100}
-                stroke="#9ca3af" 
-                fontSize={10}
-                tickLine={false}
-                axisLine={false}
-                tickFormatter={(value) => {
-                  // Truncate long names
-                  return value.length > 12 ? value.substring(0, 12) + '...' : value
-                }}
-              />
-              <ChartTooltip 
-                cursor={{ fill: 'rgba(255, 255, 255, 0.1)' }}
-                content={
-                  <ChartTooltipContent 
-                    hideLabel
-                    className="bg-tarkov-secondary border-tarkov-primary"
-                    formatter={(value, name, props) => {
-                      const displayValue = formatValue ? formatValue(Number(value)) : value
-                      return [displayValue, props.payload[nameKey]]
-                    }}
-                  />
-                } 
-              />
-              <Bar 
-                dataKey={dataKey} 
-                radius={[0, 4, 4, 0]}
+              <BarChart 
+                data={data} 
+                layout="horizontal"
+                margin={{ top: 20, right: 60, left: 10, bottom: 20 }}
+                barSize={16}
+                barGap={8}
+                barCategoryGap="20%"
               >
-                <LabelList 
-                  dataKey={dataKey} 
-                  position="right" 
-                  formatter={(value: number) => formatValue ? formatValue(value) : value}
-                  className="fill-gray-300 text-[10px]"
+                <XAxis type="number" stroke="#9ca3af" fontSize={11} />
+                <YAxis 
+                  dataKey={nameKey} 
+                  type="category" 
+                  width={110}
+                  stroke="#9ca3af" 
+                  fontSize={10}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(value) => {
+                    // Truncate long names
+                    return value.length > 14 ? value.substring(0, 14) + '...' : value
+                  }}
                 />
-              </Bar>
-            </BarChart>
-          </ChartContainer>
+                <ChartTooltip 
+                  cursor={{ fill: 'rgba(255, 255, 255, 0.1)' }}
+                  content={
+                    <ChartTooltipContent 
+                      hideLabel
+                      className="bg-tarkov-secondary border-tarkov-primary"
+                      formatter={(value, name, props) => {
+                        const displayValue = formatValue ? formatValue(Number(value)) : value
+                        return [displayValue, props.payload[nameKey]]
+                      }}
+                    />
+                  } 
+                />
+                <Bar 
+                  dataKey={dataKey} 
+                  radius={[0, 4, 4, 0]}
+                >
+                  <LabelList 
+                    dataKey={dataKey} 
+                    position="right" 
+                    formatter={(value: number) => formatValue ? formatValue(value) : value}
+                    className="fill-gray-300 text-[10px]"
+                  />
+                </Bar>
+              </BarChart>
+            </ChartContainer>
+          </div>
         </div>
 
         {/* Details List */}
-        <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
+        <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
           {data.map((item, index) => renderDetails(item, index))}
         </div>
       </div>
