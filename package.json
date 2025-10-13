@@ -26,10 +26,11 @@
     }
   },
   "scripts": {
-    "dev": "bun run --filter @tarkov-casino/backend dev",
+    "dev": "bun run build:frontend:dev && bun run --filter @tarkov-casino/backend dev",
     "dev:all": "bun --filter '*' dev",
     "build": "bun run build:frontend && bun run build:backend",
     "build:frontend": "cd packages/frontend && bun run build",
+    "build:frontend:dev": "cd packages/frontend && bun run build:dev",
     "build:backend": "cd packages/backend && bun run build",
     "build:all": "bun --filter '*' build",
     "start": "bun run dist/index.js",

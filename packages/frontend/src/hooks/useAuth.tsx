@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { account } from '../lib/appwrite';
 import { OAuthProvider } from 'appwrite';
 
-const API_URL = import.meta.env.VITE_API_URL || '/api';
+export const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 interface User {
   id: string;
@@ -19,6 +19,7 @@ interface AuthContextType {
   loading: boolean;
   signInWithDiscord: () => Promise<void>;
   signOut: () => Promise<void>;
+  refreshUser: () => Promise<void>;
   isAuthenticated: boolean;
 }
 
@@ -148,6 +149,56 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, []);
 
+  const refreshUser = useCallback(async () => {
+    try {
+      // Try to get Appwrite user first
+      let appwriteUserId: string;
+      try {
+        const appwriteUser = await account.get();
+        appwriteUserId = appwriteUser.$id;
+      } catch (appwriteError) {
+        // If Appwrite session check fails, try to get user from backend
+        // This handles server-side session cookies from test login
+        console.log('Appwrite session check failed, trying backend session...');
+        const backendResponse = await fetch(`${API_URL}/auth/me`, {
+          credentials: 'include',
+        });
+        
+        if (!backendResponse.ok) {
+          throw new Error('No valid session found');
+        }
+        
+        const userData = await backendResponse.json();
+        setUser(userData);
+        return;
+      }
+      
+      // Get full user profile from backend
+      const response = await fetch(`${API_URL}/auth/me`, {
+        credentials: 'include',
+        headers: {
+          'X-Appwrite-User-Id': appwriteUserId,
+        },
+      });
+
+      if (response.ok) {
+        const userData = await response.json();
+        setUser(userData);
+      } else {
+        // Backend couldn't find profile - use basic Appwrite data
+        const appwriteUser = await account.get();
+        setUser({
+          id: appwriteUser.$id,
+          email: appwriteUser.email,
+          name: appwriteUser.name,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to refresh user:', error);
+      setUser(null);
+    }
+  }, []);
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -155,6 +206,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       isAuthenticated: !!user,
       signInWithDiscord,
       signOut,
+      refreshUser,
     }}>
       {children}
     </AuthContext.Provider>

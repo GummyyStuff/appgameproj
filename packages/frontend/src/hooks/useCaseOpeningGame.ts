@@ -231,11 +231,9 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
       // Store winnings amount to be credited when congratulations appears
       setPendingWinnings(openingResponse.opening_result.currency_awarded)
 
-      // Setup animation after a brief delay
-      setTimeout(async () => {
-        recordFlowStep(flowId, 'animation_setup_delay', true)
-        await setupCaseOpeningAnimation(selectedCase, flowId, undefined, openingResponse)
-      }, 1000)
+      // Setup animation immediately (removed 1000ms delay for better perceived performance)
+      recordFlowStep(flowId, 'animation_setup_started', true)
+      await setupCaseOpeningAnimation(selectedCase, flowId, undefined, openingResponse)
 
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to open case')

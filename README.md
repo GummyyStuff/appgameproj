@@ -118,14 +118,30 @@ tarkov-casino/
 
 4. **Start unified development server:**
    ```bash
+   # This automatically builds frontend in dev mode and starts backend
    bun run dev
    ```
+   
+   > **Note:** The `bun run dev` command automatically builds the frontend in development mode, which enables the test login UI. If you build the frontend manually, use `bun run build:frontend:dev` to enable test accounts.
 
 5. **Access the application:**
    - Frontend + Backend: http://localhost:3000
    - API Health: http://localhost:3000/api/health
    - Detailed Health: http://localhost:3000/api/health/detailed
    - API Metrics: http://localhost:3000/api/metrics
+
+6. **Create a test account (optional):**
+   ```bash
+   # Create test account for local development (no Discord OAuth needed)
+   bun run scripts/create-test-account.ts
+   
+   # Or with custom credentials
+   bun run scripts/create-test-account.ts test@example.com password123 "Test User"
+   ```
+   
+   Then log in at http://localhost:3000/login using the test login form.
+   
+   📖 See [Test Accounts Guide](./docs/development/TEST_ACCOUNTS.md) for more details.
 
 > **Note:** Dragonfly is optional for local development. The app works fine without caching (uses database fallback). See [Redis/Dragonfly documentation](./docs/backend/redis-README.md) for more details.
 

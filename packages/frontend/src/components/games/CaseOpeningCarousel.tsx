@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { TarkovItem } from './ItemReveal'
 import { formatCurrency } from '../../utils/currency'
@@ -24,27 +24,32 @@ const rarityColors = {
   common: {
     border: 'border-gray-400',
     glow: 'shadow-gray-400/50',
-    bg: 'bg-gray-400/10'
+    bg: 'bg-gray-400/10',
+    shadowColor: 'gray-400' // Pre-calculated for animations
   },
   uncommon: {
     border: 'border-green-400',
     glow: 'shadow-green-400/50',
-    bg: 'bg-green-400/10'
+    bg: 'bg-green-400/10',
+    shadowColor: 'green-400'
   },
   rare: {
     border: 'border-blue-400',
     glow: 'shadow-blue-400/50',
-    bg: 'bg-blue-400/10'
+    bg: 'bg-blue-400/10',
+    shadowColor: 'blue-400'
   },
   epic: {
     border: 'border-purple-400',
     glow: 'shadow-purple-400/50',
-    bg: 'bg-purple-400/10'
+    bg: 'bg-purple-400/10',
+    shadowColor: 'purple-400'
   },
   legendary: {
     border: 'border-yellow-400',
     glow: 'shadow-yellow-400/50',
-    bg: 'bg-yellow-400/10'
+    bg: 'bg-yellow-400/10',
+    shadowColor: 'yellow-400'
   }
 }
 
@@ -54,6 +59,20 @@ const categoryIcons = {
   consumables: '🍖',
   valuables: '💰',
   keycards: '🗝️'
+}
+
+// Pre-calculate particle configurations outside render for better performance
+const PARTICLE_CONFIGS = {
+  primary: Array.from({ length: 6 }, (_, i) => ({
+    angle: (i * 360) / 6,
+    distance: 60 + Math.random() * 40,
+    particleType: ['✨', '💫', '⭐', '🌟'][Math.floor(Math.random() * 4)]
+  })),
+  secondary: Array.from({ length: 4 }, (_, i) => ({
+    initialX: 30 + Math.random() * 40,
+    initialY: 30 + Math.random() * 40,
+    randomX: (Math.random() - 0.5) * 30
+  }))
 }
 
 const CaseOpeningCarousel: React.FC<CaseOpeningCarouselProps> = ({
@@ -72,9 +91,14 @@ const CaseOpeningCarousel: React.FC<CaseOpeningCarouselProps> = ({
   const [scrollX, setScrollX] = useState(0)
   const [isAnimating, setIsAnimating] = useState(false)
 
-  // Simplified dimensions
-  const isMobile = window.innerWidth < 640
-  const skinWidth = isMobile ? 160 : 256
+  // Memoized dimensions (prevents recalculation on every render)
+  const { isMobile, skinWidth } = useMemo(() => {
+    const isMobileView = window.innerWidth < 640
+    return {
+      isMobile: isMobileView,
+      skinWidth: isMobileView ? 160 : 256
+    }
+  }, []) // Empty deps - only calculate once on mount
 
   // Simple easing for smooth animation
   const easingStyle = `transform ${duration}ms cubic-bezier(0.1, 0.4, 0.4, 1)`
@@ -120,47 +144,8 @@ const CaseOpeningCarousel: React.FC<CaseOpeningCarouselProps> = ({
       carouselRef.current.style.transform = 'translateX(0)'
     }
 
-    // Set up audio feedback during animation
-    const thresholds = items.map((_, i) => i * skinWidth - currentContainerWidth / 2 + 2)
-    const playedIndices = new Set<number>()
-    const startTime = Date.now()
-
-    const checkPosition = () => {
-      if (!carouselRef.current) return
-      const style = getComputedStyle(carouselRef.current)
-      const transform = style.transform
-      let currentScroll = 0
-
-      if (transform && transform !== 'none') {
-        const match = transform.match(/matrix.*\((.+)\)/)
-        if (match) {
-          const values = match[1].split(', ')
-          currentScroll = -parseFloat(values[4])
-        }
-      }
-
-      // Play audio feedback as items pass through center
-      thresholds.forEach((threshold, index) => {
-        if (!playedIndices.has(index) && currentScroll >= threshold) {
-          playedIndices.add(index)
-          playCaseReveal()
-        }
-      })
-
-      if (Date.now() - startTime < duration) {
-        requestAnimationFrame(checkPosition)
-      }
-    }
-
-    // Start animation after a brief delay
-    setTimeout(() => {
-      if (carouselRef.current) carouselRef.current.style.transition = easingStyle
-      setScrollX(targetScroll)
-      requestAnimationFrame(checkPosition)
-    }, 50)
-
-    // Complete animation
-    setTimeout(() => {
+    // Use transitionend event instead of requestAnimationFrame polling for better performance
+    const handleTransitionEnd = () => {
       setIsAnimating(false)
 
       // Debug: Check what item is actually centered
@@ -176,8 +161,28 @@ const CaseOpeningCarousel: React.FC<CaseOpeningCarouselProps> = ({
         finalItem: finalItem?.name
       })
 
+      // Cleanup event listener
+      carouselRef.current?.removeEventListener('transitionend', handleTransitionEnd)
+      
       onSpinComplete()
-    }, duration)
+    }
+
+    // Add transitionend listener (much more efficient than requestAnimationFrame)
+    carouselRef.current?.addEventListener('transitionend', handleTransitionEnd)
+
+    // Start animation after a brief delay
+    setTimeout(() => {
+      if (carouselRef.current) {
+        carouselRef.current.style.transition = easingStyle
+        setScrollX(targetScroll)
+        
+        // Optional: Play reveal sound at key moments (simplified, no polling)
+        const revealSoundInterval = duration / 10 // Play sound 10 times during animation
+        for (let i = 1; i <= 10; i++) {
+          setTimeout(() => playCaseReveal(), revealSoundInterval * i)
+        }
+      }
+    }, 50)
   }
 
   return (
@@ -192,8 +197,11 @@ const CaseOpeningCarousel: React.FC<CaseOpeningCarouselProps> = ({
           {/* Carousel items */}
           <div
             ref={carouselRef}
-            className="flex absolute left-0 top-0 will-change-transform origin-center h-full"
-            style={{ transform: carouselTransform }}
+            className="flex absolute left-0 top-0 origin-center h-full"
+            style={{ 
+              transform: carouselTransform,
+              willChange: isAnimating ? 'transform' : 'auto', // GPU acceleration only during animation
+            }}
           >
             {items.map((itemData, index) => (
               <div key={itemData.id} className="sm:w-64 w-40 h-40 sm:h-56 flex-shrink-0 px-2 flex items-center justify-center">
@@ -269,7 +277,8 @@ interface CarouselItemProps {
   animationPhase: string
 }
 
-const CarouselItem: React.FC<CarouselItemProps> = ({
+// Memoized carousel item to prevent unnecessary re-renders
+const CarouselItem: React.FC<CarouselItemProps> = React.memo(({
   itemData,
   width,
   isWinning,
@@ -317,6 +326,9 @@ const CarouselItem: React.FC<CarouselItemProps> = ({
           ${rarity.border} ${rarity.bg}
           ${isWinning ? 'scale-105 animate-pulse' : ''}
         `}
+        style={{
+          willChange: isWinning ? 'transform, opacity' : 'auto' // GPU acceleration for winning items
+        }}
       >
         {/* Item Image */}
         <div className="h-24 sm:h-32 bg-gradient-to-br from-tarkov-secondary to-tarkov-dark flex items-center justify-center relative overflow-hidden">
@@ -327,20 +339,9 @@ const CarouselItem: React.FC<CarouselItemProps> = ({
               className="w-full h-full object-cover"
             />
           ) : (
-            <motion.div
-              className="text-6xl"
-              animate={{
-                scale: [1, 1.15, 1],
-                rotate: [0, 5, -5, 0],
-              }}
-              transition={{
-                duration: 0.4,
-                repeat: Infinity,
-                ease: "easeInOut"
-              }}
-            >
+            <div className="text-6xl">
               {categoryIcons[itemCategory] || '📦'}
-            </motion.div>
+            </div>
           )}
           
           {/* Winning item glow overlay */}
@@ -389,56 +390,50 @@ const CarouselItem: React.FC<CarouselItemProps> = ({
               animate={{ opacity: 1 }}
               transition={{ delay: 0.5 }}
             >
-              {/* Primary particle burst */}
-              {[...Array(12)].map((_, i) => {
-                const angle = (i * 360) / 12
-                const distance = 60 + Math.random() * 40
-                const particleType = ['✨', '💫', '⭐', '🌟'][Math.floor(Math.random() * 4)]
-                
-                return (
-                  <motion.div
-                    key={`primary-${i}`}
-                    className="absolute text-sm"
-                    initial={{ 
-                      opacity: 0,
-                      scale: 0,
-                      x: '50%',
-                      y: '50%',
-                      rotate: 0
-                    }}
-                    animate={{ 
-                      opacity: [0, 1, 0.8, 0],
-                      scale: [0, 1.2, 0.8, 0],
-                      x: `${50 + Math.cos(angle * Math.PI / 180) * distance}%`,
-                      y: `${50 + Math.sin(angle * Math.PI / 180) * distance}%`,
-                      rotate: 360
-                    }}
-                    transition={{ 
-                      duration: 2.5,
-                      delay: i * 0.05,
-                      ease: 'easeOut'
-                    }}
-                  >
-                    {particleType}
-                  </motion.div>
-                )
-              })}
+              {/* Primary particle burst - reduced from 12 to 6 for better performance */}
+              {PARTICLE_CONFIGS.primary.map((config, i) => (
+                <motion.div
+                  key={`primary-${i}`}
+                  className="absolute text-sm"
+                  initial={{ 
+                    opacity: 0,
+                    scale: 0,
+                    x: '50%',
+                    y: '50%',
+                    rotate: 0
+                  }}
+                  animate={{ 
+                    opacity: [0, 1, 0.8, 0],
+                    scale: [0, 1.2, 0.8, 0],
+                    x: `${50 + Math.cos(config.angle * Math.PI / 180) * config.distance}%`,
+                    y: `${50 + Math.sin(config.angle * Math.PI / 180) * config.distance}%`,
+                    rotate: 360
+                  }}
+                  transition={{ 
+                    duration: 2.5,
+                    delay: i * 0.05,
+                    ease: 'easeOut'
+                  }}
+                >
+                  {config.particleType}
+                </motion.div>
+              ))}
               
-              {/* Secondary floating particles */}
-              {[...Array(8)].map((_, i) => (
+              {/* Secondary floating particles - reduced from 8 to 4 for better performance */}
+              {PARTICLE_CONFIGS.secondary.map((config, i) => (
                 <motion.div
                   key={`secondary-${i}`}
                   className="absolute text-xs"
                   initial={{ 
                     opacity: 0,
-                    x: `${30 + Math.random() * 40}%`,
-                    y: `${30 + Math.random() * 40}%`,
+                    x: `${config.initialX}%`,
+                    y: `${config.initialY}%`,
                     scale: 0.5
                   }}
                   animate={{ 
                     opacity: [0, 0.8, 0],
                     y: [0, -30, -60],
-                    x: [0, (Math.random() - 0.5) * 30],
+                    x: [0, config.randomX],
                     scale: [0.5, 1, 0.3],
                     rotate: [0, 180, 360]
                   }}
@@ -456,8 +451,8 @@ const CarouselItem: React.FC<CarouselItemProps> = ({
               {/* Rarity-specific effects */}
               {itemRarity === 'legendary' && (
                 <>
-                  {/* Golden rays */}
-                  {[...Array(8)].map((_, i) => (
+                  {/* Golden rays - reduced from 8 to 4 for better performance */}
+                  {[...Array(4)].map((_, i) => (
                     <motion.div
                       key={`ray-${i}`}
                       className="absolute w-0.5 bg-gradient-to-t from-yellow-400/80 to-transparent"
@@ -466,7 +461,7 @@ const CarouselItem: React.FC<CarouselItemProps> = ({
                         left: '50%',
                         top: 0,
                         transformOrigin: 'bottom center',
-                        transform: `rotate(${i * 45}deg)`
+                        transform: `rotate(${i * 90}deg)` // Adjusted for 4 rays instead of 8
                       }}
                       initial={{ opacity: 0, scaleY: 0 }}
                       animate={{ 
@@ -525,26 +520,26 @@ const CarouselItem: React.FC<CarouselItemProps> = ({
               )}
             </motion.div>
 
-            {/* Enhanced Border Glow */}
+            {/* Enhanced Border Glow - reduced to 3 cycles instead of infinite */}
             <motion.div
               className={`absolute inset-0 rounded-lg border-2 ${rarity.border} pointer-events-none`}
               animate={{ 
                 boxShadow: [
-                  `0 0 5px ${rarity.border.replace('border-', '').replace('-400', '')}`,
-                  `0 0 15px ${rarity.border.replace('border-', '').replace('-400', '')}`,
-                  `0 0 25px ${rarity.border.replace('border-', '').replace('-400', '')}`,
-                  `0 0 15px ${rarity.border.replace('border-', '').replace('-400', '')}`,
-                  `0 0 5px ${rarity.border.replace('border-', '').replace('-400', '')}`
+                  `0 0 5px ${rarity.shadowColor}`,
+                  `0 0 15px ${rarity.shadowColor}`,
+                  `0 0 25px ${rarity.shadowColor}`,
+                  `0 0 15px ${rarity.shadowColor}`,
+                  `0 0 5px ${rarity.shadowColor}`
                 ]
               }}
               transition={{ 
                 duration: 2, 
-                repeat: Infinity,
+                repeat: 3, // Limited to 3 cycles instead of infinite
                 ease: 'easeInOut'
               }}
             />
 
-            {/* Pulsing background */}
+            {/* Pulsing background - reduced to 4 cycles instead of infinite */}
             <motion.div
               className={`absolute inset-0 ${rarity.bg} rounded-lg pointer-events-none`}
               animate={{ 
@@ -552,7 +547,7 @@ const CarouselItem: React.FC<CarouselItemProps> = ({
               }}
               transition={{ 
                 duration: 1.5, 
-                repeat: Infinity,
+                repeat: 4, // Limited to 4 cycles instead of infinite
                 ease: 'easeInOut'
               }}
             />
@@ -561,6 +556,15 @@ const CarouselItem: React.FC<CarouselItemProps> = ({
       </div>
     </div>
   )
-}
+}, (prevProps, nextProps) => {
+  // Custom comparison function for optimal re-rendering
+  // Only re-render if these specific props change
+  return (
+    prevProps.itemData.id === nextProps.itemData.id &&
+    prevProps.width === nextProps.width &&
+    prevProps.isWinning === nextProps.isWinning &&
+    prevProps.animationPhase === nextProps.animationPhase
+  )
+})
 
 export default CaseOpeningCarousel

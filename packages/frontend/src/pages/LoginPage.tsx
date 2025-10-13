@@ -1,12 +1,19 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { useAuth } from '../hooks/useAuth'
+import { useAuth, API_URL } from '../hooks/useAuth'
 import { FontAwesomeSVGIcons } from '../components/ui/FontAwesomeSVG'
 
 const LoginPage: React.FC = () => {
-  const { user, loading, signInWithDiscord } = useAuth()
+  const { user, loading, signInWithDiscord, refreshUser } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  const [testEmail, setTestEmail] = useState('')
+  const [testPassword, setTestPassword] = useState('')
+  const [testLoading, setTestLoading] = useState(false)
+  const [testError, setTestError] = useState('')
+
+  // Check if we're in development mode
+  const isDevelopment = import.meta.env.DEV
 
   // Redirect if already logged in
   useEffect(() => {
@@ -25,6 +32,56 @@ const LoginPage: React.FC = () => {
     }
   }
 
+  const handleTestLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setTestError('')
+    setTestLoading(true)
+
+    try {
+      // Call backend test-login endpoint which sets session cookie
+      const response = await fetch(`${API_URL}/auth/test-login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', // Important for cookies
+        body: JSON.stringify({
+          email: testEmail,
+          password: testPassword,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Login failed' }))
+        throw new Error(errorData.message || 'Login failed')
+      }
+
+      console.log('✅ Test login successful')
+
+      // Refresh user data
+      await refreshUser()
+
+      // Navigate to home
+      const from = location.state?.from?.pathname || '/'
+      navigate(from, { replace: true })
+    } catch (error: any) {
+      console.error('❌ Test login failed:', error)
+      
+      // Parse error messages
+      const errorMessage = error.message || 'Login failed. Please try again.'
+      
+      if (errorMessage.includes('Invalid email or password')) {
+        setTestError('Invalid email or password')
+      } else if (errorMessage.includes('Rate limit') || errorMessage.includes('429')) {
+        setTestError('Too many attempts. Please wait a minute.')
+      } else {
+        setTestError(errorMessage)
+      }
+    } finally {
+      setTestLoading(false)
+    }
+  }
+
   return (
     <div className="max-w-md mx-auto mt-12 animate-fade-in">
       <div className="bg-tarkov-dark rounded-lg p-8 shadow-lg border border-tarkov-secondary hover:border-tarkov-accent transition-all duration-300">
@@ -35,6 +92,7 @@ const LoginPage: React.FC = () => {
         </div>
 
         <div className="space-y-4">
+          {/* Discord Login */}
           <button
             onClick={handleDiscordLogin}
             disabled={loading}
@@ -57,6 +115,70 @@ const LoginPage: React.FC = () => {
               </>
             )}
           </button>
+
+          {/* Test Account Login (Development Only) */}
+          {isDevelopment && (
+            <>
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-600"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-tarkov-dark text-gray-400">Or test with</span>
+                </div>
+              </div>
+
+              <form onSubmit={handleTestLogin} className="space-y-3">
+                <div>
+                  <label htmlFor="test-email" className="block text-sm font-medium text-gray-300 mb-1">
+                    Test Email
+                  </label>
+                  <input
+                    id="test-email"
+                    type="email"
+                    value={testEmail}
+                    onChange={(e) => setTestEmail(e.target.value)}
+                    placeholder="test@example.com"
+                    className="w-full px-3 py-2 bg-tarkov-secondary border border-gray-600 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tarkov-accent focus:border-transparent"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="test-password" className="block text-sm font-medium text-gray-300 mb-1">
+                    Test Password
+                  </label>
+                  <input
+                    id="test-password"
+                    type="password"
+                    value={testPassword}
+                    onChange={(e) => setTestPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full px-3 py-2 bg-tarkov-secondary border border-gray-600 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tarkov-accent focus:border-transparent"
+                    required
+                  />
+                </div>
+
+                {testError && (
+                  <div className="text-red-500 text-sm text-center">
+                    {testError}
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={testLoading}
+                  className="w-full py-2 px-4 bg-tarkov-accent hover:bg-tarkov-accent/80 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-semibold rounded-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-tarkov-accent focus:ring-offset-2 focus:ring-offset-tarkov-dark"
+                >
+                  {testLoading ? 'Logging in...' : 'Test Login'}
+                </button>
+              </form>
+
+              <div className="text-xs text-gray-500 text-center">
+                🔧 Development Mode: Test accounts only work locally
+              </div>
+            </>
+          )}
         </div>
 
         <div className="mt-6 text-center">

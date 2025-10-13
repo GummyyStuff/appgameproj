@@ -1,12 +1,13 @@
 import { Hono, type Context } from 'hono';
 import { HTTPException } from 'hono/http-exception';
-import { getCookie, deleteCookie } from 'hono/cookie';
+import { getCookie, deleteCookie, setCookie } from 'hono/cookie';
 import { asyncHandler } from '../middleware/error';
 import { authRateLimit } from '../middleware/rate-limit';
 import { 
   validateSession,
   logout as appwriteLogout,
   SESSION_COOKIE_NAME,
+  SESSION_MAX_AGE,
 } from '../config/appwrite';
 
 // Extend Hono types for our custom context
@@ -42,7 +43,50 @@ authRoutes.get('/me',
     console.log('🔍 Checking user session...');
     
     // Get Appwrite user ID from header (sent by frontend)
-    const appwriteUserId = c.req.header('X-Appwrite-User-Id');
+    let appwriteUserId = c.req.header('X-Appwrite-User-Id');
+    
+    // If no header, try to get from session cookie (test login)
+    if (!appwriteUserId) {
+      // Debug: Log all cookies
+      console.log('📝 No X-Appwrite-User-Id header, checking cookies...');
+      console.log('All cookies:', c.req.header('Cookie'));
+      
+      // Try both legacy and modern cookie names
+      let sessionSecret = getCookie(c, SESSION_COOKIE_NAME);
+      console.log(`Cookie '${SESSION_COOKIE_NAME}':`, sessionSecret ? 'found' : 'not found');
+      
+      if (!sessionSecret) {
+        sessionSecret = getCookie(c, `${SESSION_COOKIE_NAME}_legacy`);
+        console.log(`Cookie '${SESSION_COOKIE_NAME}_legacy':`, sessionSecret ? 'found' : 'not found');
+      }
+      
+      if (sessionSecret) {
+        console.log('📝 Session cookie found, validating...');
+        
+        // Check if it's the legacy format (JSON with id and secret)
+        try {
+          const parsed = JSON.parse(sessionSecret);
+          if (parsed.secret) {
+            console.log('📝 Parsed legacy cookie format');
+            sessionSecret = parsed.secret;
+          }
+        } catch {
+          // Not JSON, use as-is
+          console.log('📝 Using cookie value as-is');
+        }
+        
+        const sessionData = await validateSession(sessionSecret);
+        
+        if (sessionData) {
+          appwriteUserId = sessionData.id;
+          console.log('✅ Session cookie valid for user:', appwriteUserId);
+        } else {
+          console.log('❌ Session validation failed');
+        }
+      } else {
+        console.log('❌ No session cookie found');
+      }
+    }
     
     if (!appwriteUserId) {
       throw new HTTPException(401, { message: 'Not authenticated' });
@@ -66,6 +110,7 @@ authRoutes.get('/me',
       
       // Verify OAuth provider is Discord (security check)
       // Check user's identities to ensure they used Discord OAuth
+      // In development mode, allow email/password test accounts
       const { Query } = await import('node-appwrite');
       const identities = await users.listIdentities(
         [Query.equal('userId', [appwriteUserId])] // queries parameter
@@ -73,9 +118,14 @@ authRoutes.get('/me',
       const hasDiscordIdentity = identities.identities.some(
         (identity: any) => identity.provider === 'discord'
       );
+      const hasEmailIdentity = identities.identities.some(
+        (identity: any) => identity.provider === 'email'
+      );
       
-      if (!hasDiscordIdentity) {
-        console.log('❌ User does not have Discord identity');
+      const isDevelopment = process.env.NODE_ENV !== 'production';
+      
+      if (!hasDiscordIdentity && !(isDevelopment && hasEmailIdentity)) {
+        console.log('❌ User does not have valid identity');
         throw new HTTPException(403, { 
           message: 'Invalid authentication provider. Please log in with Discord.' 
         });
@@ -146,5 +196,82 @@ authRoutes.post('/logout',
     }
     
     return c.json({ success: true })
+  })
+)
+
+// Test account login (DEVELOPMENT ONLY)
+// This endpoint allows email/password authentication for local testing
+// without needing Discord OAuth
+authRoutes.post('/test-login',
+  authRateLimit,
+  asyncHandler(async (c: Context) => {
+    // Only allow in development mode
+    if (process.env.NODE_ENV === 'production') {
+      throw new HTTPException(404, { message: 'Not found' });
+    }
+
+    const body = await c.req.json();
+    const { email, password } = body;
+
+    if (!email || !password) {
+      throw new HTTPException(400, { message: 'Email and password are required' });
+    }
+
+    try {
+      const { Client, Account } = await import('node-appwrite');
+      const { retryAppwriteOperation } = await import('../utils/appwrite-retry');
+      
+      // Create a new client for this login attempt
+      const testClient = new Client()
+        .setEndpoint(process.env.APPWRITE_ENDPOINT!)
+        .setProject(process.env.APPWRITE_PROJECT_ID!);
+      
+      const account = new Account(testClient);
+      
+      console.log('🔐 Test login attempt:', email);
+      
+      // Create email session
+      const session = await retryAppwriteOperation(
+        () => account.createEmailPasswordSession(email, password),
+        { maxRetries: 3, delayMs: 500 }
+      );
+      
+      console.log('✅ Test session created:', session.$id);
+      console.log('📝 Full session object:', JSON.stringify(session, null, 2));
+      console.log('📝 Session keys:', Object.keys(session));
+      console.log('📝 Session secret length:', session.secret?.length || 0);
+      
+      // Set session cookie
+      setCookie(c, SESSION_COOKIE_NAME, session.secret, {
+        path: '/',
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'Lax',
+        maxAge: SESSION_MAX_AGE,
+      });
+      
+      console.log('✅ Session cookie set successfully');
+      console.log('📝 Cookie name:', SESSION_COOKIE_NAME);
+      console.log('📝 Cookie value length:', session.secret.length);
+      
+      // Return success with session info
+      // The frontend will call /auth/me to get full user profile
+      return c.json({
+        success: true,
+        user: {
+          id: session.userId,
+          sessionId: session.$id,
+        }
+      });
+    } catch (error: any) {
+      console.error('❌ Test login failed:', error);
+      
+      // Check for specific Appwrite errors
+      if (error.code === 401) {
+        throw new HTTPException(401, { message: 'Invalid email or password' });
+      }
+      
+      throw new HTTPException(500, { message: 'Login failed. Please try again.' });
+    }
   })
 )

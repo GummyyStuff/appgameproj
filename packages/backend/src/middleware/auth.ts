@@ -28,31 +28,49 @@ declare module 'hono' {
  */
 export async function authMiddleware(c: Context, next: Next) {
   // Get Appwrite user ID from header (sent by frontend after Appwrite session check)
-  const appwriteUserId = c.req.header('X-Appwrite-User-Id')
+  let appwriteUserId = c.req.header('X-Appwrite-User-Id')
+  
+  // If no header, try to get from session cookie (test login)
+  if (!appwriteUserId) {
+    const { getCookie } = await import('hono/cookie');
+    const { validateSession, SESSION_COOKIE_NAME } = await import('../config/appwrite');
+    
+    let sessionSecret = getCookie(c, SESSION_COOKIE_NAME);
+    
+    if (!sessionSecret) {
+      sessionSecret = getCookie(c, `${SESSION_COOKIE_NAME}_legacy`);
+    }
+    
+    if (sessionSecret) {
+      // Check if it's the legacy format (JSON with id and secret)
+      try {
+        const parsed = JSON.parse(sessionSecret);
+        if (parsed.secret) {
+          sessionSecret = parsed.secret;
+        }
+      } catch {
+        // Not JSON, use as-is
+      }
+      
+      const sessionData = await validateSession(sessionSecret);
+      
+      if (sessionData) {
+        appwriteUserId = sessionData.id;
+      }
+    }
+  }
   
   if (!appwriteUserId) {
-    console.log('🔍 Auth Debug: Missing X-Appwrite-User-Id header', {
-      headers: Object.fromEntries(
-        Object.entries(c.req.header()).filter(([k]) => k.toLowerCase().includes('auth') || k.toLowerCase().includes('appwrite'))
-      ),
-      origin: c.req.header('Origin'),
-      path: c.req.path
-    })
     throw new HTTPException(401, { message: 'Missing session. Please log in.' })
   }
 
   try {
-    console.log('🔍 Validating user:', appwriteUserId);
-    
     // Validate user exists in our database
     const profile = await UserService.getUserProfile(appwriteUserId)
     
     if (!profile) {
-      console.log('❌ User profile not found');
       throw new HTTPException(401, { message: 'User profile not found. Please log in again.' })
     }
-
-    console.log('✅ User validated:', profile.username);
 
     // Add user to context
     c.set('user', {
