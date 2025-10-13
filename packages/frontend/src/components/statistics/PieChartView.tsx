@@ -54,21 +54,32 @@ const PieChartView: React.FC<PieChartViewProps> = ({
         {/* Pie Chart Container */}
         <ChartContainer
           config={chartConfig}
-          className="mx-auto aspect-square max-h-[300px]"
+          className="mx-auto aspect-square max-h-[350px] w-full"
         >
-          <PieChart>
-            <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+          <PieChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+            <ChartTooltip 
+              content={
+                <ChartTooltipContent 
+                  hideLabel 
+                  className="bg-tarkov-secondary border-tarkov-primary text-white"
+                />
+              } 
+            />
             <Pie
               data={data}
               dataKey={dataKey}
               nameKey={nameKey}
-              label={formatLabel}
+              cx="50%"
+              cy="50%"
+              outerRadius={80}
+              innerRadius={0}
+              label={false}
             />
           </PieChart>
         </ChartContainer>
 
         {/* Details List */}
-        <div className="space-y-3">
+        <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
           {data.map((item, index) => renderDetails(item, index))}
         </div>
       </div>
