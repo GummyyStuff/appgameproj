@@ -333,4 +333,15 @@ export const FontAwesomeSVGIcons = {
   Envelope: ({ className = '', size = 24, color = 'currentColor', variant = 'solid', ...props }: Omit<FontAwesomeSVGProps, 'icon'>) => (
     <FontAwesomeSVG icon="envelope" className={className} size={size} color={color} variant={variant} {...props} />
   ),
+  
+  // Additional icons for statistics
+  Package: ({ className = '', size = 24, color = 'currentColor', variant = 'solid', ...props }: Omit<FontAwesomeSVGProps, 'icon'>) => (
+    <FontAwesomeSVG icon="box-open" className={className} size={size} color={color} variant={variant} {...props} />
+  ),
+  AlertCircle: ({ className = '', size = 24, color = 'currentColor', variant = 'solid', ...props }: Omit<FontAwesomeSVGProps, 'icon'>) => (
+    <FontAwesomeSVG icon="exclamation-circle" className={className} size={size} color={color} variant={variant} {...props} />
+  ),
+  TrendingUp: ({ className = '', size = 24, color = 'currentColor', variant = 'solid', ...props }: Omit<FontAwesomeSVGProps, 'icon'>) => (
+    <FontAwesomeSVG icon="arrow-up" className={className} size={size} color={color} variant={variant} {...props} />
+  ),
 }
