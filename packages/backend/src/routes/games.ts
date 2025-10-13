@@ -5,12 +5,18 @@ import { gameBetRateLimit } from '../middleware/rate-limit'
 import { validationMiddleware, commonSchemas } from '../middleware/validation'
 import { auditGame, auditLog } from '../middleware/audit'
 import { z } from 'zod'
+import { Databases } from 'node-appwrite'
 import { RouletteGame } from '../services/game-engine/roulette-game'
-import { BlackjackGame } from '../services/game-engine/blackjack-game'
 import { CaseOpeningService } from '../services/case-opening-appwrite'
+import { StockMarketGame } from '../services/game-engine/stock-market-game'
+import { stockMarketStateService } from '../services/stock-market-state'
 
 import { CurrencyService } from '../services/currency-new'
 import { realtimeGameService } from '../services/realtime-game'
+import { appwriteClient } from '../config/appwrite'
+
+const DATABASE_ID = process.env.APPWRITE_DATABASE_ID!
+const databases = new Databases(appwriteClient)
 
 export const gameRoutes = new Hono()
 
@@ -18,18 +24,18 @@ export const gameRoutes = new Hono()
 gameRoutes.use('*', optionalAuthMiddleware)
 
 // Apply critical auth with session validation to game betting endpoints (money operations)
-gameRoutes.use('/blackjack/start', criticalAuthMiddleware)
-gameRoutes.use('/blackjack/action', criticalAuthMiddleware)
 gameRoutes.use('/roulette/bet', criticalAuthMiddleware)
 gameRoutes.use('/case-opening/open', criticalAuthMiddleware)
 gameRoutes.use('/case-opening/purchase', criticalAuthMiddleware)
+gameRoutes.use('/stock-market/buy', criticalAuthMiddleware)
+gameRoutes.use('/stock-market/sell', criticalAuthMiddleware)
 
 // Apply stricter rate limiting to betting routes
-gameRoutes.use('/blackjack/start', gameBetRateLimit)
-gameRoutes.use('/blackjack/action', gameBetRateLimit)
 gameRoutes.use('/roulette/bet', gameBetRateLimit)
 gameRoutes.use('/case-opening/open', gameBetRateLimit)
 gameRoutes.use('/case-opening/purchase', gameBetRateLimit)
+gameRoutes.use('/stock-market/buy', gameBetRateLimit)
+gameRoutes.use('/stock-market/sell', gameBetRateLimit)
 
 // Game validation schemas
 const rouletteBetSchema = z.object({
@@ -40,14 +46,12 @@ const rouletteBetSchema = z.object({
   )
 })
 
-const blackjackStartSchema = z.object({
-  amount: commonSchemas.betAmount
+const stockMarketBuySchema = z.object({
+  shares: z.number().positive().max(1000000)
 })
 
-const blackjackActionSchema = z.object({
-  gameId: commonSchemas.gameId,
-  action: commonSchemas.blackjackAction,
-  handIndex: z.number().int().min(0).max(3).optional()
+const stockMarketSellSchema = z.object({
+  shares: z.number().positive().max(1000000)
 })
 
 
@@ -59,7 +63,7 @@ gameRoutes.get('/', asyncHandler(async (c: Context) => {
     message: 'Tarkov Casino Games API',
     available_games: {
       roulette: '/api/games/roulette',
-      blackjack: '/api/games/blackjack',
+      stock_market: '/api/games/stock-market',
       case_opening: '/api/games/cases'
     },
     status: 'Games API ready'
@@ -162,161 +166,6 @@ gameRoutes.post('/roulette/bet',
     })
   } catch (error) {
     console.error('Roulette bet error:', error)
-    return c.json({ error: 'Internal server error' }, 500)
-  }
-}))
-
-// Blackjack game endpoints
-gameRoutes.get('/blackjack', asyncHandler(async (c: Context) => {
-  return c.json({
-    message: 'Blackjack game information',
-    game_info: BlackjackGame.getGameInfo(),
-    min_bet: 1,
-    max_bet: 10000
-  })
-}))
-
-gameRoutes.post('/blackjack/start',
-  validationMiddleware(blackjackStartSchema),
-  auditGame('blackjack_start'),
-  asyncHandler(async (c: Context) => {
-  const user = c.get('user')
-  if (!user) {
-    return c.json({ error: 'Authentication required' }, 401)
-  }
-
-  const { amount } = c.get('validatedData')
-
-  // Check user balance
-  const balance = await CurrencyService.getBalance(user.id)
-  if (balance < amount) {
-    return c.json({ error: 'Insufficient balance' }, 400)
-  }
-
-  try {
-    // Create blackjack game instance
-    const blackjackGame = new BlackjackGame()
-
-    // Create bet object
-    const bet = {
-      userId: user.id,
-      amount,
-      gameType: 'blackjack' as const
-    }
-
-    // Start the game
-    const result = await blackjackGame.play(bet)
-
-    if (!result.success) {
-      return c.json({ error: result.error || 'Game failed to start' }, 400)
-    }
-
-    // Note: For blackjack, we'll handle the full transaction when the game completes
-    // This is different from roulette which processes immediately
-
-    // Log game start
-    const ip = c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP')
-    await auditLog.gamePlayStarted(user.id, 'blackjack', amount, ip)
-    
-    // Broadcast game start
-    await realtimeGameService.handleBlackjackGameStart(user.id, amount, result.gameId!)
-
-    return c.json({
-      success: true,
-      game_id: result.gameId,
-      game_state: result.resultData,
-      bet_amount: amount,
-      current_balance: balance
-    })
-  } catch (error) {
-    console.error('Blackjack start error:', error)
-    return c.json({ error: 'Internal server error' }, 500)
-  }
-}))
-
-gameRoutes.post('/blackjack/action',
-  validationMiddleware(blackjackActionSchema),
-  asyncHandler(async (c: Context) => {
-  const user = c.get('user')
-  if (!user) {
-    return c.json({ error: 'Authentication required' }, 401)
-  }
-
-  const validatedData = c.get('validatedData')
-  console.log('Blackjack action - validated data:', validatedData)
-  
-  const { gameId, action, handIndex } = validatedData
-
-  try {
-    // Create blackjack game instance
-    const blackjackGame = new BlackjackGame()
-
-    // Create action object
-    const blackjackAction = {
-      userId: user.id,
-      gameId,
-      action,
-      handIndex
-    }
-
-    // Process the action
-    const result = await blackjackGame.processAction(blackjackAction)
-
-    if (!result.success) {
-      return c.json({ error: result.error || 'Action failed' }, 400)
-    }
-
-    // Check if game is completed
-    const gameState = blackjackGame.getGameState(gameId)
-    const isGameComplete = !gameState || gameState.gameStatus === 'completed'
-
-    if (isGameComplete) {
-      // Process the complete game transaction
-      const transactionResult = await CurrencyService.processGameTransaction(
-        user.id,
-        'blackjack',
-        result.betAmount || 0,
-        result.winAmount,
-        result.resultData
-      )
-
-      // Log game completion
-      const ip = c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP')
-      await auditLog.gameCompleted(user.id, 'blackjack', result.betAmount || 0, result.winAmount, ip)
-      
-      // Broadcast game completion
-      await realtimeGameService.handleBlackjackGameComplete(user.id, gameId, result)
-
-      // Broadcast balance update
-      await realtimeGameService.handleBalanceUpdate(
-        user.id,
-        transactionResult.newBalance,
-        transactionResult.previousBalance
-      )
-
-      return c.json({
-        success: true,
-        game_complete: true,
-        game_result: result.resultData,
-        bet_amount: result.betAmount || 0,
-        win_amount: result.winAmount,
-        net_result: result.winAmount - (result.betAmount || 0),
-        new_balance: transactionResult.newBalance,
-        game_id: gameId
-      })
-    } else {
-      // Game still in progress
-      await realtimeGameService.handleBlackjackActionUpdate(user.id, gameId, action, result.resultData)
-
-      return c.json({
-        success: true,
-        game_complete: false,
-        game_state: result.resultData,
-        game_id: gameId
-      })
-    }
-  } catch (error) {
-    console.error('Blackjack action error:', error)
     return c.json({ error: 'Internal server error' }, 500)
   }
 }))
@@ -541,6 +390,312 @@ gameRoutes.get('/cases/stats/:userId?', asyncHandler(async (c: Context) => {
   } catch (error) {
     console.error('Error fetching case opening stats:', error)
     return c.json({ error: 'Failed to fetch case opening statistics' }, 500)
+  }
+}))
+
+// ============================================
+// STOCK MARKET GAME ENDPOINTS
+// ============================================
+
+// Get stock market game info
+gameRoutes.get('/stock-market', asyncHandler(async (c: Context) => {
+  return c.json({
+    message: 'Stock Market Trading Game',
+    game_info: StockMarketGame.getGameInfo(),
+    min_bet: 1,
+    max_bet: 100000
+  })
+}))
+
+// Get current market state
+gameRoutes.get('/stock-market/state', asyncHandler(async (c: Context) => {
+  try {
+    const state = await stockMarketStateService.getCurrentState()
+    return c.json({
+      success: true,
+      state
+    })
+  } catch (error) {
+    console.error('Failed to get market state:', error)
+    return c.json({ error: 'Failed to get market state' }, 500)
+  }
+}))
+
+// Get historical candles
+gameRoutes.get('/stock-market/candles', asyncHandler(async (c: Context) => {
+  const limit = parseInt(c.req.query('limit') || '100')
+  
+  try {
+    const candles = await stockMarketStateService.getHistoricalCandles(limit)
+    return c.json({
+      success: true,
+      candles
+    })
+  } catch (error) {
+    console.error('Failed to get candles:', error)
+    return c.json({ error: 'Failed to get candles' }, 500)
+  }
+}))
+
+// Get user's position
+gameRoutes.get('/stock-market/position', asyncHandler(async (c: Context) => {
+  const user = c.get('user')
+  if (!user) {
+    return c.json({ error: 'Authentication required' }, 401)
+  }
+
+  try {
+    const game = StockMarketGame.getInstance()
+    const position = await game.getUserPosition(user.id)
+    
+    return c.json({
+      success: true,
+      position: position || {
+        shares: 0,
+        avg_price: 0,
+        unrealized_pnl: 0
+      }
+    })
+  } catch (error) {
+    console.error('Failed to get position:', error)
+    return c.json({ error: 'Failed to get position' }, 500)
+  }
+}))
+
+// Get user's trade history
+gameRoutes.get('/stock-market/history', asyncHandler(async (c: Context) => {
+  const user = c.get('user')
+  if (!user) {
+    return c.json({ error: 'Authentication required' }, 401)
+  }
+
+  const limit = parseInt(c.req.query('limit') || '50')
+
+  try {
+    const game = StockMarketGame.getInstance()
+    const trades = await game.getUserTradeHistory(user.id, limit)
+    
+    return c.json({
+      success: true,
+      trades
+    })
+  } catch (error) {
+    console.error('Failed to get trade history:', error)
+    return c.json({ error: 'Failed to get trade history' }, 500)
+  }
+}))
+
+// Get recent trades feed
+gameRoutes.get('/stock-market/trades', asyncHandler(async (c: Context) => {
+  const limit = parseInt(c.req.query('limit') || '20')
+
+  try {
+    const game = StockMarketGame.getInstance()
+    const trades = await game.getRecentTrades(limit)
+    
+    return c.json({
+      success: true,
+      trades
+    })
+  } catch (error) {
+    console.error('Failed to get recent trades:', error)
+    return c.json({ error: 'Failed to get recent trades' }, 500)
+  }
+}))
+
+// Buy shares
+gameRoutes.post('/stock-market/buy',
+  validationMiddleware(stockMarketBuySchema),
+  auditGame('stock_market_buy'),
+  asyncHandler(async (c: Context) => {
+    const user = c.get('user')
+    if (!user) {
+      return c.json({ error: 'Authentication required' }, 401)
+    }
+
+    const { shares } = c.get('validatedData')
+
+    try {
+      // Get current market price
+      const state = await stockMarketStateService.getCurrentState()
+      const currentPrice = state.current_price
+
+      // Execute buy order
+      const game = StockMarketGame.getInstance()
+      const result = await game.executeBuy(user.id, user.username || user.email, shares, currentPrice)
+
+      if (!result.success) {
+        return c.json({ error: result.error || 'Failed to execute buy order' }, 400)
+      }
+
+      // Log game activity
+      const ip = c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP')
+      await auditLog.gamePlayStarted(user.id, 'stock_market', shares * currentPrice, ip)
+
+      return c.json({
+        success: true,
+        result: result.resultData
+      })
+    } catch (error) {
+      console.error('Buy order error:', error)
+      return c.json({ error: 'Failed to execute buy order' }, 500)
+    }
+  })
+)
+
+// Sell shares
+gameRoutes.post('/stock-market/sell',
+  validationMiddleware(stockMarketSellSchema),
+  auditGame('stock_market_sell'),
+  asyncHandler(async (c: Context) => {
+    const user = c.get('user')
+    if (!user) {
+      return c.json({ error: 'Authentication required' }, 401)
+    }
+
+    const { shares } = c.get('validatedData')
+
+    try {
+      // Get current market price
+      const state = await stockMarketStateService.getCurrentState()
+      const currentPrice = state.current_price
+
+      // Execute sell order
+      const game = StockMarketGame.getInstance()
+      const result = await game.executeSell(user.id, user.username || user.email, shares, currentPrice)
+
+      if (!result.success) {
+        return c.json({ error: result.error || 'Failed to execute sell order' }, 400)
+      }
+
+      // Log game activity
+      const ip = c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP')
+      await auditLog.gamePlayStarted(user.id, 'stock_market', shares * currentPrice, ip)
+
+      return c.json({
+        success: true,
+        result: result.resultData
+      })
+    } catch (error) {
+      console.error('Sell order error:', error)
+      return c.json({ error: 'Failed to execute sell order' }, 500)
+    }
+  })
+)
+
+// Get leaderboard
+gameRoutes.get('/stock-market/leaderboard', asyncHandler(async (c: Context) => {
+  const timeframe = c.req.query('timeframe') || 'all' // all, daily, weekly
+  const limit = parseInt(c.req.query('limit') || '10')
+  
+  try {
+    // Calculate date filter based on timeframe
+    let dateFilter: Date | null = null
+    if (timeframe === 'daily') {
+      dateFilter = new Date()
+      dateFilter.setHours(0, 0, 0, 0)
+    } else if (timeframe === 'weekly') {
+      dateFilter = new Date()
+      dateFilter.setDate(dateFilter.getDate() - 7)
+    }
+
+    // Get all trades within timeframe
+    const tradesQuery = [
+      'orderDesc("timestamp")',
+      `limit(10000)` // Get enough trades to calculate stats
+    ]
+
+    const tradesResult = await databases.listDocuments(
+      DATABASE_ID,
+      'stock_market_trades',
+      tradesQuery
+    )
+
+    const trades = tradesResult.documents as any[]
+
+    // Filter trades by timeframe if specified
+    const filteredTrades = dateFilter
+      ? trades.filter(trade => new Date(trade.timestamp) >= dateFilter!)
+      : trades
+
+    // Calculate stats per user
+    const userStats = new Map<string, {
+      userId: string
+      username: string
+      totalProfit: number
+      totalTrades: number
+      totalSharesBought: number
+      totalSharesSold: number
+      totalCostBasis: number
+      totalProceeds: number
+    }>()
+
+    // Process trades to calculate stats
+    for (const trade of filteredTrades) {
+      const { user_id, username, trade_type, shares, price, pnl } = trade
+      
+      if (!userStats.has(user_id)) {
+        userStats.set(user_id, {
+          userId: user_id,
+          username: username,
+          totalProfit: 0,
+          totalTrades: 0,
+          totalSharesBought: 0,
+          totalSharesSold: 0,
+          totalCostBasis: 0,
+          totalProceeds: 0
+        })
+      }
+
+      const stats = userStats.get(user_id)!
+      stats.totalTrades++
+
+      if (trade_type === 'buy') {
+        stats.totalSharesBought += shares
+        stats.totalCostBasis += shares * price
+      } else if (trade_type === 'sell') {
+        stats.totalSharesSold += shares
+        stats.totalProceeds += shares * price
+        if (pnl) {
+          stats.totalProfit += pnl
+        }
+      }
+    }
+
+    // Calculate ROI and prepare leaderboard entries
+    const leaderboard = Array.from(userStats.values())
+      .map(stats => {
+        // Calculate ROI based on realized profits and cost basis
+        const roi = stats.totalCostBasis > 0
+          ? (stats.totalProfit / stats.totalCostBasis) * 100
+          : 0
+
+        return {
+          rank: 0, // Will be set after sorting
+          username: stats.username,
+          totalProfit: Math.round(stats.totalProfit * 100) / 100,
+          roi: Math.round(roi * 100) / 100,
+          trades: stats.totalTrades,
+          sharesBought: Math.round(stats.totalSharesBought * 100) / 100,
+          sharesSold: Math.round(stats.totalSharesSold * 100) / 100
+        }
+      })
+      .sort((a, b) => b.totalProfit - a.totalProfit) // Sort by profit descending
+      .slice(0, limit)
+      .map((entry, index) => ({
+        ...entry,
+        rank: index + 1
+      }))
+
+    return c.json({
+      success: true,
+      leaderboard,
+      timeframe,
+      generated_at: new Date().toISOString()
+    })
+  } catch (error) {
+    console.error('Leaderboard error:', error)
+    return c.json({ error: 'Failed to get leaderboard' }, 500)
   }
 }))
 

@@ -37,6 +37,7 @@
   "dependencies": {
     "@types/pg": "^8.15.5",
     "bun-plugin-tailwind": "^0.1.2",
+    "dotenv": "17.2.3",
     "hono": "catalog:default",
     "hono-rate-limiter": "^0.4.2",
     "node-appwrite": "catalog:default",
@@ -45,6 +46,7 @@
   },
   "devDependencies": {
     "@types/bun": "catalog:default",
+    "@types/dotenv": "8.2.3",
     "typescript": "catalog:default"
   }
 }

@@ -9,7 +9,7 @@ import { GameHistory, RouletteResult } from '../types/database'
 
 export interface GameStateUpdate {
   userId: string
-  gameType: 'roulette' | 'blackjack'
+  gameType: 'roulette' | 'stock_market' | 'case_opening'
   gameId?: string
   status: 'betting' | 'playing' | 'completed'
   data?: any
@@ -160,12 +160,12 @@ export class RealtimeGameService {
   }
 
   /**
-   * Handle blackjack game start
+   * Handle stock market game start (legacy method, kept for compatibility)
    */
   async handleBlackjackGameStart(userId: string, betAmount: number, gameId: string) {
     const update: GameStateUpdate = {
       userId,
-      gameType: 'blackjack',
+      gameType: 'stock_market',
       gameId,
       status: 'betting',
       data: {
@@ -178,12 +178,12 @@ export class RealtimeGameService {
   }
 
   /**
-   * Handle blackjack action update
+   * Handle stock market action update (legacy method, kept for compatibility)
    */
   async handleBlackjackActionUpdate(userId: string, gameId: string, action: string, gameState: any) {
     const update: GameStateUpdate = {
       userId,
-      gameType: 'blackjack',
+      gameType: 'stock_market',
       gameId,
       status: 'playing',
       data: {
@@ -196,12 +196,12 @@ export class RealtimeGameService {
   }
 
   /**
-   * Handle blackjack game completion
+   * Handle stock market game completion (legacy method, kept for compatibility)
    */
   async handleBlackjackGameComplete(userId: string, gameId: string, result: GameResult) {
     const update: GameStateUpdate = {
       userId,
-      gameType: 'blackjack',
+      gameType: 'stock_market',
       gameId,
       status: 'completed',
       data: {
@@ -216,12 +216,12 @@ export class RealtimeGameService {
     if (result.winAmount > 1000) {
       await this.broadcastGlobalGameEvent({
         userId,
-        gameType: 'blackjack',
+        gameType: 'stock_market',
         gameId,
         status: 'completed',
         data: {
           winAmount: result.winAmount,
-          gameType: 'blackjack'
+          gameType: 'stock_market'
         }
       })
     }

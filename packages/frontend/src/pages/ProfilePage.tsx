@@ -360,7 +360,7 @@ const ProfilePage: React.FC = () => {
                       'high-roller': FontAwesomeSVGIcons.RubleSign,
                       'lucky-seven': FontAwesomeSVGIcons.Bolt,
                       'roulette-master': FontAwesomeSVGIcons.Circle,
-                      'blackjack-ace': FontAwesomeSVGIcons.Spade
+                      'stock-trader': FontAwesomeSVGIcons.ChartLine
                     }
                     return iconMap[achievementId] || FontAwesomeSVGIcons.Shield
                   }
@@ -429,7 +429,7 @@ const ProfilePage: React.FC = () => {
                           'high-roller': FontAwesomeSVGIcons.RubleSign,
                           'lucky-seven': FontAwesomeSVGIcons.Bolt,
                           'roulette-master': FontAwesomeSVGIcons.Circle,
-                          'blackjack-ace': FontAwesomeSVGIcons.Spade
+                          'stock-trader': FontAwesomeSVGIcons.ChartLine
                         }
                         return iconMap[achievementId] || FontAwesomeSVGIcons.Shield
                       }

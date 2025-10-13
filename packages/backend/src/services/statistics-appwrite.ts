@@ -37,7 +37,7 @@ export interface GameTypeBreakdown {
 }
 
 export interface StatisticsFilters {
-  gameType?: 'roulette' | 'blackjack' | 'case_opening';
+  gameType?: 'roulette' | 'stock_market' | 'case_opening';
   dateFrom?: string;
   dateTo?: string;
   minBet?: number;
@@ -70,7 +70,7 @@ export interface AdvancedStatistics {
 interface GameHistoryDocument {
   $id: string;
   userId: string;
-  gameType: 'roulette' | 'blackjack' | 'case_opening';
+  gameType: 'roulette' | 'stock_market' | 'case_opening';
   betAmount: number;
   winAmount: number;
   resultData: string;
@@ -203,7 +203,7 @@ export class StatisticsServiceAppwrite {
    * Calculate game type breakdown with trends
    */
   static calculateGameTypeBreakdown(games: GameHistoryDocument[]): GameTypeBreakdown[] {
-    const gameTypes = ['roulette', 'blackjack', 'case_opening'] as const;
+    const gameTypes = ['roulette', 'stock_market', 'case_opening'] as const;
     const breakdown: GameTypeBreakdown[] = [];
 
     gameTypes.forEach((gameType, index) => {

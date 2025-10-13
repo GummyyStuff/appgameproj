@@ -9,7 +9,7 @@ import { useAuth } from './useAuth'
 import { useUsername } from './useProfile'
 
 export interface UseRealtimeGameOptions {
-  gameType: 'roulette' | 'blackjack'
+  gameType: 'roulette' | 'stock_market' | 'case_opening'
   onGameUpdate?: (update: GameStateUpdate) => void
   onRoomUpdate?: (state: GameRoomState) => void
   autoJoinRoom?: boolean

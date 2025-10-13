@@ -68,7 +68,7 @@ const PARTICLE_CONFIGS = {
     distance: 60 + Math.random() * 40,
     particleType: ['✨', '💫', '⭐', '🌟'][Math.floor(Math.random() * 4)]
   })),
-  secondary: Array.from({ length: 4 }, (_, i) => ({
+  secondary: Array.from({ length: 4 }, () => ({
     initialX: 30 + Math.random() * 40,
     initialY: 30 + Math.random() * 40,
     randomX: (Math.random() - 0.5) * 30
@@ -92,10 +92,9 @@ const CaseOpeningCarousel: React.FC<CaseOpeningCarouselProps> = ({
   const [isAnimating, setIsAnimating] = useState(false)
 
   // Memoized dimensions (prevents recalculation on every render)
-  const { isMobile, skinWidth } = useMemo(() => {
+  const { skinWidth } = useMemo(() => {
     const isMobileView = window.innerWidth < 640
     return {
-      isMobile: isMobileView,
       skinWidth: isMobileView ? 160 : 256
     }
   }, []) // Empty deps - only calculate once on mount

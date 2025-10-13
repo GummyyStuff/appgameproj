@@ -128,7 +128,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ isOpen, onClose, currentUser 
   const getFavoriteGameIcon = (game: string) => {
     switch (game.toLowerCase()) {
       case 'roulette': return <FontAwesomeSVGIcons.Circle size={16} />
-      case 'blackjack': return <FontAwesomeSVGIcons.Spade size={16} />
+      case 'stock_market': return <FontAwesomeSVGIcons.ChartLine size={16} />
 
       default: return <FontAwesomeSVGIcons.Sword size={16} />
     }

@@ -37,7 +37,7 @@ const Navigation: React.FC = () => {
   const navItems = [
     { path: '/', label: 'Home', icon: FontAwesomeSVGIcons.Home },
     { path: '/roulette', label: 'Roulette', icon: FontAwesomeSVGIcons.DiceD6 },
-    { path: '/blackjack', label: 'Blackjack', icon: FontAwesomeSVGIcons.Spade },
+    { path: '/stock-market', label: 'Trading', icon: FontAwesomeSVGIcons.ChartLine },
     { path: '/cases', label: 'Cases', icon: FontAwesomeSVGIcons.Gem },
     { path: '/leaderboard', label: 'Leaderboard', icon: FontAwesomeSVGIcons.Trophy },
   ]

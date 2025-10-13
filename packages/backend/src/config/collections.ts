@@ -48,7 +48,7 @@ export interface UserProfile {
 export interface GameHistory {
   $id?: string;
   userId: string;
-  gameType: 'roulette' | 'blackjack' | 'case_opening';
+  gameType: 'roulette' | 'stock_market' | 'case_opening';
   betAmount: number;
   winAmount: number;
   resultData: string; // JSON string

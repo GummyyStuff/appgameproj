@@ -373,13 +373,13 @@ const mockAchievements: Achievement[] = [
     unlocked: false
   },
   {
-    id: 'blackjack-ace',
-    title: 'Blackjack Ace',
-    description: 'Get 10 blackjacks in a single session',
+    id: 'stock-trader',
+    title: 'Stock Trader',
+    description: 'Make 50 profitable trades',
     category: 'special',
     rarity: 'legendary',
-    progress: 2,
-    maxProgress: 10,
+    progress: 0,
+    maxProgress: 50,
     unlocked: false
   }
 ]
@@ -429,7 +429,7 @@ const AchievementSystem: React.FC<AchievementSystemProps> = ({
       'high-roller': FontAwesomeSVGIcons.RubleSign,
       'lucky-seven': FontAwesomeSVGIcons.Bolt,
       'roulette-master': FontAwesomeSVGIcons.Circle,
-      'blackjack-ace': FontAwesomeSVGIcons.Spade,
+      'stock-trader': FontAwesomeSVGIcons.ChartLine,
     }
     return iconMap[achievementId] || FontAwesomeSVGIcons.Shield
   }

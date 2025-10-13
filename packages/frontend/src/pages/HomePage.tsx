@@ -29,10 +29,10 @@ const HomePage: React.FC = () => {
       color: 'from-red-900 to-red-700',
     },
     {
-      name: 'Blackjack',
-      icon: FontAwesomeSVGIcons.Spade,
-      description: 'Strategic card game with dealer AI',
-      path: '/blackjack',
+      name: 'Stock Market',
+      icon: FontAwesomeSVGIcons.ChartLine,
+      description: 'Real-time trading with provably fair price movements',
+      path: '/stock-market',
       color: 'from-green-900 to-green-700',
     },
     {

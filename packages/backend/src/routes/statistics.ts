@@ -16,7 +16,7 @@ export const statisticsRoutes = new Hono()
 
 // Helper to validate game types
 const isValidGameType = (gameType: string): boolean => {
-  return ['roulette', 'blackjack', 'case_opening'].includes(gameType)
+  return ['roulette', 'blackjack', 'case_opening', 'stock_market'].includes(gameType)
 }
 
 // Validation schemas

@@ -168,7 +168,7 @@ export const useAchievements = () => {
   const trackGamePlayed = useCallback(async (
     betAmount: number,
     winAmount: number,
-    gameType?: 'roulette' | 'blackjack'
+    gameType?: 'roulette' | 'stock_market' | 'case_opening'
   ) => {
     // Track wins
     if (winAmount > 0) {

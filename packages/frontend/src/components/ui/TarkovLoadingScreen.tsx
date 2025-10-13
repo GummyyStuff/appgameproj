@@ -159,7 +159,7 @@ export const TarkovLoadingScreen: React.FC<LoadingScreenProps> = ({
 
 // Game-specific loading screens
 export const GameLoadingScreen: React.FC<{
-  gameType: 'roulette' | 'blackjack'
+  gameType: 'roulette' | 'stock_market' | 'case_opening'
   message?: string
 }> = ({ gameType, message }) => {
   const gameConfig = {
@@ -174,15 +174,15 @@ export const GameLoadingScreen: React.FC<{
         "The wheel has 37 numbers in European roulette (0-36)"
       ]
     },
-    blackjack: {
-      icon: FontAwesomeSVGIcons.Spade,
-      title: 'Blackjack Table',
-      defaultMessage: 'Shuffling the deck...',
+    stock_market: {
+      icon: FontAwesomeSVGIcons.ChartLine,
+      title: 'Stock Market',
+      defaultMessage: 'Loading market data...',
       tips: [
-        "Always split Aces and 8s",
-        "Never split 10s or face cards",
-        "Double down on 11 when dealer shows 2-10",
-        "Basic strategy reduces the house edge significantly"
+        "Buy low, sell high - watch for price trends",
+        "Diversify your portfolio to manage risk",
+        "Use stop-loss orders to limit losses",
+        "Market prices update every 1-2 seconds"
       ]
     },
 

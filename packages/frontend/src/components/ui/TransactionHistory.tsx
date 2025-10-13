@@ -91,7 +91,7 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
   const getGameIcon = (gameType: string) => {
     switch (gameType) {
       case 'roulette': return <FontAwesomeSVGIcons.Circle size={16} />
-      case 'blackjack': return <FontAwesomeSVGIcons.Spade size={16} />
+      case 'stock_market': return <FontAwesomeSVGIcons.ChartLine size={16} />
       case 'case_opening': return <FontAwesomeSVGIcons.Gift size={16} />
       case 'admin': return <FontAwesomeSVGIcons.Shield size={16} />
       default: return <FontAwesomeSVGIcons.Gamepad size={16} />
@@ -101,7 +101,7 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
   const getGameName = (gameType: string) => {
     switch (gameType) {
       case 'roulette': return 'Roulette'
-      case 'blackjack': return 'Blackjack'
+      case 'stock_market': return 'Stock Market'
       case 'case_opening': return 'Case Opening'
       case 'admin': return 'Admin'
       default: return gameType ? gameType.charAt(0).toUpperCase() + gameType.slice(1) : 'Unknown'
@@ -149,7 +149,7 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
             >
               <option value="all">All Games</option>
               <option value="roulette">Roulette</option>
-              <option value="blackjack">Blackjack</option>
+              <option value="stock_market">Stock Market</option>
               <option value="case_opening">Case Opening</option>
             </select>
             
@@ -229,8 +229,8 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
                       {transaction.gameType === 'roulette' && transaction.result_data.winning_number !== undefined && (
                         <span>Winning Number: {transaction.result_data.winning_number}</span>
                       )}
-                      {transaction.gameType === 'blackjack' && transaction.result_data.player_hand && (
-                        <span>Player: {transaction.result_data.player_hand.join(', ')} | Dealer: {transaction.result_data.dealer_hand?.join(', ')}</span>
+                      {transaction.gameType === 'stock_market' && transaction.result_data.action && (
+                        <span>{transaction.result_data.action.toUpperCase()}: {transaction.result_data.shares} shares @ ${transaction.result_data.price}</span>
                       )}
 
                     </div>
