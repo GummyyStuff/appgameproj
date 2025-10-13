@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, createContext, useContext, ReactNode } from 'react'
 
 /**
  * Animation speed options for case opening carousel
@@ -24,25 +24,24 @@ export const ANIMATION_DURATIONS: Record<AnimationSpeed, number> = {
 const STORAGE_KEY_SPEED = 'tarkov-casino-animation-speed'
 const STORAGE_KEY_QUICK_OPEN = 'tarkov-casino-quick-open'
 
+interface GamePreferencesContextValue {
+  animationSpeed: AnimationSpeed
+  setAnimationSpeed: (speed: AnimationSpeed) => void
+  quickOpen: boolean
+  toggleQuickOpen: () => void
+  currentDuration: number
+  ANIMATION_DURATIONS: typeof ANIMATION_DURATIONS
+}
+
+// Create Context (React.dev pattern for shared state)
+const GamePreferencesContext = createContext<GamePreferencesContextValue | undefined>(undefined)
+
 /**
- * Custom hook for managing game preferences with localStorage persistence.
- * Follows the same pattern as useSoundPreferences for consistency.
- * 
- * Features:
- * - Animation speed control (fast/normal/slow)
- * - Quick open mode (skip animation entirely)
- * - Persistent storage using localStorage
- * - Type-safe with TypeScript
- * 
- * @example
- * ```tsx
- * const { animationSpeed, setAnimationSpeed, quickOpen, toggleQuickOpen } = useGamePreferences()
- * 
- * // Get duration for carousel
- * const duration = ANIMATION_DURATIONS[animationSpeed]
- * ```
+ * Game Preferences Provider Component
+ * Based on React.dev Context patterns for shared state
+ * Research: https://react.dev/reference/react/useContext
  */
-export const useGamePreferences = () => {
+export const GamePreferencesProvider = ({ children }: { children: ReactNode }) => {
   // Animation speed preference
   const [animationSpeed, setAnimationSpeedState] = useState<AnimationSpeed>(() => {
     const saved = localStorage.getItem(STORAGE_KEY_SPEED)
@@ -59,12 +58,14 @@ export const useGamePreferences = () => {
   })
 
   const setAnimationSpeed = useCallback((speed: AnimationSpeed) => {
+    console.log(`🎮 Animation speed changed: ${speed} (${ANIMATION_DURATIONS[speed]}ms)`)
     setAnimationSpeedState(speed)
     localStorage.setItem(STORAGE_KEY_SPEED, speed)
   }, [])
 
   const toggleQuickOpen = useCallback(() => {
     const newValue = !quickOpen
+    console.log(`⚡ Quick open toggled: ${newValue}`)
     setQuickOpenState(newValue)
     localStorage.setItem(STORAGE_KEY_QUICK_OPEN, JSON.stringify(newValue))
   }, [quickOpen])
@@ -72,7 +73,7 @@ export const useGamePreferences = () => {
   // Get current duration based on speed
   const currentDuration = ANIMATION_DURATIONS[animationSpeed]
 
-  return {
+  const value: GamePreferencesContextValue = {
     animationSpeed,
     setAnimationSpeed,
     quickOpen,
@@ -80,6 +81,32 @@ export const useGamePreferences = () => {
     currentDuration,
     ANIMATION_DURATIONS
   }
+
+  return (
+    <GamePreferencesContext.Provider value={value}>
+      {children}
+    </GamePreferencesContext.Provider>
+  )
+}
+
+/**
+ * Custom hook for accessing game preferences from Context.
+ * Now all components share the same state!
+ * 
+ * @example
+ * ```tsx
+ * const { animationSpeed, setAnimationSpeed, quickOpen, toggleQuickOpen } = useGamePreferences()
+ * 
+ * // Get duration for carousel
+ * const duration = ANIMATION_DURATIONS[animationSpeed]
+ * ```
+ */
+export const useGamePreferences = () => {
+  const context = useContext(GamePreferencesContext)
+  if (!context) {
+    throw new Error('useGamePreferences must be used within GamePreferencesProvider')
+  }
+  return context
 }
 
 /**
