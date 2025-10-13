@@ -9,7 +9,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { RealtimeResponseEvent } from 'appwrite';
-import { client } from '../lib/appwrite';
+import { appwriteClient } from '../lib/appwrite';
 import type { MarketState, Trade, Candle } from '../services/stock-market-api';
 
 const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID!;
@@ -37,7 +37,7 @@ export function useStockMarketRealtime({
   const subscribeToMarketState = useCallback(() => {
     if (!onPriceUpdate) return
 
-    const unsubscribe = client.subscribe(
+    const unsubscribe = appwriteClient.subscribe(
       `databases.${DATABASE_ID}.collections.stock_market_state.documents.current`,
       (response: RealtimeResponseEvent<MarketState>) => {
         if (response.events.includes('databases.*.collections.*.documents.*.update')) {
@@ -56,7 +56,7 @@ export function useStockMarketRealtime({
   const subscribeToTrades = useCallback(() => {
     if (!onTradeUpdate) return
 
-    const unsubscribe = client.subscribe(
+    const unsubscribe = appwriteClient.subscribe(
       `databases.${DATABASE_ID}.collections.stock_market_trades.documents`,
       (response: RealtimeResponseEvent<Trade>) => {
         if (response.events.includes('databases.*.collections.*.documents.*.create')) {
@@ -75,7 +75,7 @@ export function useStockMarketRealtime({
   const subscribeToCandles = useCallback(() => {
     if (!onCandleUpdate) return
 
-    const unsubscribe = client.subscribe(
+    const unsubscribe = appwriteClient.subscribe(
       `databases.${DATABASE_ID}.collections.stock_market_candles.documents`,
       (response: RealtimeResponseEvent<Candle>) => {
         if (response.events.includes('databases.*.collections.*.documents.*.create')) {

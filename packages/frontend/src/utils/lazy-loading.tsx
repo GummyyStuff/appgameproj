@@ -30,13 +30,14 @@ export const LazyRouletteGame = withLazyLoading(
   </div>
 );
 
-export const LazyBlackjackGame = withLazyLoading(
-  () => import('@/components/games/BlackjackGame'),
-  <div className="flex items-center justify-center h-64">
-    <LoadingSpinner />
-    <span className="ml-2 text-tarkov-text">Loading Blackjack...</span>
-  </div>
-);
+// BlackjackGame component not yet implemented
+// export const LazyBlackjackGame = withLazyLoading(
+//   () => import('@/components/games/BlackjackGame'),
+//   <div className="flex items-center justify-center h-64">
+//     <LoadingSpinner />
+//     <span className="ml-2 text-tarkov-text">Loading Blackjack...</span>
+//   </div>
+// );
 
 
 
@@ -47,9 +48,10 @@ export const LazyRoulettePage = withLazyLoading(
   () => import('@/pages/RoulettePage')
 );
 
-export const LazyBlackjackPage = withLazyLoading(
-  () => import('@/pages/BlackjackPage')
-);
+// BlackjackPage component not yet implemented
+// export const LazyBlackjackPage = withLazyLoading(
+//   () => import('@/pages/BlackjackPage')
+// );
 
 
 
@@ -87,7 +89,7 @@ export function preloadCriticalComponents() {
   // Preload components that are likely to be used soon
   const preloadPromises = [
     import('@/components/games/RouletteWheel'),
-    import('@/components/games/BlackjackGame'),
+    // import('@/components/games/BlackjackGame'), // Not yet implemented
 
   ];
 
@@ -123,7 +125,8 @@ export function useProgressiveLoading() {
       case 'roulette':
         return import('@/components/games/RouletteWheel');
       case 'blackjack':
-        return import('@/components/games/BlackjackGame');
+        // return import('@/components/games/BlackjackGame'); // Not yet implemented
+        return Promise.resolve();
 
       default:
         return Promise.resolve();
@@ -135,7 +138,8 @@ export function useProgressiveLoading() {
       case 'roulette':
         return import('@/pages/RoulettePage');
       case 'blackjack':
-        return import('@/pages/BlackjackPage');
+        // return import('@/pages/BlackjackPage'); // Not yet implemented
+        return Promise.resolve();
 
       case 'profile':
         return import('@/pages/ProfilePage');

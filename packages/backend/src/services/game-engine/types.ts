@@ -86,6 +86,10 @@ export interface IRandomGenerator {
   generateSecureRandomInt(min: number, max: number): Promise<number>
   generateSecureBytes(length: number): Promise<Buffer>
   generateSeed(): Promise<string>
+  generateProvablyFairResult(seed: ProvablyFairSeed): Promise<ProvablyFairResult>
+  verifyProvablyFairResult(result: ProvablyFairResult): Promise<boolean>
+  generateMultipleFromSeed(seed: ProvablyFairSeed, count: number): Promise<number[]>
+  hashServerSeed(serverSeed: string): string
 }
 
 // Game state manager interface

@@ -11,7 +11,7 @@ import { Label } from '../ui/label';
 import { Card } from '../ui/card';
 import { buyShares, sellShares, getUserPosition, type Position } from '../../services/stock-market-api';
 import { useAuth } from '../../hooks/useAuth';
-import { useCurrency } from '../../hooks/useCurrency';
+import { useBalance } from '../../hooks/useBalance';
 import { TrendingUp, TrendingDown, DollarSign, Package } from 'lucide-react';
 
 interface StockMarketTradingProps {
@@ -21,7 +21,7 @@ interface StockMarketTradingProps {
 
 export function StockMarketTrading({ currentPrice, onTradeSuccess }: StockMarketTradingProps) {
   const { user } = useAuth()
-  const { balance, refreshBalance } = useCurrency()
+  const { balance, refetch: refreshBalance } = useBalance()
   const [position, setPosition] = useState<Position | null>(null)
   const [shares, setShares] = useState<string>('1')
   const [isLoading, setIsLoading] = useState(false)

@@ -152,7 +152,8 @@ export class StockMarketStateService {
         nonce: this.tickCount
       }
       
-      const randomValue = await this.randomGenerator.generateFromSeed(seed)
+      const result = await this.randomGenerator.generateProvablyFairResult(seed)
+      const randomValue = result.randomValue
       
       // Convert to standard normal distribution (Box-Muller transform)
       const u1 = randomValue
