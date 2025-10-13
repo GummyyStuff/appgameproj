@@ -6,6 +6,7 @@ import { statisticsRoutes } from './statistics'
 import { caseStatisticsRoutes } from './case-statistics'
 import { chatRoutes } from './chat'
 import { analyticsRoutes } from './analytics'
+import { achievementRoutes } from './achievements'
 
 export const apiRoutes = new Hono()
 
@@ -35,3 +36,4 @@ apiRoutes.route('/statistics', statisticsRoutes)
 apiRoutes.route('/case-statistics', caseStatisticsRoutes)
 apiRoutes.route('/chat', chatRoutes)
 apiRoutes.route('/analytics', analyticsRoutes)
+apiRoutes.route('/achievements', achievementRoutes)

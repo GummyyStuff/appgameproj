@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../../hooks/useAuth'
 import { useBalance } from '../../hooks/useBalance'
-import { useAdvancedFeatures } from '../../hooks/useAdvancedFeatures'
+import { useAchievements } from '../../hooks/useAchievements'
 // Supabase import removed - using Appwrite with cookie auth
 import BlackjackHand from './BlackjackHand'
 import BlackjackActions from './BlackjackActions'
@@ -43,7 +43,7 @@ interface BlackjackGameResult {
 const BlackjackGame: React.FC = () => {
   const { user } = useAuth()
   const { balance, refetch: refreshBalance } = useBalance()
-  const { trackGamePlayed, updateAchievementProgress } = useAdvancedFeatures()
+  const { trackGamePlayed, updateAchievementProgress } = useAchievements()
   
   // Game state
   const [gameState, setGameState] = useState<BlackjackGameState | null>(null)

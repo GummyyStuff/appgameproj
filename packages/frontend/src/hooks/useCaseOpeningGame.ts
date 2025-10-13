@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from './useAuth'
 import { useBalance } from './useBalance'
-import { useAdvancedFeatures } from './useAdvancedFeatures'
+import { useAchievements } from './useAchievements'
 import { useSoundEffects, useSoundPreferences } from './useSoundEffects'
 import { useGamePreferences } from './useGamePreferences'
 import { useToastContext } from '../components/providers/ToastProvider'
@@ -57,7 +57,7 @@ export interface UseCaseOpeningGameReturn {
 export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
   const { user } = useAuth()
   const { balance, refetch: refreshBalance } = useBalance()
-  const { trackGamePlayed } = useAdvancedFeatures()
+  const { trackGamePlayed } = useAchievements()
   const { playWinSound, playLoseSound, playCaseOpen, playCaseReveal, playRarityReveal } = useSoundEffects()
   const { quickOpen, currentDuration } = useGamePreferences()
   const toast = useToastContext()

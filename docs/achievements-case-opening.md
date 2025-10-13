@@ -100,8 +100,8 @@ The system tracks:
 ## Integration Points
 
 ### Frontend Integration
-- Component: `AchievementSystem.tsx`
-- Hook: `useAdvancedFeatures.ts` (achievement state management)
+- Component: `AchievementSystem.tsx` - Achievement display UI
+- Hook: `useAchievements.ts` - Achievement state management and tracking
 - Location: Profile page, accessible via achievement button
 
 ### Backend Integration (Future)
@@ -159,10 +159,86 @@ Based on research from CSGO/CS2 case opening simulators and game achievement sys
 
 ## Related Files
 
-- `/packages/frontend/src/components/ui/AchievementSystem.tsx` - Main component
-- `/packages/frontend/src/components/ui/__tests__/AchievementSystem.test.tsx` - Test suite
-- `/packages/frontend/src/hooks/useAdvancedFeatures.ts` - Achievement state management
+- `/packages/frontend/src/components/ui/AchievementSystem.tsx` - Achievement display UI component
+- `/packages/frontend/src/components/ui/__tests__/AchievementSystem.test.tsx` - Comprehensive test suite (29 tests)
+- `/packages/frontend/src/hooks/useAchievements.ts` - Achievement state management and tracking
 - `/docs/game-rules/case-opening.md` - Case opening game rules
+
+## Usage Examples
+
+### Displaying Achievements
+```tsx
+import { useAchievements } from '@/hooks/useAchievements'
+import AchievementSystem from '@/components/ui/AchievementSystem'
+
+function ProfilePage() {
+  const { 
+    showAchievements, 
+    achievements, 
+    openAchievements, 
+    closeAchievements,
+    claimAchievementReward 
+  } = useAchievements()
+
+  return (
+    <>
+      <button onClick={openAchievements}>View Achievements</button>
+      <AchievementSystem
+        isOpen={showAchievements}
+        onClose={closeAchievements}
+        achievements={achievements}
+        onClaimReward={claimAchievementReward}
+      />
+    </>
+  )
+}
+```
+
+### Tracking Game Sessions
+```tsx
+import { useAchievements } from '@/hooks/useAchievements'
+
+function RouletteGame() {
+  const { trackGamePlayed } = useAchievements()
+
+  const handleGameResult = (betAmount: number, winAmount: number) => {
+    // Track game session for achievement progress
+    trackGamePlayed(betAmount, winAmount, 'roulette')
+  }
+}
+```
+
+### Tracking Case Openings
+```tsx
+import { useAchievements } from '@/hooks/useAchievements'
+
+function CaseOpeningGame() {
+  const { trackCaseOpening } = useAchievements()
+
+  const handleCaseOpened = (result: CaseResult) => {
+    trackCaseOpening(
+      result.caseType,      // 'scav' | 'pmc' | 'labs'
+      result.itemRarity,    // 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary'
+      result.itemValue,     // number
+      result.itemCategory   // 'medical' | 'tech' | 'valuables' | 'keys' | 'consumables'
+    )
+  }
+}
+```
+
+### Manual Achievement Updates
+```tsx
+import { useAchievements } from '@/hooks/useAchievements'
+
+function CustomGame() {
+  const { updateAchievementProgress } = useAchievements()
+
+  const handleSpecialEvent = () => {
+    // Manually update achievement progress
+    updateAchievementProgress('case-opener-10', 1)
+  }
+}
+```
 
 ---
 

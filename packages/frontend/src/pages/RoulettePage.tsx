@@ -5,7 +5,7 @@ import { useRouletteRealtime } from '../hooks/useRouletteRealtime'
 import { useSoundEffects, useSoundPreferences } from '../hooks/useSoundEffects'
 import { useToastContext } from '../components/providers/ToastProvider'
 import { useGameShortcuts } from '../hooks/useKeyboardShortcuts'
-import { useAdvancedFeatures } from '../hooks/useAdvancedFeatures'
+import { useAchievements } from '../hooks/useAchievements'
 // Supabase import removed - using Appwrite with cookie auth
 import { formatCurrency } from '../utils/currency'
 import { FontAwesomeSVGIcons } from '../components/ui/FontAwesomeSVG'
@@ -61,7 +61,7 @@ const RoulettePage: React.FC = () => {
   const { isConnected, broadcastGameStart } = useRouletteRealtime()
   const { soundEnabled, toggleSound } = useSoundPreferences()
   const { playSpinSound, playWinSound, playLoseSound, playBetSound } = useSoundEffects()
-  const { trackGamePlayed, updateAchievementProgress } = useAdvancedFeatures()
+  const { trackGamePlayed, updateAchievementProgress } = useAchievements()
   const toast = useToastContext()
   const [isInitialLoading, setIsInitialLoading] = useState(true)
   

@@ -31,7 +31,8 @@
     "db:test-connection": "bun run src/scripts/test-connection.ts",
     "db:populate-items": "bun run src/scripts/populate-global-item-pool.ts",
     "db:cleanup-pools": "bun run src/scripts/cleanup-case-item-pools.ts",
-    "db:test-items": "bun run src/scripts/test-global-item-pool.ts"
+    "db:test-items": "bun run src/scripts/test-global-item-pool.ts",
+    "seed:achievements": "bun run src/scripts/seed-achievements.ts"
   },
   "dependencies": {
     "@types/pg": "^8.15.5",

@@ -62,8 +62,8 @@ mock.module('../useBalance', () => ({
   })
 }))
 
-mock.module('../useAdvancedFeatures', () => ({
-  useAdvancedFeatures: () => ({
+mock.module('../useAchievements', () => ({
+  useAchievements: () => ({
     trackGamePlayed: mock()
   })
 }))

@@ -23,7 +23,9 @@ interface AchievementSystemProps {
   isOpen: boolean
   onClose: () => void
   achievements: Achievement[]
-  onClaimReward?: (achievementId: string) => void
+  loading?: boolean
+  error?: string | null
+  onClaimReward?: (achievementId: string) => Promise<void>
 }
 
 const achievementCategories = [
@@ -385,7 +387,9 @@ const mockAchievements: Achievement[] = [
 const AchievementSystem: React.FC<AchievementSystemProps> = ({
   isOpen,
   onClose,
-  achievements = mockAchievements,
+  achievements,
+  loading = false,
+  error = null,
   onClaimReward
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
@@ -438,9 +442,14 @@ const AchievementSystem: React.FC<AchievementSystemProps> = ({
   const totalCount = achievements.length
   const completionPercentage = Math.round((unlockedCount / totalCount) * 100)
 
-  const handleClaimReward = (achievement: Achievement) => {
+  const handleClaimReward = async (achievement: Achievement) => {
     if (onClaimReward) {
-      onClaimReward(achievement.id)
+      try {
+        await onClaimReward(achievement.id)
+      } catch (error) {
+        console.error('Failed to claim reward:', error)
+        // Error handling is done in the hook
+      }
     }
   }
 
@@ -525,9 +534,25 @@ const AchievementSystem: React.FC<AchievementSystemProps> = ({
         )}
 
         {/* Reward indicator */}
-        {achievement.reward && achievement.unlocked && (
-          <div className="mt-2 p-2 bg-green-900/20 border border-green-500/30 rounded text-xs text-green-400">
-            Reward: {achievement.reward.type === 'currency' ? `₽${achievement.reward.amount}` : achievement.reward.item}
+        {achievement.reward && achievement.unlocked && !achievement.claimed && (
+          <div className="mt-2 p-2 bg-green-900/20 border border-green-500/30 rounded text-xs">
+            <TarkovButton
+              variant="success"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleClaimReward(achievement);
+              }}
+            >
+              Claim ₽{achievement.reward.amount}
+            </TarkovButton>
+          </div>
+        )}
+
+        {achievement.claimed && achievement.reward && (
+          <div className="mt-2 text-xs text-gray-500 flex items-center gap-2">
+            <FontAwesomeSVGIcons.Check size={12} />
+            <span>Reward claimed</span>
           </div>
         )}
       </motion.div>
@@ -573,6 +598,20 @@ const AchievementSystem: React.FC<AchievementSystemProps> = ({
                   <FontAwesomeSVGIcons.Times size={24} />
                 </button>
               </div>
+
+              {/* Loading State */}
+              {loading && (
+                <div className="flex items-center justify-center py-12">
+                  <div className="text-gray-400">Loading achievements...</div>
+                </div>
+              )}
+
+              {/* Error State */}
+              {error && (
+                <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-4 mb-6">
+                  <p className="text-red-400">{error}</p>
+                </div>
+              )}
 
               {/* Progress Overview */}
               <div className="mb-6">
@@ -682,7 +721,7 @@ const AchievementSystem: React.FC<AchievementSystemProps> = ({
                             </div>
                           )}
 
-                          {selectedAchievement.reward && selectedAchievement.unlocked && (
+                          {selectedAchievement.reward && selectedAchievement.unlocked && !selectedAchievement.claimed && (
                             <div className="mb-4 p-3 bg-green-900/20 border border-green-500/30 rounded-lg">
                               <div className="text-sm text-green-400 mb-2">Reward Available!</div>
                               <TarkovButton
@@ -692,6 +731,13 @@ const AchievementSystem: React.FC<AchievementSystemProps> = ({
                               >
                                 Claim {selectedAchievement.reward.type === 'currency' ? `₽${selectedAchievement.reward.amount}` : selectedAchievement.reward.item}
                               </TarkovButton>
+                            </div>
+                          )}
+
+                          {selectedAchievement.claimed && selectedAchievement.reward && (
+                            <div className="mb-4 text-sm text-gray-500 flex items-center justify-center gap-2">
+                              <FontAwesomeSVGIcons.Check size={16} />
+                              <span>Reward claimed</span>
                             </div>
                           )}
 

@@ -9,7 +9,7 @@ import StatisticsDashboard from '../components/ui/StatisticsDashboard'
 import GameHistoryTable from '../components/ui/GameHistoryTable'
 import { AchievementSystem, TarkovButton, TarkovCard, ProfileLeaderboard, FontAwesomeSVGIcons, TarkovTabs } from '../components/ui'
 import type { Tab } from '../components/ui'
-import { useAdvancedFeatures } from '../hooks/useAdvancedFeatures'
+import { useAchievements } from '../hooks/useAchievements'
 import { formatCurrency } from '../utils/currency'
 
 
@@ -44,14 +44,16 @@ const ProfilePage: React.FC = () => {
   // Get active tab from URL or default to 'overview'
   const activeTab = searchParams.get('tab') || 'overview'
   
-  // Advanced features for achievements
+  // Achievement system
   const {
     showAchievements,
     achievements,
+    loading: achievementsLoading,
+    error: achievementsError,
     openAchievements,
     closeAchievements,
     claimAchievementReward
-  } = useAdvancedFeatures()
+  } = useAchievements()
   
   // Handle tab change and update URL
   const handleTabChange = (tabId: string) => {
@@ -620,6 +622,8 @@ const ProfilePage: React.FC = () => {
         isOpen={showAchievements}
         onClose={closeAchievements}
         achievements={achievements}
+        loading={achievementsLoading}
+        error={achievementsError}
         onClaimReward={claimAchievementReward}
       />
     </div>

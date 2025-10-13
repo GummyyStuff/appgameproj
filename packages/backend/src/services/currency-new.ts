@@ -460,5 +460,71 @@ export class CurrencyService {
   static getDailyBonusAmount(): number {
     return this.DAILY_BONUS_AMOUNT;
   }
+
+  /**
+   * Credit balance to user account
+   * Used for rewards, bonuses, refunds, etc.
+   * 
+   * @param userId - User ID to credit
+   * @param amount - Amount to credit (must be positive)
+   * @param reason - Reason for credit (for audit trail)
+   * @param metadata - Additional metadata about the credit
+   */
+  static async creditBalance(
+    userId: string,
+    amount: number,
+    reason: string,
+    metadata?: any
+  ): Promise<{ success: boolean; newBalance: number; previousBalance: number }> {
+    if (amount <= 0) {
+      throw new Error('Credit amount must be positive');
+    }
+
+    try {
+      // Get current user profile
+      const profile = await UserService.getUserProfile(userId);
+      if (!profile) {
+        throw new Error('User not found');
+      }
+
+      const previousBalance = profile.balance;
+      const newBalance = previousBalance + amount;
+
+      console.log(`💰 Crediting balance for user ${userId}:`, {
+        previousBalance,
+        amount,
+        newBalance,
+        reason,
+        metadata,
+      });
+
+      // Update user balance
+      const updateResult = await UserService.updateUserBalance(userId, newBalance);
+      
+      if (!updateResult) {
+        throw new Error('Failed to update user balance');
+      }
+
+      // Invalidate cache
+      const { CacheService } = await import('./cache-service');
+      await CacheService.invalidateUserProfile(userId);
+
+      console.log(`✅ Balance credited successfully:`, {
+        userId,
+        previousBalance,
+        newBalance,
+        amount,
+      });
+
+      return {
+        success: true,
+        newBalance,
+        previousBalance,
+      };
+    } catch (error) {
+      console.error('Error crediting balance:', error);
+      throw error;
+    }
+  }
 }
 
