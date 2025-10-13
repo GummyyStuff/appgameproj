@@ -17,6 +17,7 @@ import {
 } from 'recharts'
 import { motion } from 'framer-motion'
 import WinLossPattern from './WinLossPattern'
+import CaseItemStatistics from '../statistics/CaseItemStatistics'
 
 interface GameHistory {
   id: string
@@ -548,6 +549,20 @@ const StatisticsDashboard: React.FC = () => {
         transition={{ delay: 0.9 }}
       >
         <WinLossPattern gameHistory={gameHistory || []} maxResults={100} />
+      </motion.div>
+
+      {/* Case Opening Item Statistics */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 1.0 }}
+        className="bg-tarkov-dark rounded-lg p-6"
+      >
+        <h3 className="text-2xl font-tarkov font-bold text-tarkov-accent mb-6 flex items-center space-x-2">
+          <FontAwesomeSVGIcons.Package className="text-tarkov-accent" size={32} />
+          <span>Case Opening Item Statistics</span>
+        </h3>
+        <CaseItemStatistics isLoading={isLoading} />
       </motion.div>
     </div>
   )
