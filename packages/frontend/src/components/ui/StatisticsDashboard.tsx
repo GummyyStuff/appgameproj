@@ -638,7 +638,7 @@ const StatisticsDashboard: React.FC = () => {
           <FontAwesomeSVGIcons.Package className="text-tarkov-accent" size={32} />
           <span>Case Opening Item Statistics</span>
         </h3>
-        <CaseItemStatistics isLoading={isLoading} />
+        <CaseItemStatistics isLoading={historyLoading} />
       </motion.div>
     </div>
   )

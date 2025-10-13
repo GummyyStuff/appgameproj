@@ -26,14 +26,6 @@ interface UserProfile {
   games_played: number
 }
 
-interface GameStats {
-  game_type: string
-  games_played: number
-  total_wagered: number
-  total_won: number
-  biggest_win: number
-}
-
 interface DailyBonusStatus {
   can_claim: boolean
   bonus_amount: number
@@ -140,37 +132,6 @@ const ProfilePage: React.FC = () => {
     retry: 2,
   })
 
-  // Fetch game statistics from backend API
-  const { data: gameStats, isLoading: statsLoading } = useQuery({
-    queryKey: ['gameStats', user?.id],
-    queryFn: async () => {
-      if (!user) return []
-      
-      try {
-        const response = await fetch('/api/statistics/user', {
-          credentials: 'include',
-          headers: {
-            'X-Appwrite-User-Id': user.id,
-          },
-        });
-        
-        if (!response.ok) {
-          console.warn('Game stats endpoint not available');
-          return [];
-        }
-        
-        const result = await response.json();
-        return result.statistics as GameStats[];
-      } catch (error) {
-        console.warn('Game stats not available:', error);
-        return [];
-      }
-    },
-    enabled: !!user,
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-    retry: 1, // Only retry once
-  })
-
   // Update username mutation
   const updateUsernameMutation = useMutation({
     mutationFn: async (username: string) => {
@@ -210,15 +171,6 @@ const ProfilePage: React.FC = () => {
       month: 'long',
       day: 'numeric',
     })
-  }
-
-  const formatCurrencyAmount = (amount: number) => {
-    return formatCurrency(amount, 'roubles', { showSymbol: false })
-  }
-
-  const getWinRate = (wagered: number, won: number): string => {
-    if (wagered === 0) return '0.0'
-    return ((won / wagered) * 100).toFixed(1)
   }
 
   const formatAchievementDate = (date: Date | string | undefined): string => {
@@ -357,65 +309,6 @@ const ProfilePage: React.FC = () => {
               <div className="text-center py-4">
                 <FontAwesomeSVGIcons.Clock className="text-tarkov-accent mx-auto mb-2 animate-pulse" size={32} />
                 <p className="text-gray-400">Loading bonus status...</p>
-              </div>
-            )}
-          </div>
-
-          {/* Game Statistics */}
-          <div className="bg-tarkov-dark rounded-lg p-6 shadow-lg">
-            <h2 className="text-xl font-tarkov font-bold text-white mb-4">Game Statistics</h2>
-            
-            {statsLoading ? (
-              <div className="text-center py-8">
-                <FontAwesomeSVGIcons.AlarmClock className="text-tarkov-accent mx-auto mb-4 animate-pulse" size={48} />
-                <p className="text-gray-400">Loading game statistics...</p>
-              </div>
-            ) : gameStats && gameStats.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {gameStats.map((stat) => (
-              <div key={stat.game_type} className="bg-tarkov-secondary rounded-lg p-4">
-                <div className="flex items-center space-x-2 mb-3">
-                  <FontAwesomeSVGIcons.Gamepad className="text-tarkov-accent" size={24} />
-                  <h3 className="text-lg font-medium text-white capitalize">
-                    {stat.game_type}
-                  </h3>
-                </div>
-                
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Games Played:</span>
-                    <span className="text-white font-medium">{stat.games_played}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Total Wagered:</span>
-                    <span className="text-white font-medium">₽{formatCurrencyAmount(stat.total_wagered)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Total Won:</span>
-                    <span className="text-white font-medium">₽{formatCurrencyAmount(stat.total_won)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Win Rate:</span>
-                    <span className={`font-medium ${
-                      parseFloat(getWinRate(stat.total_wagered, stat.total_won)) > 50 
-                        ? 'text-tarkov-success' 
-                        : 'text-tarkov-danger'
-                    }`}>
-                      {getWinRate(stat.total_wagered, stat.total_won)}%
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Biggest Win:</span>
-                    <span className="text-tarkov-accent font-medium">₽{formatCurrencyAmount(stat.biggest_win || 0)}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <FontAwesomeSVGIcons.Gamepad className="text-gray-400 mx-auto mb-4" size={48} />
-                <p className="text-gray-400">No games played yet. Start playing to see your statistics!</p>
               </div>
             )}
           </div>

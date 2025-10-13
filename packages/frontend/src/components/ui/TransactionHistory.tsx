@@ -5,12 +5,12 @@ import { useAuth } from '../../hooks/useAuth'
 import { FontAwesomeSVGIcons } from './FontAwesomeSVG'
 
 interface Transaction {
-  id: string
-  game_type: string
-  bet_amount: number
-  win_amount: number
-  net_result: number
-  created_at: string
+  $id: string
+  gameType: string
+  betAmount: number
+  winAmount: number
+  netResult?: number
+  createdAt: string
   result_data?: any
 }
 
@@ -92,6 +92,7 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
     switch (gameType) {
       case 'roulette': return <FontAwesomeSVGIcons.Circle size={16} />
       case 'blackjack': return <FontAwesomeSVGIcons.Spade size={16} />
+      case 'case_opening': return <FontAwesomeSVGIcons.Gift size={16} />
       case 'admin': return <FontAwesomeSVGIcons.Shield size={16} />
       default: return <FontAwesomeSVGIcons.Gamepad size={16} />
     }
@@ -101,7 +102,7 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
     switch (gameType) {
       case 'roulette': return 'Roulette'
       case 'blackjack': return 'Blackjack'
-
+      case 'case_opening': return 'Case Opening'
       case 'admin': return 'Admin'
       default: return gameType ? gameType.charAt(0).toUpperCase() + gameType.slice(1) : 'Unknown'
     }
@@ -149,7 +150,7 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
               <option value="all">All Games</option>
               <option value="roulette">Roulette</option>
               <option value="blackjack">Blackjack</option>
-
+              <option value="case_opening">Case Opening</option>
             </select>
             
             <button
@@ -169,72 +170,75 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
         </div>
       ) : (
         <div className="space-y-3">
-          {transactions.map((transaction) => (
-            <div
-              key={transaction.id}
-              className={`
-                bg-tarkov-secondary rounded-lg p-4 transition-all duration-200 hover:bg-tarkov-primary
-                ${compact ? 'p-3' : 'p-4'}
-              `}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <span className="text-2xl">{getGameIcon(transaction.game_type)}</span>
-                  <div>
-                    <div className="flex items-center space-x-2">
-                      <span className="font-medium text-white">
-                        {getGameName(transaction.game_type)}
-                      </span>
-                      {!compact && (
-                        <span className="text-xs text-gray-400">
-                          {formatDate(transaction.created_at)}
+          {transactions.map((transaction) => {
+            const netResult = transaction.netResult ?? (transaction.winAmount - transaction.betAmount);
+            return (
+              <div
+                key={transaction.$id}
+                className={`
+                  bg-tarkov-secondary rounded-lg p-4 transition-all duration-200 hover:bg-tarkov-primary
+                  ${compact ? 'p-3' : 'p-4'}
+                `}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <span className="text-2xl">{getGameIcon(transaction.gameType)}</span>
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <span className="font-medium text-white">
+                          {getGameName(transaction.gameType)}
                         </span>
+                        {!compact && (
+                          <span className="text-xs text-gray-400">
+                            {formatDate(transaction.createdAt)}
+                          </span>
+                        )}
+                      </div>
+                      {compact && (
+                        <div className="text-xs text-gray-400">
+                          {formatDate(transaction.createdAt)}
+                        </div>
                       )}
                     </div>
-                    {compact && (
-                      <div className="text-xs text-gray-400">
-                        {formatDate(transaction.created_at)}
+                  </div>
+                  
+                  <div className="text-right">
+                    <div className="flex items-center space-x-4">
+                      <div className="text-sm text-gray-400">
+                        Bet: ₽{formatCurrency(transaction.betAmount)}
                       </div>
-                    )}
+                      <div className="text-sm text-gray-400">
+                        Won: ₽{formatCurrency(transaction.winAmount)}
+                      </div>
+                      <div className={`font-bold ${
+                        netResult > 0 
+                          ? 'text-tarkov-success' 
+                          : netResult < 0 
+                          ? 'text-tarkov-danger' 
+                          : 'text-gray-400'
+                      }`}>
+                        {netResult > 0 ? '+' : ''}₽{formatCurrency(netResult)}
+                      </div>
+                    </div>
                   </div>
                 </div>
                 
-                <div className="text-right">
-                  <div className="flex items-center space-x-4">
-                    <div className="text-sm text-gray-400">
-                      Bet: ₽{formatCurrency(transaction.bet_amount)}
-                    </div>
-                    <div className="text-sm text-gray-400">
-                      Won: ₽{formatCurrency(transaction.win_amount)}
-                    </div>
-                    <div className={`font-bold ${
-                      transaction.net_result > 0 
-                        ? 'text-tarkov-success' 
-                        : transaction.net_result < 0 
-                        ? 'text-tarkov-danger' 
-                        : 'text-gray-400'
-                    }`}>
-                      {transaction.net_result > 0 ? '+' : ''}₽{formatCurrency(transaction.net_result)}
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              {!compact && transaction.result_data && (
-                <div className="mt-2 pt-2 border-t border-tarkov-primary">
-                  <div className="text-xs text-gray-400">
-                    {transaction.game_type === 'roulette' && transaction.result_data.winning_number !== undefined && (
-                      <span>Winning Number: {transaction.result_data.winning_number}</span>
-                    )}
-                    {transaction.game_type === 'blackjack' && transaction.result_data.player_hand && (
-                      <span>Player: {transaction.result_data.player_hand.join(', ')} | Dealer: {transaction.result_data.dealer_hand?.join(', ')}</span>
-                    )}
+                {!compact && transaction.result_data && (
+                  <div className="mt-2 pt-2 border-t border-tarkov-primary">
+                    <div className="text-xs text-gray-400">
+                      {transaction.gameType === 'roulette' && transaction.result_data.winning_number !== undefined && (
+                        <span>Winning Number: {transaction.result_data.winning_number}</span>
+                      )}
+                      {transaction.gameType === 'blackjack' && transaction.result_data.player_hand && (
+                        <span>Player: {transaction.result_data.player_hand.join(', ')} | Dealer: {transaction.result_data.dealer_hand?.join(', ')}</span>
+                      )}
 
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
-          ))}
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
       

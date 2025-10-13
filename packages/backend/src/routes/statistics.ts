@@ -248,6 +248,42 @@ statisticsRoutes.get('/streaks', asyncHandler(async (c: Context) => {
   }
 }))
 
+// Get leaderboard
+statisticsRoutes.get('/leaderboard', asyncHandler(async (c: Context) => {
+  const query = c.req.query()
+
+  try {
+    const params = leaderboardSchema.parse({
+      metric: query.metric,
+      limit: query.limit ? parseInt(query.limit) : undefined
+    })
+
+    const leaderboard = await StatisticsService.getLeaderboard(
+      params.metric as 'balance' | 'totalWon' | 'gamesPlayed' | 'totalWagered',
+      params.limit
+    )
+
+    return c.json({
+      success: true,
+      leaderboard,
+      metric: params.metric,
+      limit: params.limit,
+      generated_at: new Date().toISOString()
+    })
+
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      throw new HTTPException(400, { 
+        message: 'Invalid parameters', 
+        cause: error.issues 
+      })
+    }
+    
+    console.error('Leaderboard error:', error)
+    throw new HTTPException(500, { message: 'Failed to fetch leaderboard' })
+  }
+}))
+
 // Get betting patterns analysis
 statisticsRoutes.get('/betting-patterns', asyncHandler(async (c: Context) => {
   const user = c.get('user')

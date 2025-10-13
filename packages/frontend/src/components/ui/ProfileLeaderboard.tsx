@@ -127,7 +127,7 @@ const ProfileLeaderboard: React.FC<ProfileLeaderboardProps> = ({
       const transformedData = cachedData.leaderboard.map((entry: any, index: number) => {
         const baseStats = {
           totalWinnings: 0,
-          gamesPlayed: entry.games_played || 0,
+          gamesPlayed: entry.gamesPlayed || 0,
           winRate: 0,
           biggestWin: 0,
           favoriteGame: 'Roulette'
@@ -154,7 +154,7 @@ const ProfileLeaderboard: React.FC<ProfileLeaderboardProps> = ({
 
         return {
           rank: entry.rank || (index + 1),
-          username: entry.username || entry.display_name || 'Anonymous',
+          username: entry.username || entry.displayName || 'Anonymous',
           stats: baseStats,
           isCurrentUser: entry.username === currentUser,
           badges: []

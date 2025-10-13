@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { TarkovButton, TarkovCard, FontAwesomeSVGIcons } from './index'
 
-interface Achievement {
+export interface Achievement {
   id: string
   title: string
   description: string
@@ -50,18 +50,296 @@ const rarityGlow = {
 
 // Mock achievements data
 const mockAchievements: Achievement[] = [
+  // Case Opening Achievements
   {
-    id: 'first-win',
-    title: 'First Extract',
-    description: 'Win your first game',
+    id: 'first-case',
+    title: 'First Case',
+    description: 'Open your first case',
     category: 'gameplay',
     rarity: 'common',
     progress: 1,
     maxProgress: 1,
     unlocked: true,
     unlockedAt: new Date(Date.now() - 86400000),
+    reward: { type: 'currency', amount: 500 }
+  },
+  {
+    id: 'case-opener-10',
+    title: 'Case Opener',
+    description: 'Open 10 cases',
+    category: 'progression',
+    rarity: 'common',
+    progress: 3,
+    maxProgress: 10,
+    unlocked: false,
     reward: { type: 'currency', amount: 1000 }
   },
+  {
+    id: 'case-master-50',
+    title: 'Case Master',
+    description: 'Open 50 cases',
+    category: 'progression',
+    rarity: 'rare',
+    progress: 12,
+    maxProgress: 50,
+    unlocked: false,
+    reward: { type: 'currency', amount: 5000 }
+  },
+  {
+    id: 'case-legend-100',
+    title: 'Case Legend',
+    description: 'Open 100 cases',
+    category: 'progression',
+    rarity: 'epic',
+    progress: 12,
+    maxProgress: 100,
+    unlocked: false,
+    reward: { type: 'currency', amount: 10000 }
+  },
+  {
+    id: 'case-god-500',
+    title: 'Case God',
+    description: 'Open 500 cases',
+    category: 'progression',
+    rarity: 'legendary',
+    progress: 12,
+    maxProgress: 500,
+    unlocked: false,
+    reward: { type: 'currency', amount: 50000 }
+  },
+  {
+    id: 'scav-collector',
+    title: 'Scav Collector',
+    description: 'Open 25 Scav cases',
+    category: 'gameplay',
+    rarity: 'common',
+    progress: 8,
+    maxProgress: 25,
+    unlocked: false,
+    reward: { type: 'currency', amount: 2000 }
+  },
+  {
+    id: 'pmc-veteran',
+    title: 'PMC Veteran',
+    description: 'Open 50 PMC cases',
+    category: 'gameplay',
+    rarity: 'rare',
+    progress: 3,
+    maxProgress: 50,
+    unlocked: false,
+    reward: { type: 'currency', amount: 10000 }
+  },
+  {
+    id: 'labs-elite',
+    title: 'Labs Elite',
+    description: 'Open 25 Labs cases',
+    category: 'gameplay',
+    rarity: 'epic',
+    progress: 1,
+    maxProgress: 25,
+    unlocked: false,
+    reward: { type: 'currency', amount: 25000 }
+  },
+  {
+    id: 'legendary-pull',
+    title: 'Legendary Pull',
+    description: 'Get your first legendary item',
+    category: 'special',
+    rarity: 'legendary',
+    progress: 0,
+    maxProgress: 1,
+    unlocked: false,
+    reward: { type: 'currency', amount: 5000 }
+  },
+  {
+    id: 'legendary-collector',
+    title: 'Legendary Collector',
+    description: 'Get 10 legendary items',
+    category: 'special',
+    rarity: 'legendary',
+    progress: 0,
+    maxProgress: 10,
+    unlocked: false,
+    reward: { type: 'currency', amount: 50000 }
+  },
+  {
+    id: 'epic-hunter',
+    title: 'Epic Hunter',
+    description: 'Get 25 epic items',
+    category: 'special',
+    rarity: 'epic',
+    progress: 2,
+    maxProgress: 25,
+    unlocked: false,
+    reward: { type: 'currency', amount: 15000 }
+  },
+  {
+    id: 'rare-finder',
+    title: 'Rare Finder',
+    description: 'Get 50 rare items',
+    category: 'special',
+    rarity: 'rare',
+    progress: 8,
+    maxProgress: 50,
+    unlocked: false,
+    reward: { type: 'currency', amount: 10000 }
+  },
+  {
+    id: 'lucky-streak-3',
+    title: 'Lucky Streak',
+    description: 'Get 3 rare or better items in a row',
+    category: 'special',
+    rarity: 'rare',
+    progress: 1,
+    maxProgress: 3,
+    unlocked: false,
+    reward: { type: 'currency', amount: 5000 }
+  },
+  {
+    id: 'lucky-streak-5',
+    title: 'Super Lucky',
+    description: 'Get 5 rare or better items in a row',
+    category: 'special',
+    rarity: 'epic',
+    progress: 1,
+    maxProgress: 5,
+    unlocked: false,
+    reward: { type: 'currency', amount: 15000 }
+  },
+  {
+    id: 'big-win',
+    title: 'Big Win',
+    description: 'Win an item worth ₽10,000 or more',
+    category: 'special',
+    rarity: 'rare',
+    progress: 0,
+    maxProgress: 1,
+    unlocked: false,
+    reward: { type: 'currency', amount: 5000 }
+  },
+  {
+    id: 'jackpot',
+    title: 'Jackpot',
+    description: 'Win an item worth ₽50,000 or more',
+    category: 'special',
+    rarity: 'legendary',
+    progress: 0,
+    maxProgress: 1,
+    unlocked: false,
+    reward: { type: 'currency', amount: 25000 }
+  },
+  {
+    id: 'profit-master',
+    title: 'Profit Master',
+    description: 'Make ₽100,000 profit from cases',
+    category: 'progression',
+    rarity: 'epic',
+    progress: 15000,
+    maxProgress: 100000,
+    unlocked: false,
+    reward: { type: 'currency', amount: 20000 }
+  },
+  {
+    id: 'medical-supplies',
+    title: 'Medical Supplies',
+    description: 'Collect 50 medical items',
+    category: 'special',
+    rarity: 'common',
+    progress: 12,
+    maxProgress: 50,
+    unlocked: false,
+    reward: { type: 'currency', amount: 3000 }
+  },
+  {
+    id: 'tech-collector',
+    title: 'Tech Collector',
+    description: 'Collect 50 electronics',
+    category: 'special',
+    rarity: 'common',
+    progress: 8,
+    maxProgress: 50,
+    unlocked: false,
+    reward: { type: 'currency', amount: 3000 }
+  },
+  {
+    id: 'key-master',
+    title: 'Key Master',
+    description: 'Collect 25 keycards and keys',
+    category: 'special',
+    rarity: 'rare',
+    progress: 3,
+    maxProgress: 25,
+    unlocked: false,
+    reward: { type: 'currency', amount: 5000 }
+  },
+  {
+    id: 'valuables-hoarder',
+    title: 'Valuables Hoarder',
+    description: 'Collect 50 valuables',
+    category: 'special',
+    rarity: 'rare',
+    progress: 15,
+    maxProgress: 50,
+    unlocked: false,
+    reward: { type: 'currency', amount: 8000 }
+  },
+  {
+    id: 'daily-opener',
+    title: 'Daily Opener',
+    description: 'Open cases for 7 days in a row',
+    category: 'progression',
+    rarity: 'rare',
+    progress: 2,
+    maxProgress: 7,
+    unlocked: false,
+    reward: { type: 'currency', amount: 10000 }
+  },
+  {
+    id: 'weekly-warrior',
+    title: 'Weekly Warrior',
+    description: 'Open cases for 30 days in a row',
+    category: 'progression',
+    rarity: 'epic',
+    progress: 2,
+    maxProgress: 30,
+    unlocked: false,
+    reward: { type: 'currency', amount: 50000 }
+  },
+  {
+    id: 'break-even',
+    title: 'Break Even',
+    description: 'Open 10 cases without losing money',
+    category: 'special',
+    rarity: 'rare',
+    progress: 3,
+    maxProgress: 10,
+    unlocked: false,
+    reward: { type: 'currency', amount: 5000 }
+  },
+  {
+    id: 'first-epic',
+    title: 'First Epic',
+    description: 'Get your first epic item',
+    category: 'special',
+    rarity: 'epic',
+    progress: 0,
+    maxProgress: 1,
+    unlocked: false,
+    reward: { type: 'currency', amount: 3000 }
+  },
+  {
+    id: 'first-rare',
+    title: 'First Rare',
+    description: 'Get your first rare item',
+    category: 'special',
+    rarity: 'common',
+    progress: 1,
+    maxProgress: 1,
+    unlocked: true,
+    unlockedAt: new Date(Date.now() - 172800000),
+    reward: { type: 'currency', amount: 1000 }
+  },
+  // Original achievements (Roulette/Blackjack)
   {
     id: 'high-roller',
     title: 'High Roller',
@@ -101,8 +379,7 @@ const mockAchievements: Achievement[] = [
     progress: 2,
     maxProgress: 10,
     unlocked: false
-  },
-
+  }
 ]
 
 const AchievementSystem: React.FC<AchievementSystemProps> = ({
@@ -117,12 +394,38 @@ const AchievementSystem: React.FC<AchievementSystemProps> = ({
   // Function to get icon based on achievement ID
   const getAchievementIcon = (achievementId: string) => {
     const iconMap: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
-      'first-win': FontAwesomeSVGIcons.Heart,
+      // Case Opening Achievements
+      'first-case': FontAwesomeSVGIcons.Gift,
+      'case-opener-10': FontAwesomeSVGIcons.Box,
+      'case-master-50': FontAwesomeSVGIcons.Boxes,
+      'case-legend-100': FontAwesomeSVGIcons.Star,
+      'case-god-500': FontAwesomeSVGIcons.Crown,
+      'scav-collector': FontAwesomeSVGIcons.Backpack,
+      'pmc-veteran': FontAwesomeSVGIcons.Shield,
+      'labs-elite': FontAwesomeSVGIcons.Flask,
+      'legendary-pull': FontAwesomeSVGIcons.Gem,
+      'legendary-collector': FontAwesomeSVGIcons.Gems,
+      'epic-hunter': FontAwesomeSVGIcons.Target,
+      'rare-finder': FontAwesomeSVGIcons.MagnifyingGlass,
+      'lucky-streak-3': FontAwesomeSVGIcons.Clover,
+      'lucky-streak-5': FontAwesomeSVGIcons.Clover,
+      'big-win': FontAwesomeSVGIcons.Trophy,
+      'jackpot': FontAwesomeSVGIcons.Coins,
+      'profit-master': FontAwesomeSVGIcons.RubleSign,
+      'medical-supplies': FontAwesomeSVGIcons.Heart,
+      'tech-collector': FontAwesomeSVGIcons.Laptop,
+      'key-master': FontAwesomeSVGIcons.Key,
+      'valuables-hoarder': FontAwesomeSVGIcons.Coin,
+      'daily-opener': FontAwesomeSVGIcons.Calendar,
+      'weekly-warrior': FontAwesomeSVGIcons.CalendarCheck,
+      'break-even': FontAwesomeSVGIcons.BalanceScale,
+      'first-epic': FontAwesomeSVGIcons.Sparkles,
+      'first-rare': FontAwesomeSVGIcons.Star,
+      // Original achievements (Roulette/Blackjack)
       'high-roller': FontAwesomeSVGIcons.RubleSign,
       'lucky-seven': FontAwesomeSVGIcons.Bolt,
       'roulette-master': FontAwesomeSVGIcons.Circle,
       'blackjack-ace': FontAwesomeSVGIcons.Spade,
-
     }
     return iconMap[achievementId] || FontAwesomeSVGIcons.Shield
   }
@@ -265,6 +568,7 @@ const AchievementSystem: React.FC<AchievementSystemProps> = ({
                 <button
                   onClick={onClose}
                   className="text-gray-400 hover:text-white transition-colors"
+                  aria-label="Close achievements"
                 >
                   <FontAwesomeSVGIcons.Times size={24} />
                 </button>
@@ -394,6 +698,7 @@ const AchievementSystem: React.FC<AchievementSystemProps> = ({
                           <TarkovButton
                             variant="secondary"
                             onClick={() => setSelectedAchievement(null)}
+                            aria-label="Close achievement details"
                           >
                             Close
                           </TarkovButton>

@@ -3,12 +3,12 @@ import { motion } from 'framer-motion'
 import { FontAwesomeSVGIcons } from './FontAwesomeSVG'
 
 interface GameResult {
-  id: string
-  game_type: string
-  bet_amount: number
-  win_amount: number
-  net_result: number
-  created_at: string
+  $id: string
+  gameType: string
+  betAmount: number
+  winAmount: number
+  netResult?: number
+  createdAt: string
 }
 
 interface WinLossPatternProps {
@@ -24,8 +24,8 @@ const WinLossPattern: React.FC<WinLossPatternProps> = ({
   const recentGames = gameHistory.slice(0, maxResults)
 
   const getResultType = (game: GameResult): 'win' | 'loss' | 'break-even' => {
-    if (game.win_amount > game.bet_amount) return 'win'
-    if (game.win_amount < game.bet_amount) return 'loss'
+    if (game.winAmount > game.betAmount) return 'win'
+    if (game.winAmount < game.betAmount) return 'loss'
     return 'break-even'
   }
 
@@ -52,7 +52,7 @@ const WinLossPattern: React.FC<WinLossPatternProps> = ({
 
     // Sort games chronologically (oldest first) for streak calculation
     const sortedGames = [...recentGames].sort((a, b) => 
-      new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
     )
 
     sortedGames.forEach(game => {
@@ -123,7 +123,7 @@ const WinLossPattern: React.FC<WinLossPatternProps> = ({
 
             return (
               <motion.div
-                key={game.id}
+                key={game.$id}
                 className={`
                   relative w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-bold text-white cursor-pointer
                   ${getResultColor(resultType)}
@@ -134,11 +134,11 @@ const WinLossPattern: React.FC<WinLossPatternProps> = ({
                 transition={{ delay: index * 0.02 }}
                 whileHover={{ scale: 1.2, zIndex: 10 }}
                 title={`
-                  ${game.game_type ? game.game_type.charAt(0).toUpperCase() + game.game_type.slice(1) : 'Unknown'} - 
+                  ${game.gameType ? game.gameType.charAt(0).toUpperCase() + game.gameType.slice(1) : 'Unknown'} - 
                   ${resultType === 'win' ? 'Win' : resultType === 'loss' ? 'Loss' : 'Break Even'} - 
-                  Bet: ₽${(game.bet_amount || 0).toLocaleString()} - 
-                  Win: ₽${(game.win_amount || 0).toLocaleString()} - 
-                  ${game.created_at ? (() => { const d = new Date(game.created_at); return isNaN(d.getTime()) ? 'N/A' : d.toLocaleDateString(); })() : 'N/A'}
+                  Bet: ₽${(game.betAmount || 0).toLocaleString()} - 
+                  Win: ₽${(game.winAmount || 0).toLocaleString()} - 
+                  ${game.createdAt ? (() => { const d = new Date(game.createdAt); return isNaN(d.getTime()) ? 'N/A' : d.toLocaleDateString(); })() : 'N/A'}
                 `}
               >
                 {getResultIcon(resultType)}
@@ -206,7 +206,7 @@ const WinLossPattern: React.FC<WinLossPatternProps> = ({
                     }`}>
                       {streak.type === 'win' ? '+' : ''}₽{
                         streak.games.reduce((sum, game) => {
-                          const netResult = game.net_result ?? (game.win_amount - game.bet_amount)
+                          const netResult = game.netResult ?? (game.winAmount - game.betAmount)
                           return sum + (isNaN(netResult) ? 0 : netResult)
                         }, 0).toLocaleString()
                       }
@@ -219,12 +219,12 @@ const WinLossPattern: React.FC<WinLossPatternProps> = ({
                 <div className="mt-3 flex space-x-1">
                   {streak.games.map((game) => (
                     <div
-                      key={game.id}
+                      key={game.$id}
                       className={`
                         w-3 h-3 rounded-full
                         ${streak.type === 'win' ? 'bg-tarkov-success' : 'bg-tarkov-danger'}
                       `}
-                      title={`${game.game_type} - Bet: ₽${(game.bet_amount || 0).toLocaleString()} - Win: ₽${(game.win_amount || 0).toLocaleString()}`}
+                      title={`${game.gameType} - Bet: ₽${(game.betAmount || 0).toLocaleString()} - Win: ₽${(game.winAmount || 0).toLocaleString()}`}
                     />
                   ))}
                 </div>
