@@ -167,12 +167,12 @@ export class CaseOpeningService {
               }
             });
 
-            // Use case_item_pools value_multiplier if specified
+            // Create weighted items (value_multiplier from pool entry, or 1.0 if not specified)
             const weightedItems: WeightedItem[] = [];
             for (const poolEntry of poolEntries) {
               const item = items.get(poolEntry.itemId);
               if (item) {
-                const valueMultiplier = poolEntry.valueMultiplier || caseType.value_multiplier;
+                const valueMultiplier = poolEntry.valueMultiplier || 1.0;
                 weightedItems.push({
                   item,
                   weight: 1.0, // Weight not used in rarity-based selection
@@ -196,14 +196,14 @@ export class CaseOpeningService {
             throw new Error('No active items found in global pool');
           }
 
-          // Transform all items to weighted items using case's value_multiplier
+          // Transform all items to weighted items (no multiplier - values are boosted in base_value)
           const weightedItems: WeightedItem[] = allItems.map(appwriteItem => {
             const item = this.transformTarkovItem(appwriteItem);
             return {
               item,
               weight: 1.0, // Weight not used in rarity-based selection
-              value_multiplier: caseType.value_multiplier,
-              effective_value: item.base_value * caseType.value_multiplier,
+              value_multiplier: 1.0, // Always 1.0 - item values are pre-boosted
+              effective_value: item.base_value, // Direct value, no multiplication needed
             };
           });
 
@@ -276,13 +276,17 @@ export class CaseOpeningService {
       // Fallback: if no items of selected rarity, try to find any item
       console.warn(`No items of rarity ${selectedRarity} found in pool, using fallback`);
       if (itemPool.length > 0) {
-        return itemPool[Math.floor(Math.random() * itemPool.length)];
+        // Use secure random for fallback selection
+        const secureRandom = await this.randomGenerator.generateSecureRandom();
+        const fallbackIndex = Math.floor(secureRandom * itemPool.length);
+        return itemPool[fallbackIndex];
       }
       throw new Error('No items available in pool');
     }
 
-    // Step 3: Randomly select one item from the filtered rarity tier
-    const randomItemIndex = Math.floor(Math.random() * itemsOfRarity.length);
+    // Step 3: Randomly select one item from the filtered rarity tier using SECURE random
+    const secureRandom = await this.randomGenerator.generateSecureRandom();
+    const randomItemIndex = Math.floor(secureRandom * itemsOfRarity.length);
     return itemsOfRarity[randomItemIndex];
   }
 
@@ -473,7 +477,7 @@ export class CaseOpeningService {
       description: appwriteCase.description,
       image_url: appwriteCase.imageUrl,
       rarity_distribution: JSON.parse(appwriteCase.rarityDistribution),
-      value_multiplier: (appwriteCase as any).valueMultiplier || 1.0, // Default to 1.0 for backward compatibility
+      value_multiplier: 1.0, // Fixed value - item boosts are applied via base_value, not multipliers
       is_active: appwriteCase.isActive,
       created_at: appwriteCase.createdAt,
       updated_at: appwriteCase.updatedAt,

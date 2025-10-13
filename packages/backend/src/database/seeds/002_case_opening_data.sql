@@ -226,9 +226,8 @@ INSERT INTO case_types (name, price, description, image_url, rarity_distribution
 
 -- Create case-item pool relationships (OPTIONAL)
 -- By default, ALL items from tarkov_items are available to ALL cases (global pool)
--- Cases differ by:
---   1. rarity_distribution (% chance for each rarity tier)
---   2. value_multiplier (stored on case_types table)
+-- Cases differ by rarity_distribution (% chance for each rarity tier)
+-- Item values are boosted via base_value, not multipliers
 --
 -- Only add entries to case_item_pools if you want case-EXCLUSIVE items
 -- Example: If you want a specific item to ONLY appear in Labs Case

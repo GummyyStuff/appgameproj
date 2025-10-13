@@ -383,23 +383,21 @@ gameRoutes.post('/cases/open',
 
   const { caseTypeId, previewOnly, requestId } = c.get('validatedData')
 
-    // Request deduplication check
-    if (requestId) {
-      const dedupKey = `case_open_${user.id}_${requestId}`
-      // Simple in-memory deduplication (in production, use Redis or similar)
-      const requestCache = (global as any).requestCache || {}
-      if (requestCache[dedupKey]) {
-        return c.json({ error: 'Request already in progress' }, 429)
+    // Request deduplication using promise-based approach (prevents race conditions)
+    const dedupKey = requestId ? `case_open_${user.id}_${requestId}` : null
+    const requestPromises = (global as any).requestPromises as Map<string, Promise<any>> | undefined
+    
+    if (dedupKey && requestPromises) {
+      // If request is already in flight, wait for it and return same result
+      const existingPromise = requestPromises.get(dedupKey)
+      if (existingPromise) {
+        console.log(`🔄 Deduplicating request: ${dedupKey}`)
+        return await existingPromise
       }
-      ;(global as any).requestCache = requestCache
-      requestCache[dedupKey] = true
-
-      // Clean up cache after 30 seconds
-      setTimeout(() => {
-        delete requestCache[dedupKey]
-      }, 30000)
     }
 
+  // Wrap the entire request processing in a function
+  const processRequest = async () => {
   try {
     // Validate case opening request
     const validation = await CaseOpeningService.validateCaseOpening(user.id, caseTypeId)
@@ -496,6 +494,31 @@ gameRoutes.post('/cases/open',
     console.error('Error message:', error?.message)
     console.error('Error stack:', error?.stack)
     return c.json({ error: error?.message || 'Internal server error' }, 500)
+  }
+  }
+
+  // Store promise for deduplication and execute
+  if (dedupKey) {
+    // Initialize cache if needed
+    if (!(global as any).requestPromises) {
+      (global as any).requestPromises = new Map<string, Promise<any>>()
+    }
+    
+    const promiseCache = (global as any).requestPromises as Map<string, Promise<any>>
+    
+    // Execute and store promise
+    const requestPromise = processRequest().finally(() => {
+      // Clean up after request completes (success or failure)
+      setTimeout(() => {
+        promiseCache.delete(dedupKey)
+      }, 30000) // Keep for 30s to handle retries
+    })
+    
+    promiseCache.set(dedupKey, requestPromise)
+    return await requestPromise
+  } else {
+    // No deduplication requested, execute directly
+    return await processRequest()
   }
 }))
 

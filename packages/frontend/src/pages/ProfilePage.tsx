@@ -30,6 +30,14 @@ interface GameStats {
   biggest_win: number
 }
 
+interface DailyBonusStatus {
+  can_claim: boolean
+  bonus_amount: number
+  formatted_bonus: string
+  next_available?: string
+  cooldown_hours?: number
+}
+
 const ProfilePage: React.FC = () => {
   const { user, signOut } = useAuth()
   const queryClient = useQueryClient()
@@ -44,6 +52,57 @@ const ProfilePage: React.FC = () => {
     closeAchievements,
     claimAchievementReward
   } = useAdvancedFeatures()
+  
+  // Fetch daily bonus status
+  const { data: bonusData, refetch: refetchBonus } = useQuery({
+    queryKey: ['dailyBonus', user?.id],
+    queryFn: async () => {
+      if (!user) return null
+      
+      const response = await fetch('/api/user/balance', {
+        credentials: 'include',
+        headers: {
+          'X-Appwrite-User-Id': user.id,
+        },
+      });
+      
+      if (!response.ok) throw new Error('Failed to fetch bonus status');
+      
+      const result = await response.json();
+      return result.daily_bonus as DailyBonusStatus;
+    },
+    enabled: !!user,
+    staleTime: 1 * 60 * 1000, // Cache for 1 minute
+    refetchInterval: 60 * 1000, // Refetch every minute to update countdown
+  })
+  
+  // Claim daily bonus mutation
+  const claimBonusMutation = useMutation({
+    mutationFn: async () => {
+      if (!user) throw new Error('No user')
+      
+      const response = await fetch('/api/user/daily-bonus', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'X-Appwrite-User-Id': user.id,
+        },
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to claim daily bonus');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['profile'] })
+      queryClient.invalidateQueries({ queryKey: ['dailyBonus'] })
+      refetchBonus()
+    },
+  })
+  
   // Fetch user profile with optimized caching
   const { data: profile, isLoading: profileLoading, error: profileError } = useQuery({
     queryKey: ['profile', user?.id],
@@ -212,6 +271,95 @@ const ProfilePage: React.FC = () => {
 
         {/* Currency Management */}
         <CurrencyManager />
+      </div>
+
+      {/* Daily Bonus Section */}
+      <div className="bg-tarkov-dark rounded-lg p-6 shadow-lg border-2 border-tarkov-accent/30">
+        <div className="flex items-center space-x-3 mb-4">
+          <FontAwesomeSVGIcons.Gift className="text-tarkov-accent" size={28} />
+          <h2 className="text-xl font-tarkov font-bold text-white">Daily Bonus</h2>
+        </div>
+        
+        {bonusData ? (
+          <div className="space-y-4">
+            <div className="bg-tarkov-secondary rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-400 text-sm mb-1">Bonus Amount</p>
+                  <div className="flex items-center space-x-2">
+                    <FontAwesomeSVGIcons.RubleSign className="text-tarkov-accent" size={24} />
+                    <span className="text-2xl font-tarkov font-bold text-white">
+                      {bonusData.formatted_bonus || formatCurrency(bonusData.bonus_amount, 'roubles', { showSymbol: false })}
+                    </span>
+                  </div>
+                </div>
+                
+                {bonusData.can_claim ? (
+                  <button
+                    onClick={() => claimBonusMutation.mutate()}
+                    disabled={claimBonusMutation.isPending}
+                    className="px-6 py-3 bg-gradient-to-r from-tarkov-accent to-orange-600 hover:from-orange-500 hover:to-orange-700 disabled:from-gray-600 disabled:to-gray-700 text-white font-tarkov font-bold rounded-md transition-all transform hover:scale-105 disabled:scale-100 disabled:cursor-not-allowed shadow-lg"
+                  >
+                    {claimBonusMutation.isPending ? (
+                      <span className="flex items-center space-x-2">
+                        <FontAwesomeSVGIcons.Clock className="animate-spin" size={16} />
+                        <span>Claiming...</span>
+                      </span>
+                    ) : (
+                      <span className="flex items-center space-x-2">
+                        <FontAwesomeSVGIcons.Gift size={16} />
+                        <span>CLAIM NOW</span>
+                      </span>
+                    )}
+                  </button>
+                ) : (
+                  <div className="text-center">
+                    <div className="px-4 py-2 bg-gray-700 rounded-md border border-gray-600">
+                      <FontAwesomeSVGIcons.Clock className="text-gray-400 mx-auto mb-2" size={24} />
+                      <p className="text-sm text-gray-400 mb-1">Next bonus in:</p>
+                      <p className="text-lg font-tarkov font-bold text-white">
+                        {bonusData.cooldown_hours ? `${bonusData.cooldown_hours}h` : 'Tomorrow'}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {claimBonusMutation.isSuccess && (
+              <div className="bg-green-900/30 border border-green-500/50 rounded-lg p-3 flex items-center space-x-3">
+                <FontAwesomeSVGIcons.Check className="text-green-400" size={20} />
+                <div>
+                  <p className="text-green-400 font-medium">Daily bonus claimed successfully!</p>
+                  <p className="text-sm text-gray-300">
+                    Your balance has been updated with {bonusData.formatted_bonus || formatCurrency(bonusData.bonus_amount, 'roubles')}
+                  </p>
+                </div>
+              </div>
+            )}
+            
+            {claimBonusMutation.isError && (
+              <div className="bg-red-900/30 border border-red-500/50 rounded-lg p-3 flex items-center space-x-3">
+                <FontAwesomeSVGIcons.Times className="text-red-400" size={20} />
+                <div>
+                  <p className="text-red-400 font-medium">Failed to claim bonus</p>
+                  <p className="text-sm text-gray-300">
+                    {claimBonusMutation.error?.message || 'Please try again later'}
+                  </p>
+                </div>
+              </div>
+            )}
+            
+            <div className="text-center text-sm text-gray-400">
+              <p>Come back daily to claim your free bonus!</p>
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-4">
+            <FontAwesomeSVGIcons.Clock className="text-tarkov-accent mx-auto mb-2 animate-pulse" size={32} />
+            <p className="text-gray-400">Loading bonus status...</p>
+          </div>
+        )}
       </div>
 
       {/* Username Edit */}
