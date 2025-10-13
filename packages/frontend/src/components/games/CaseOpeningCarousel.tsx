@@ -109,9 +109,20 @@ const CaseOpeningCarousel: React.FC<CaseOpeningCarouselProps> = ({
   // Single layer transform
   const carouselTransform = `translateX(-${scrollX}px)`
 
+  // Store event handler ref for proper cleanup (research-backed pattern)
+  const transitionHandlerRef = useRef<((e: TransitionEvent) => void) | null>(null)
+
   useEffect(() => {
     if (isSpinning && items.length > 0) {
       startCarouselAnimation()
+    }
+    
+    // Cleanup function to remove event listener if component unmounts during animation
+    return () => {
+      if (carouselRef.current && transitionHandlerRef.current) {
+        carouselRef.current.removeEventListener('transitionend', transitionHandlerRef.current as EventListener)
+        transitionHandlerRef.current = null
+      }
     }
   }, [isSpinning, items])
 
@@ -144,8 +155,13 @@ const CaseOpeningCarousel: React.FC<CaseOpeningCarouselProps> = ({
       carouselRef.current.style.transform = 'translateX(0)'
     }
 
-    // Use transitionend event instead of requestAnimationFrame polling for better performance
-    const handleTransitionEnd = () => {
+    // Use transitionend event with property checking (more efficient than requestAnimationFrame)
+    const handleTransitionEnd = (e: TransitionEvent) => {
+      // Only handle transform transitions, ignore other property transitions
+      if (e.propertyName !== 'transform') {
+        return
+      }
+
       setIsAnimating(false)
 
       // Debug: Check what item is actually centered
@@ -161,14 +177,20 @@ const CaseOpeningCarousel: React.FC<CaseOpeningCarouselProps> = ({
         finalItem: finalItem?.name
       })
 
-      // Cleanup event listener
-      carouselRef.current?.removeEventListener('transitionend', handleTransitionEnd)
+      // Cleanup event listener (store in ref for useEffect cleanup)
+      if (carouselRef.current) {
+        carouselRef.current.removeEventListener('transitionend', handleTransitionEnd as EventListener)
+      }
+      transitionHandlerRef.current = null
       
       onSpinComplete()
     }
 
+    // Store handler in ref for proper cleanup
+    transitionHandlerRef.current = handleTransitionEnd
+
     // Add transitionend listener (much more efficient than requestAnimationFrame)
-    carouselRef.current?.addEventListener('transitionend', handleTransitionEnd)
+    carouselRef.current?.addEventListener('transitionend', handleTransitionEnd as EventListener)
 
     // Start animation after a brief delay
     setTimeout(() => {
