@@ -338,10 +338,34 @@ export const FontAwesomeSVGIcons = {
   Package: ({ className = '', size = 24, color = 'currentColor', variant = 'solid', ...props }: Omit<FontAwesomeSVGProps, 'icon'>) => (
     <FontAwesomeSVG icon="box-open" className={className} size={size} color={color} variant={variant} {...props} />
   ),
+  Box: ({ className = '', size = 24, color = 'currentColor', variant = 'solid', ...props }: Omit<FontAwesomeSVGProps, 'icon'>) => (
+    <FontAwesomeSVG icon="box" className={className} size={size} color={color} variant={variant} {...props} />
+  ),
   AlertCircle: ({ className = '', size = 24, color = 'currentColor', variant = 'solid', ...props }: Omit<FontAwesomeSVGProps, 'icon'>) => (
     <FontAwesomeSVG icon="exclamation-circle" className={className} size={size} color={color} variant={variant} {...props} />
   ),
   TrendingUp: ({ className = '', size = 24, color = 'currentColor', variant = 'solid', ...props }: Omit<FontAwesomeSVGProps, 'icon'>) => (
     <FontAwesomeSVG icon="arrow-up" className={className} size={size} color={color} variant={variant} {...props} />
+  ),
+  
+  // Settings & Configuration
+  Cog: ({ className = '', size = 24, color = 'currentColor', variant = 'solid', ...props }: Omit<FontAwesomeSVGProps, 'icon'>) => (
+    <FontAwesomeSVG icon="cog" className={className} size={size} color={color} variant={variant} {...props} />
+  ),
+  
+  // Navigation arrows
+  ChevronLeft: ({ className = '', size = 24, color = 'currentColor', variant = 'solid', ...props }: Omit<FontAwesomeSVGProps, 'icon'>) => (
+    <FontAwesomeSVG icon="chevron-left" className={className} size={size} color={color} variant={variant} {...props} />
+  ),
+  ChevronRight: ({ className = '', size = 24, color = 'currentColor', variant = 'solid', ...props }: Omit<FontAwesomeSVGProps, 'icon'>) => (
+    <FontAwesomeSVG icon="chevron-right" className={className} size={size} color={color} variant={variant} {...props} />
+  ),
+  
+  // Search & Actions
+  Search: ({ className = '', size = 24, color = 'currentColor', variant = 'solid', ...props }: Omit<FontAwesomeSVGProps, 'icon'>) => (
+    <FontAwesomeSVG icon="search" className={className} size={size} color={color} variant={variant} {...props} />
+  ),
+  DoorOpen: ({ className = '', size = 24, color = 'currentColor', variant = 'solid', ...props }: Omit<FontAwesomeSVGProps, 'icon'>) => (
+    <FontAwesomeSVG icon="door-open" className={className} size={size} color={color} variant={variant} {...props} />
   ),
 }
