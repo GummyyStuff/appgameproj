@@ -334,7 +334,7 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
         recordFlowStep(flowId, 'error_recovered', true)
       }
     }
-  }, [user, balance, gameState.phase, caseData, caseOpening, errorHandling, toast, playCaseOpen, transitionToPhase, startUserFlow, recordFlowStep, recordErrorRecovery, completeUserFlow, monitorAPICall, monitorGameAction, startTiming])
+  }, [user, balance, gameState.phase, caseData, caseOpening, errorHandling, toast, playCaseOpen, transitionToPhase, startUserFlow, recordFlowStep, recordErrorRecovery, completeUserFlow, monitorAPICall, monitorGameAction, startTiming, currentDuration, quickOpen])
 
   // Consolidated function using TypeScript function overloading for flexible parameter handling
   const setupCaseOpeningAnimation: {
@@ -515,7 +515,7 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
         completeUserFlow(flowId)
       }
     }
-  }, [caseOpening, caseAnimation, transitionToPhase, errorHandling, startTiming, recordFlowStep, recordErrorRecovery, completeUserFlow])
+  }, [caseOpening, caseAnimation, transitionToPhase, errorHandling, startTiming, recordFlowStep, recordErrorRecovery, completeUserFlow, currentDuration])
 
   const handleRevealFallback = useCallback(async (selectedCase: CaseType, openingResponse: CaseOpeningResponse, flowId: string) => {
     try {
