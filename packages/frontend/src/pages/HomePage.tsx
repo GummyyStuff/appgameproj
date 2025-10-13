@@ -68,17 +68,9 @@ const HomePage: React.FC = () => {
           </p>
           
           {!user && (
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="flex justify-center">
               <TarkovButton
                 variant="primary"
-                size="lg"
-                onClick={() => playGameSound('click')}
-                icon={<FontAwesomeSVGIcons.Play size={20} color="white" />}
-              >
-                <Link to="/register">Enter the Raid</Link>
-              </TarkovButton>
-              <TarkovButton
-                variant="secondary"
                 size="lg"
                 onClick={() => playGameSound('click')}
                 icon={<FontAwesomeSVGIcons.Key size={20} color="white" />}

@@ -25,11 +25,14 @@
     "@radix-ui/react-collapsible": "1.1.12",
     "@tanstack/react-query": "^5.89.0",
     "appwrite": "catalog:default",
+    "clsx": "2.1.1",
     "framer-motion": "^12.23.16",
+    "lucide-react": "0.545.0",
     "react": "catalog:default",
     "react-dom": "catalog:default",
     "react-router-dom": "^7.9.1",
-    "recharts": "^3.2.1"
+    "recharts": "2.15.4",
+    "tailwind-merge": "3.3.1"
   },
   "devDependencies": {
     "@happy-dom/global-registrator": "catalog:default",

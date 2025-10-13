@@ -1,11 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { 
-  BarChart, Bar, PieChart, Pie, Cell, 
-  XAxis, YAxis, CartesianGrid, Tooltip, 
-  Legend, ResponsiveContainer 
-} from 'recharts'
-import { 
   type CaseStatistics, 
   type CaseItemStats,
   RARITY_COLORS, 
@@ -15,6 +10,8 @@ import {
 import { formatCurrency } from '../../utils/currency'
 import { FontAwesomeSVGIcons } from '../ui'
 import { useAuth } from '../../hooks/useAuth'
+import PieChartView from './PieChartView'
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 
 interface CaseItemStatisticsProps {
   isLoading?: boolean
@@ -146,6 +143,44 @@ const CaseItemStatistics: React.FC<CaseItemStatisticsProps> = ({ isLoading: isLo
   const topItemsByFrequency = statistics.items_by_frequency.slice(0, 10)
   const topItemsByValue = statistics.items_by_value.slice(0, 10)
 
+  // Prepare chart data with fill colors for all views
+  const frequencyChartData = topItemsByFrequency.map((item, index) => ({
+    ...item,
+    fill: RARITY_COLORS[item.rarity] || `hsl(${index * 36}, 70%, 50%)`
+  }))
+
+  const valueChartData = topItemsByValue.map((item, index) => ({
+    ...item,
+    fill: RARITY_COLORS[item.rarity] || `hsl(${index * 36}, 70%, 50%)`
+  }))
+
+  const rarityChartData = statistics.rarity_distribution.map((item) => ({
+    ...item,
+    name: item.rarity,
+    value: item.count,
+    fill: RARITY_COLORS[item.rarity] || '#999'
+  }))
+
+  const categoryChartData = statistics.category_distribution.map((item) => ({
+    ...item,
+    name: item.category,
+    value: item.count,
+    fill: CATEGORY_COLORS[item.category] || '#999'
+  }))
+
+  // Chart configs for shadcn charts
+  const createChartConfig = (data: any[], labelKey: string = 'name') => {
+    const config: any = {}
+    data.forEach((item) => {
+      const key = item[labelKey] || item.item_name || item.name
+      config[key] = {
+        label: key,
+        color: item.fill
+      }
+    })
+    return config
+  }
+
   return (
     <div className="space-y-6">
       {/* Header with Summary Cards */}
@@ -264,182 +299,161 @@ const CaseItemStatistics: React.FC<CaseItemStatisticsProps> = ({ isLoading: isLo
 
       {/* Main Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Top Items Chart */}
-        {(viewMode === 'frequency' || viewMode === 'value') && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-tarkov-dark rounded-lg p-6"
-          >
-            <h3 className="text-xl font-semibold text-white mb-4">
-              {viewMode === 'frequency' ? 'Most Frequently Won Items' : 'Highest Value Items'}
-            </h3>
-            <ResponsiveContainer width="100%" height={400}>
-              <BarChart 
-                data={viewMode === 'frequency' ? topItemsByFrequency : topItemsByValue}
-                margin={{ top: 20, right: 30, left: 20, bottom: 80 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-                <XAxis 
-                  dataKey="item_name" 
-                  angle={-45} 
-                  textAnchor="end" 
-                  height={100}
-                  tick={{ fill: '#9CA3AF', fontSize: 12 }}
-                />
-                <YAxis tick={{ fill: '#9CA3AF' }} />
-                <Tooltip
-                  contentStyle={{ 
-                    backgroundColor: '#1a1a1a', 
-                    border: '1px solid #f59e0b',
-                    borderRadius: '8px'
-                  }}
-                  formatter={(value: any, name: string) => {
-                    if (name === 'count') return [value, 'Times Won']
-                    if (name === 'total_value') return [formatCurrency(value, 'roubles'), 'Total Value']
-                    return [value, name]
-                  }}
-                />
-                <Legend />
-                <Bar 
-                  dataKey={viewMode === 'frequency' ? 'count' : 'total_value'} 
-                  fill="#f59e0b"
-                  name={viewMode === 'frequency' ? 'Times Won' : 'Total Value'}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </motion.div>
+        {/* By Frequency */}
+        {viewMode === 'frequency' && (
+          <PieChartView
+            title="Most Frequently Won Items"
+            data={frequencyChartData}
+            dataKey="count"
+            nameKey="item_name"
+            chartConfig={createChartConfig(frequencyChartData, 'item_name')}
+            formatLabel={(entry) => `${entry.item_name}: ${entry.count} (${entry.percentage.toFixed(1)}%)`}
+            renderDetails={(item) => (
+              <div key={item.item_name} className="bg-tarkov-secondary rounded-lg p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span 
+                    className="font-semibold text-sm"
+                    style={{ color: item.fill }}
+                  >
+                    {item.item_name}
+                  </span>
+                  <span className="text-gray-400 text-sm">
+                    {item.count} ({item.percentage.toFixed(1)}%)
+                  </span>
+                </div>
+                <div className="w-full bg-gray-700 rounded-full h-2">
+                  <div 
+                    className="h-2 rounded-full transition-all duration-500"
+                    style={{ 
+                      width: `${item.percentage}%`,
+                      backgroundColor: item.fill
+                    }}
+                  />
+                </div>
+                <div className="text-xs text-gray-500 mt-1 capitalize">
+                  {item.rarity} • {item.category}
+                </div>
+              </div>
+            )}
+          />
         )}
 
-        {/* Rarity Distribution */}
+        {/* By Value */}
+        {viewMode === 'value' && (
+          <PieChartView
+            title="Highest Value Items"
+            data={valueChartData}
+            dataKey="total_value"
+            nameKey="item_name"
+            chartConfig={createChartConfig(valueChartData, 'item_name')}
+            formatLabel={(entry) => `${entry.item_name}: ${formatCurrency(entry.total_value, 'roubles')}`}
+            renderDetails={(item) => {
+              const maxValue = Math.max(...valueChartData.map(i => i.total_value))
+              const percentage = (item.total_value / maxValue) * 100
+              return (
+                <div key={item.item_name} className="bg-tarkov-secondary rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span 
+                      className="font-semibold text-sm"
+                      style={{ color: item.fill }}
+                    >
+                      {item.item_name}
+                    </span>
+                    <span className="text-gray-400 text-sm">
+                      {formatCurrency(item.total_value, 'roubles')}
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-700 rounded-full h-2">
+                    <div 
+                      className="h-2 rounded-full transition-all duration-500"
+                      style={{ 
+                        width: `${percentage}%`,
+                        backgroundColor: item.fill
+                      }}
+                    />
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1 capitalize">
+                    {item.rarity} • {item.category} • {item.count} won
+                  </div>
+                </div>
+              )
+            }}
+          />
+        )}
+
+        {/* By Rarity */}
         {viewMode === 'rarity' && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-tarkov-dark rounded-lg p-6 lg:col-span-2"
-          >
-            <h3 className="text-xl font-semibold text-white mb-4">Rarity Distribution</h3>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={statistics.rarity_distribution}
-                    dataKey="count"
-                    nameKey="rarity"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={100}
-                    label={(entry) => `${entry.rarity}: ${entry.count} (${entry.percentage.toFixed(1)}%)`}
+          <PieChartView
+            title="Rarity Distribution"
+            data={rarityChartData}
+            dataKey="value"
+            nameKey="name"
+            chartConfig={createChartConfig(rarityChartData)}
+            formatLabel={(entry) => `${entry.name}: ${entry.value} (${entry.percentage.toFixed(1)}%)`}
+            renderDetails={(item) => (
+              <div key={item.rarity} className="bg-tarkov-secondary rounded-lg p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span 
+                    className="font-semibold capitalize"
+                    style={{ color: item.fill }}
                   >
-                    {statistics.rarity_distribution.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={RARITY_COLORS[entry.rarity] || '#999'} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{ 
-                      backgroundColor: '#1a1a1a', 
-                      border: '1px solid #f59e0b',
-                      borderRadius: '8px'
+                    {item.rarity}
+                  </span>
+                  <span className="text-gray-400 text-sm">
+                    {item.count} items ({item.percentage.toFixed(1)}%)
+                  </span>
+                </div>
+                <div className="w-full bg-gray-700 rounded-full h-2">
+                  <div 
+                    className="h-2 rounded-full transition-all duration-500"
+                    style={{ 
+                      width: `${item.percentage}%`,
+                      backgroundColor: item.fill
                     }}
                   />
-                </PieChart>
-              </ResponsiveContainer>
-
-              <div className="space-y-3">
-                {statistics.rarity_distribution.map((rarity) => (
-                  <div key={rarity.rarity} className="bg-tarkov-secondary rounded-lg p-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <span 
-                        className="font-semibold capitalize"
-                        style={{ color: RARITY_COLORS[rarity.rarity] }}
-                      >
-                        {rarity.rarity}
-                      </span>
-                      <span className="text-gray-400 text-sm">
-                        {rarity.count} items ({rarity.percentage.toFixed(1)}%)
-                      </span>
-                    </div>
-                    <div className="w-full bg-gray-700 rounded-full h-2">
-                      <div 
-                        className="h-2 rounded-full transition-all duration-500"
-                        style={{ 
-                          width: `${rarity.percentage}%`,
-                          backgroundColor: RARITY_COLORS[rarity.rarity]
-                        }}
-                      />
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1">
-                      Total Value: {formatCurrency(rarity.total_value, 'roubles')}
-                    </div>
-                  </div>
-                ))}
+                </div>
+                <div className="text-xs text-gray-500 mt-1">
+                  Total Value: {formatCurrency(item.total_value, 'roubles')}
+                </div>
               </div>
-            </div>
-          </motion.div>
+            )}
+          />
         )}
 
-        {/* Category Distribution */}
+        {/* By Category */}
         {viewMode === 'category' && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-tarkov-dark rounded-lg p-6 lg:col-span-2"
-          >
-            <h3 className="text-xl font-semibold text-white mb-4">Category Distribution</h3>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={statistics.category_distribution}
-                    dataKey="count"
-                    nameKey="category"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={100}
-                    label={(entry) => `${CATEGORY_ICONS[entry.category]} ${entry.category}: ${entry.count}`}
-                  >
-                    {statistics.category_distribution.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={CATEGORY_COLORS[entry.category] || '#999'} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{ 
-                      backgroundColor: '#1a1a1a', 
-                      border: '1px solid #f59e0b',
-                      borderRadius: '8px'
+          <PieChartView
+            title="Category Distribution"
+            data={categoryChartData}
+            dataKey="value"
+            nameKey="name"
+            chartConfig={createChartConfig(categoryChartData)}
+            formatLabel={(entry) => `${CATEGORY_ICONS[entry.category]} ${entry.category}: ${entry.count}`}
+            renderDetails={(item) => (
+              <div key={item.category} className="bg-tarkov-secondary rounded-lg p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-semibold capitalize flex items-center gap-2">
+                    <span>{CATEGORY_ICONS[item.category]}</span>
+                    <span style={{ color: item.fill }}>
+                      {item.category}
+                    </span>
+                  </span>
+                  <span className="text-gray-400 text-sm">
+                    {item.count} items ({item.percentage.toFixed(1)}%)
+                  </span>
+                </div>
+                <div className="w-full bg-gray-700 rounded-full h-2">
+                  <div 
+                    className="h-2 rounded-full transition-all duration-500"
+                    style={{ 
+                      width: `${item.percentage}%`,
+                      backgroundColor: item.fill
                     }}
                   />
-                </PieChart>
-              </ResponsiveContainer>
-
-              <div className="space-y-3">
-                {statistics.category_distribution.map((category) => (
-                  <div key={category.category} className="bg-tarkov-secondary rounded-lg p-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-semibold capitalize flex items-center gap-2">
-                        <span>{CATEGORY_ICONS[category.category]}</span>
-                        <span style={{ color: CATEGORY_COLORS[category.category] }}>
-                          {category.category}
-                        </span>
-                      </span>
-                      <span className="text-gray-400 text-sm">
-                        {category.count} items ({category.percentage.toFixed(1)}%)
-                      </span>
-                    </div>
-                    <div className="w-full bg-gray-700 rounded-full h-2">
-                      <div 
-                        className="h-2 rounded-full transition-all duration-500"
-                        style={{ 
-                          width: `${category.percentage}%`,
-                          backgroundColor: CATEGORY_COLORS[category.category]
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))}
+                </div>
               </div>
-            </div>
-          </motion.div>
+            )}
+          />
         )}
       </div>
 
@@ -449,16 +463,19 @@ const CaseItemStatistics: React.FC<CaseItemStatisticsProps> = ({ isLoading: isLo
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-tarkov-dark rounded-lg p-6 border-2 border-blue-500/30"
           >
-            <div className="text-center">
-              <div className="text-3xl mb-2">🏆</div>
-              <h4 className="text-lg font-semibold text-blue-500 mb-2">Most Common</h4>
-              <p className="text-white font-medium">{statistics.most_common_item.item_name}</p>
-              <p className="text-gray-400 text-sm mt-1">
-                Won {statistics.most_common_item.count} times ({statistics.most_common_item.percentage.toFixed(1)}%)
-              </p>
-            </div>
+            <Card className="bg-tarkov-dark border-blue-500/30 border-2 text-center">
+              <CardHeader className="items-center pb-2">
+                <div className="text-4xl mb-2">🏆</div>
+                <CardTitle className="text-blue-500">Most Common</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <p className="text-white font-medium text-lg">{statistics.most_common_item.item_name}</p>
+                <CardDescription className="text-gray-400">
+                  Won {statistics.most_common_item.count} times ({statistics.most_common_item.percentage.toFixed(1)}%)
+                </CardDescription>
+              </CardContent>
+            </Card>
           </motion.div>
         )}
 
@@ -467,16 +484,19 @@ const CaseItemStatistics: React.FC<CaseItemStatisticsProps> = ({ isLoading: isLo
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="bg-tarkov-dark rounded-lg p-6 border-2 border-yellow-500/30"
           >
-            <div className="text-center">
-              <div className="text-3xl mb-2">💎</div>
-              <h4 className="text-lg font-semibold text-yellow-500 mb-2">Highest Value</h4>
-              <p className="text-white font-medium">{statistics.highest_value_item.item_name}</p>
-              <p className="text-gray-400 text-sm mt-1">
-                {formatCurrency(statistics.highest_value_item.total_value, 'roubles')} total
-              </p>
-            </div>
+            <Card className="bg-tarkov-dark border-yellow-500/30 border-2 text-center">
+              <CardHeader className="items-center pb-2">
+                <div className="text-4xl mb-2">💎</div>
+                <CardTitle className="text-yellow-500">Highest Value</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <p className="text-white font-medium text-lg">{statistics.highest_value_item.item_name}</p>
+                <CardDescription className="text-gray-400">
+                  {formatCurrency(statistics.highest_value_item.total_value, 'roubles')} total
+                </CardDescription>
+              </CardContent>
+            </Card>
           </motion.div>
         )}
 
@@ -485,16 +505,19 @@ const CaseItemStatistics: React.FC<CaseItemStatisticsProps> = ({ isLoading: isLo
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="bg-tarkov-dark rounded-lg p-6 border-2 border-purple-500/30"
           >
-            <div className="text-center">
-              <div className="text-3xl mb-2">✨</div>
-              <h4 className="text-lg font-semibold text-purple-500 mb-2">Rarest</h4>
-              <p className="text-white font-medium">{statistics.rarest_item.item_name}</p>
-              <p className="text-gray-400 text-sm mt-1">
-                Only {statistics.rarest_item.count} time{statistics.rarest_item.count !== 1 ? 's' : ''} ({statistics.rarest_item.percentage.toFixed(1)}%)
-              </p>
-            </div>
+            <Card className="bg-tarkov-dark border-purple-500/30 border-2 text-center">
+              <CardHeader className="items-center pb-2">
+                <div className="text-4xl mb-2">✨</div>
+                <CardTitle className="text-purple-500">Rarest</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <p className="text-white font-medium text-lg">{statistics.rarest_item.item_name}</p>
+                <CardDescription className="text-gray-400">
+                  Only {statistics.rarest_item.count} time{statistics.rarest_item.count !== 1 ? 's' : ''} ({statistics.rarest_item.percentage.toFixed(1)}%)
+                </CardDescription>
+              </CardContent>
+            </Card>
           </motion.div>
         )}
       </div>
