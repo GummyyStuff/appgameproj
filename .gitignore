@@ -116,7 +116,7 @@ Thumbs.db
 .supabase/
 
 # CS2 Case Simulator
-cs2-case-simulator/
+cs2-case-simulator-main/
 # Lock files
 package-lock.json
 yarn.lock

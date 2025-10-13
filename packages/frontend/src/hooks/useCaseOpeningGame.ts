@@ -4,6 +4,7 @@ import { useAuth } from './useAuth'
 import { useBalance } from './useBalance'
 import { useAdvancedFeatures } from './useAdvancedFeatures'
 import { useSoundEffects, useSoundPreferences } from './useSoundEffects'
+import { useGamePreferences } from './useGamePreferences'
 import { useToastContext } from '../components/providers/ToastProvider'
 import { formatCurrency } from '../utils/currency'
 import { generateCarouselSequence, calculateWinningPosition, CAROUSEL_TIMING, REVEAL_TIMING } from '../utils/carousel'
@@ -58,6 +59,7 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
   const { balance, refetch: refreshBalance } = useBalance()
   const { trackGamePlayed } = useAdvancedFeatures()
   const { playWinSound, playLoseSound, playCaseOpen, playCaseReveal, playRarityReveal } = useSoundEffects()
+  const { quickOpen, currentDuration } = useGamePreferences()
   const toast = useToastContext()
   const queryClient = useQueryClient()
 
@@ -115,6 +117,76 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
   }, [gameState.phase])
 
   /**
+   * Quick open mode - skips animation and shows result immediately (CS2-style)
+   * Based on CS2 case simulator's quick open implementation
+   */
+  const handleQuickOpen = useCallback(async (selectedCase: CaseType, flowId: string) => {
+    try {
+      recordFlowStep(flowId, 'quick_open_started', true)
+      
+      // Play immediate unlock sound (different from regular open)
+      playCaseOpen()
+      
+      // Make API call to open case
+      const openingResponse = await monitorAPICall(
+        '/api/games/cases/open',
+        'POST',
+        () => optimisticCaseOpening.mutateAsync({
+          caseType: selectedCase,
+          currentBalance: balance,
+          userId: user!.id,
+          delayCredit: false  // Immediate credit for quick open
+        })
+      )
+
+      recordFlowStep(flowId, 'quick_open_api_success', true)
+
+      const result = openingResponse.opening_result
+
+      // Transition directly to complete phase (skip animation phases)
+      transitionToPhase('complete', 'Quick open completed')
+      
+      setGameState(prev => ({
+        ...prev,
+        phase: 'complete',
+        selectedCase,
+        result,
+        history: [result, ...prev.history.slice(0, 9)]
+      }))
+
+      // Play rarity-based reveal sound
+      playRarityReveal(result.item_won.rarity)
+      
+      // Show success message with winnings
+      toast.success(
+        'Case Opened Instantly!',
+        `Won ${result.item_won.name} worth ${formatCurrency(result.currency_awarded, 'roubles')}`,
+        { duration: 3000 }
+      )
+
+      recordFlowStep(flowId, 'quick_open_completed', true)
+      completeUserFlow(flowId)
+
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('Failed to quick open case')
+      const recovered = await errorHandling.handleError(error, 'quick open')
+
+      recordFlowStep(flowId, 'quick_open_error', false, error.message)
+      recordErrorRecovery(recovered)
+
+      if (!recovered) {
+        transitionToPhase('error', `Quick open failed: ${error.message}`)
+        setGameState(prev => ({
+          ...prev,
+          phase: 'error',
+          error: error.message
+        }))
+        completeUserFlow(flowId)
+      }
+    }
+  }, [user, balance, caseData, optimisticCaseOpening, errorHandling, toast, playCaseOpen, playRarityReveal, transitionToPhase, monitorAPICall, recordFlowStep, recordErrorRecovery, completeUserFlow])
+
+  /**
    * Opens a case and manages the complete case opening flow.
    * 
    * This function handles the entire case opening process:
@@ -159,6 +231,12 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
     if (balance < selectedCase.price) {
       toast.error('Insufficient balance', `You need ${formatCurrency(selectedCase.price - balance, 'roubles')} more`)
       recordFlowStep(flowId, 'balance_check_failed', false, 'Insufficient balance')
+      return
+    }
+
+    // Check if quick open mode is enabled (CS2-style instant result)
+    if (quickOpen) {
+      await handleQuickOpen(selectedCase, flowId)
       return
     }
 
@@ -291,7 +369,7 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
 
       const animationConfig: AnimationConfig = {
         type: 'carousel',
-        duration: CAROUSEL_TIMING.TOTAL_DURATION, // Full duration for maximum anticipation
+        duration: currentDuration, // Use user preference (fast/normal/slow)
         easing: [0.25, 0.46, 0.45, 0.94], // Smooth deceleration easing
         items: caseItems
       }

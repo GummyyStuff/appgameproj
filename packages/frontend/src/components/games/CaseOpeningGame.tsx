@@ -7,6 +7,7 @@ import CaseOpeningAnimation from './CaseOpeningAnimation'
 import CaseOpeningErrorBoundary from './ErrorBoundary'
 import CaseResult from './CaseResult'
 import CaseHistory from './CaseHistory'
+import GameSettings from './GameSettings'
 import { useCaseOpeningGame } from '../../hooks/useCaseOpeningGame'
 import { getErrorStrategy, getUserFriendlyMessage, isRecoverableError } from '../../utils/errorHandling'
 import { REVEAL_TIMING } from '../../utils/carousel'
@@ -314,6 +315,9 @@ Case Opening Carousel
           </motion.div>
 
 
+
+          {/* Game Settings */}
+          <GameSettings />
 
           {/* Enhanced Opening History */}
           <CaseHistory history={gameState.history} />

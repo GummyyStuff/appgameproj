@@ -57,6 +57,7 @@
   "devDependencies": {
     "@happy-dom/global-registrator": "catalog:default",
     "@types/bun": "catalog:default",
+    "shadcn": "3.4.0",
     "typescript": "catalog:default"
   },
   "peerDependencies": {

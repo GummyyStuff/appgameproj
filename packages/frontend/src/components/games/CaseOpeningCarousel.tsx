@@ -111,25 +111,18 @@ const CaseOpeningCarousel: React.FC<CaseOpeningCarouselProps> = ({
 
   // Store event handler ref for proper cleanup (research-backed pattern)
   const transitionHandlerRef = useRef<((e: TransitionEvent) => void) | null>(null)
-  
-  // Store sound timeout IDs for cleanup
-  const soundTimeoutsRef = useRef<number[]>([])
 
   useEffect(() => {
     if (isSpinning && items.length > 0) {
       startCarouselAnimation()
     }
     
-    // Cleanup function to remove event listener and sound timeouts if component unmounts
+    // Cleanup function to remove event listener if component unmounts
     return () => {
       if (carouselRef.current && transitionHandlerRef.current) {
         carouselRef.current.removeEventListener('transitionend', transitionHandlerRef.current as EventListener)
         transitionHandlerRef.current = null
       }
-      
-      // Clear all pending sound timeouts
-      soundTimeoutsRef.current.forEach(timeoutId => clearTimeout(timeoutId))
-      soundTimeoutsRef.current = []
     }
   }, [isSpinning, items])
 
@@ -199,48 +192,49 @@ const CaseOpeningCarousel: React.FC<CaseOpeningCarouselProps> = ({
     // Add transitionend listener (much more efficient than requestAnimationFrame)
     carouselRef.current?.addEventListener('transitionend', handleTransitionEnd as EventListener)
 
+    // CS2-style sound sync: Use requestAnimationFrame to detect when items cross center
+    // This prevents sound spam during deceleration (cubic-bezier easing)
+    const thresholds = items.map((_, i) => i * skinWidth - currentContainerWidth / 2 + 2)
+    const playedIndices = new Set<number>()
+    const animationStartTime = Date.now()
+
+    const checkPosition = () => {
+      if (!carouselRef.current) return
+      
+      // Get current scroll position from transform
+      const style = getComputedStyle(carouselRef.current)
+      const transform = style.transform
+      let currentScroll = 0
+
+      if (transform && transform !== 'none') {
+        const match = transform.match(/matrix.*\((.+)\)/)
+        if (match) {
+          const values = match[1].split(', ')
+          currentScroll = -parseFloat(values[4])
+        }
+      }
+
+      // Check each item threshold and play sound only once per item
+      thresholds.forEach((threshold, index) => {
+        if (!playedIndices.has(index) && currentScroll >= threshold) {
+          playedIndices.add(index)  // Mark as played to prevent duplicates
+          playCaseReveal()  // Play tick sound
+          console.log(`🔊 Item ${index} (${items[index]?.item?.name}) crossed center at ${Date.now() - animationStartTime}ms`)
+        }
+      })
+
+      // Continue checking until animation completes
+      if (Date.now() - animationStartTime < duration) {
+        requestAnimationFrame(checkPosition)
+      }
+    }
+
     // Start animation after a brief delay
     setTimeout(() => {
       if (carouselRef.current) {
         carouselRef.current.style.transition = easingStyle
         setScrollX(targetScroll)
-        
-        // CS2-style sound sync: Play tick sound when each item crosses the center
-        // Calculate when each item will cross the center during the animation
-        const centerPosition = currentContainerWidth / 2
-        
-        // Calculate which items will cross the center and when
-        const itemCrossings: { itemIndex: number; time: number }[] = []
-        
-        // During the animation, items move from their start position to targetScroll
-        // An item crosses center when: itemPosition - scrollAmount === centerPosition
-        for (let i = 0; i < items.length; i++) {
-          const itemStartPosition = i * skinWidth
-          const itemCenterPosition = itemStartPosition + (skinWidth / 2)
-          
-          // When does this item cross the center?
-          // itemCenterPosition - scrollProgress === centerPosition
-          // scrollProgress goes from 0 to targetScroll over 'duration' ms
-          const scrollNeeded = itemCenterPosition - centerPosition
-          
-          // Only include items that will actually cross the center
-          if (scrollNeeded >= 0 && scrollNeeded <= targetScroll) {
-            // Calculate when this happens (as percentage of total duration)
-            const crossingPercentage = scrollNeeded / targetScroll
-            const crossingTime = duration * crossingPercentage
-            
-            itemCrossings.push({ itemIndex: i, time: crossingTime })
-          }
-        }
-        
-        // Schedule sounds for each item crossing (CS2-style tick sounds)
-        itemCrossings.forEach(({ itemIndex, time }) => {
-          const timeoutId = window.setTimeout(() => {
-            playCaseReveal()  // Play tick sound when item crosses center
-            console.log(`🔊 Item ${itemIndex} (${items[itemIndex]?.item?.name}) crossing center`)
-          }, time)
-          soundTimeoutsRef.current.push(timeoutId)
-        })
+        requestAnimationFrame(checkPosition)  // Start position checking
       }
     }, 50)
   }
