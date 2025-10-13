@@ -50,7 +50,7 @@
     "deploy:validate": "./scripts/validate-production.sh",
     "deploy:verify-balance": "bun run test:balance",
     "health:check": "./scripts/health-check.sh",
-    "health:check:prod": "./scripts/health-check.sh -u https://your-domain.com",
+    "health:check:prod": "./scripts/health-check.sh -u https://tarkov.juanis.cool",
     "docker:build": "./scripts/deploy.sh build",
     "docker:test": "./scripts/deploy.sh test"
   },

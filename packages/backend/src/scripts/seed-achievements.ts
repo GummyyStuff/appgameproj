@@ -356,7 +356,6 @@ async function seedAchievements() {
     try {
       const { error } = await appwriteDb.createDocument(
         COLLECTION_IDS.ACHIEVEMENT_DEFINITIONS,
-        ID.unique(),
         {
           ...achievement,
           createdAt: new Date().toISOString(),
