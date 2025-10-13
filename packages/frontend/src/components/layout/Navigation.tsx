@@ -39,7 +39,7 @@ const Navigation: React.FC = () => {
     { path: '/roulette', label: 'Roulette', icon: FontAwesomeSVGIcons.DiceD6 },
     { path: '/blackjack', label: 'Blackjack', icon: FontAwesomeSVGIcons.Spade },
     { path: '/cases', label: 'Cases', icon: FontAwesomeSVGIcons.Gem },
-    { path: '/history', label: 'History', icon: FontAwesomeSVGIcons.History },
+    { path: '/leaderboard', label: 'Leaderboard', icon: FontAwesomeSVGIcons.Trophy },
   ]
 
   const isActive = (path: string) => location.pathname === path

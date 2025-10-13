@@ -1,5 +1,5 @@
 import React from 'react'
-import { Bar, BarChart, XAxis, YAxis, LabelList } from 'recharts'
+import { Bar, BarChart, XAxis, YAxis, LabelList, Cell } from 'recharts'
 import { motion } from 'framer-motion'
 import {
   ChartContainer,
@@ -103,6 +103,9 @@ const BarChartView: React.FC<BarChartViewProps> = ({
                   dataKey={dataKey} 
                   radius={[0, 4, 4, 0]}
                 >
+                  {data.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                  ))}
                   <LabelList 
                     dataKey={dataKey} 
                     position="right" 

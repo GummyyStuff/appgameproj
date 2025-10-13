@@ -389,8 +389,8 @@ describe.skip('End-to-End User Workflows - SKIPPED: Mock browser setup needs rev
     })
 
     test('should view game history', async () => {
-      // Navigate to history
-      await mockBrowser.navigate('http://localhost:3000/history')
+      // Navigate to profile with history tab
+      await mockBrowser.navigate('http://localhost:3000/profile?tab=history')
 
       // Verify history table is displayed
       const historyTable = await mockBrowser.findElement('[data-testid="history-table"]')
@@ -471,7 +471,7 @@ describe.skip('End-to-End User Workflows - SKIPPED: Mock browser setup needs rev
         { selector: '[data-testid="nav-roulette"]', expectedUrl: '/roulette' },
         { selector: '[data-testid="nav-blackjack"]', expectedUrl: '/blackjack' },
         { selector: '[data-testid="nav-profile"]', expectedUrl: '/profile' },
-        { selector: '[data-testid="nav-history"]', expectedUrl: '/history' }
+        { selector: '[data-testid="nav-leaderboard"]', expectedUrl: '/leaderboard' }
       ]
 
       for (const navItem of navItems) {

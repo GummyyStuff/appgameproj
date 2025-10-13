@@ -10,7 +10,7 @@ const RoulettePage = lazy(() => import('../pages/RoulettePage'))
 const BlackjackPage = lazy(() => import('../pages/BlackjackPage'))
 const CaseOpeningPage = lazy(() => import('../pages/CaseOpeningPage'))
 const ProfilePage = lazy(() => import('../pages/ProfilePage'))
-const HistoryPage = lazy(() => import('../pages/HistoryPage'))
+const LeaderboardPage = lazy(() => import('../pages/LeaderboardPage'))
 
 // Loading component for lazy routes
 const PageLoader = () => (
@@ -76,13 +76,11 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: 'history',
+        path: 'leaderboard',
         element: (
-          <ProtectedRoute>
-            <Suspense fallback={<PageLoader />}>
-              <HistoryPage />
-            </Suspense>
-          </ProtectedRoute>
+          <Suspense fallback={<PageLoader />}>
+            <LeaderboardPage />
+          </Suspense>
         ),
       },
     ],

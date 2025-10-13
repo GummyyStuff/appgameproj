@@ -62,7 +62,7 @@ describe('Lazy Loading Utilities', () => {
       expect(lazyModule.LazyRoulettePage).toBeDefined();
       expect(lazyModule.LazyBlackjackPage).toBeDefined();
 
-      expect(lazyModule.LazyHistoryPage).toBeDefined();
+      expect(lazyModule.LazyLeaderboardPage).toBeDefined();
       expect(lazyModule.LazyProfilePage).toBeDefined();
     });
 

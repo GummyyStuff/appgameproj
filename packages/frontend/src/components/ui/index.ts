@@ -19,6 +19,8 @@ export { default as KeyboardShortcutsHelp } from './KeyboardShortcutsHelp'
 export { default as AchievementSystem } from './AchievementSystem'
 export { default as Leaderboard } from './Leaderboard'
 export { default as ProfileLeaderboard } from './ProfileLeaderboard'
+export { TarkovTabs } from './TarkovTabs'
+export type { Tab, TarkovTabsProps } from './TarkovTabs'
 
 // Existing components
 export { default as CurrencyDisplay } from './CurrencyDisplay'

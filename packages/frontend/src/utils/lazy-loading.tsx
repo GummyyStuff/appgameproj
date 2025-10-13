@@ -53,8 +53,8 @@ export const LazyBlackjackPage = withLazyLoading(
 
 
 
-export const LazyHistoryPage = withLazyLoading(
-  () => import('@/pages/HistoryPage')
+export const LazyLeaderboardPage = withLazyLoading(
+  () => import('@/pages/LeaderboardPage')
 );
 
 export const LazyProfilePage = withLazyLoading(
@@ -139,8 +139,8 @@ export function useProgressiveLoading() {
 
       case 'profile':
         return import('@/pages/ProfilePage');
-      case 'history':
-        return import('@/pages/HistoryPage');
+      case 'leaderboard':
+        return import('@/pages/LeaderboardPage');
       default:
         return Promise.resolve();
     }

@@ -1,10 +1,13 @@
 import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../hooks/useAuth'
+import { useSearchParams } from 'react-router-dom'
 // Supabase import removed - using Appwrite backend API
 import CurrencyManager from '../components/ui/CurrencyManager'
 import TransactionHistory from '../components/ui/TransactionHistory'
-import { AchievementSystem, TarkovButton, TarkovCard, ProfileLeaderboard, FontAwesomeSVGIcons } from '../components/ui'
+import StatisticsDashboard from '../components/ui/StatisticsDashboard'
+import GameHistoryTable from '../components/ui/GameHistoryTable'
+import { AchievementSystem, TarkovButton, TarkovCard, ProfileLeaderboard, FontAwesomeSVGIcons, TarkovTabs, Tab } from '../components/ui'
 import { useAdvancedFeatures } from '../hooks/useAdvancedFeatures'
 import { formatCurrency } from '../utils/currency'
 
@@ -43,6 +46,10 @@ const ProfilePage: React.FC = () => {
   const queryClient = useQueryClient()
   const [isEditing, setIsEditing] = useState(false)
   const [newUsername, setNewUsername] = useState('')
+  const [searchParams, setSearchParams] = useSearchParams()
+  
+  // Get active tab from URL or default to 'overview'
+  const activeTab = searchParams.get('tab') || 'overview'
   
   // Advanced features for achievements
   const {
@@ -52,6 +59,11 @@ const ProfilePage: React.FC = () => {
     closeAchievements,
     claimAchievementReward
   } = useAdvancedFeatures()
+  
+  // Handle tab change and update URL
+  const handleTabChange = (tabId: string) => {
+    setSearchParams({ tab: tabId })
+  }
   
   // Fetch daily bonus status
   const { data: bonusData, refetch: refetchBonus } = useQuery({
@@ -245,33 +257,18 @@ const ProfilePage: React.FC = () => {
     )
   }
 
-  return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      {/* Profile Header */}
-      <div className="bg-tarkov-dark rounded-lg p-6 shadow-lg">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-4">
-            <div className="w-16 h-16 bg-tarkov-accent rounded-full flex items-center justify-center text-2xl font-bold text-tarkov-dark">
-              {profile.username?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || '?'}
-            </div>
-            <div>
-              <h1 className="text-2xl font-tarkov font-bold text-white">
-                {profile.username || 'Anonymous Operator'}
-              </h1>
-              <p className="text-gray-400">Member since {formatDate(profile.created_at)}</p>
-            </div>
+  // Define tabs
+  const tabs: Tab[] = [
+    {
+      id: 'overview',
+      label: 'Overview',
+      icon: <FontAwesomeSVGIcons.Shield size={16} />,
+      content: (
+        <div className="space-y-6">
+          {/* Currency Management */}
+          <div className="bg-tarkov-dark rounded-lg p-6 shadow-lg">
+            <CurrencyManager />
           </div>
-          <button
-            onClick={signOut}
-            className="px-4 py-2 bg-tarkov-danger hover:bg-red-600 text-white rounded-md transition-colors"
-          >
-            Logout
-          </button>
-        </div>
-
-        {/* Currency Management */}
-        <CurrencyManager />
-      </div>
 
       {/* Daily Bonus Section */}
       <div className="bg-tarkov-dark rounded-lg p-6 shadow-lg border-2 border-tarkov-accent/30">
@@ -358,64 +355,6 @@ const ProfilePage: React.FC = () => {
           <div className="text-center py-4">
             <FontAwesomeSVGIcons.Clock className="text-tarkov-accent mx-auto mb-2 animate-pulse" size={32} />
             <p className="text-gray-400">Loading bonus status...</p>
-          </div>
-        )}
-      </div>
-
-      {/* Username Edit */}
-      <div className="bg-tarkov-dark rounded-lg p-6 shadow-lg">
-        <h2 className="text-xl font-tarkov font-bold text-white mb-4">Account Settings</h2>
-        
-        {isEditing ? (
-          <form onSubmit={handleUsernameUpdate} className="space-y-4">
-            <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-300 mb-2">
-                Username
-              </label>
-              <input
-                id="username"
-                type="text"
-                value={newUsername}
-                onChange={(e) => setNewUsername(e.target.value)}
-                placeholder={profile.username || 'Enter username'}
-                className="w-full px-3 py-2 bg-tarkov-secondary border border-tarkov-primary rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tarkov-accent focus:border-transparent"
-              />
-            </div>
-            <div className="flex space-x-2">
-              <button
-                type="submit"
-                disabled={updateUsernameMutation.isPending}
-                className="px-4 py-2 bg-tarkov-accent hover:bg-orange-500 disabled:bg-gray-600 text-tarkov-dark font-semibold rounded-md transition-colors"
-              >
-                {updateUsernameMutation.isPending ? 'Saving...' : 'Save'}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsEditing(false)
-                  setNewUsername('')
-                }}
-                className="px-4 py-2 bg-tarkov-secondary hover:bg-tarkov-primary text-white rounded-md transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        ) : (
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-400">Username</p>
-              <p className="text-white font-medium">{profile.username || 'Not set'}</p>
-            </div>
-            <button
-              onClick={() => {
-                setIsEditing(true)
-                setNewUsername(profile.username || '')
-              }}
-              className="px-4 py-2 bg-tarkov-secondary hover:bg-tarkov-primary text-white rounded-md transition-colors"
-            >
-              Edit
-            </button>
           </div>
         )}
       </div>
@@ -647,15 +586,139 @@ const ProfilePage: React.FC = () => {
       <div className="bg-tarkov-dark rounded-lg p-6 shadow-lg">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-tarkov font-bold text-white">Recent Activity</h2>
-          <a 
-            href="/history" 
-            className="text-tarkov-accent hover:text-orange-500 text-sm font-medium transition-colors"
-          >
-            View All →
-          </a>
         </div>
-        <TransactionHistory limit={5} showFilters={false} compact={true} />
+        <TransactionHistory limit={10} showFilters={false} compact={true} />
       </div>
+        </div>
+      )
+    },
+    {
+      id: 'statistics',
+      label: 'Statistics',
+      icon: <FontAwesomeSVGIcons.ChartBar size={16} />,
+      content: <StatisticsDashboard />
+    },
+    {
+      id: 'history',
+      label: 'Game History',
+      icon: <FontAwesomeSVGIcons.History size={16} />,
+      content: (
+        <div className="bg-tarkov-dark rounded-lg p-6">
+          <GameHistoryTable showFilters={true} showExport={true} pageSize={25} />
+        </div>
+      )
+    },
+    {
+      id: 'settings',
+      label: 'Settings',
+      icon: <FontAwesomeSVGIcons.Cog size={16} />,
+      content: (
+        <div className="space-y-6">
+          {/* Account Settings */}
+          <div className="bg-tarkov-dark rounded-lg p-6 shadow-lg">
+            <h2 className="text-xl font-tarkov font-bold text-white mb-4">Account Settings</h2>
+            
+            {isEditing ? (
+              <form onSubmit={handleUsernameUpdate} className="space-y-4">
+                <div>
+                  <label htmlFor="username" className="block text-sm font-medium text-gray-300 mb-2">
+                    Username
+                  </label>
+                  <input
+                    id="username"
+                    type="text"
+                    value={newUsername}
+                    onChange={(e) => setNewUsername(e.target.value)}
+                    placeholder={profile.username || 'Enter username'}
+                    className="w-full px-3 py-2 bg-tarkov-secondary border border-tarkov-primary rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tarkov-accent focus:border-transparent"
+                  />
+                </div>
+                <div className="flex space-x-2">
+                  <button
+                    type="submit"
+                    disabled={updateUsernameMutation.isPending}
+                    className="px-4 py-2 bg-tarkov-accent hover:bg-orange-500 disabled:bg-gray-600 text-tarkov-dark font-semibold rounded-md transition-colors"
+                  >
+                    {updateUsernameMutation.isPending ? 'Saving...' : 'Save'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsEditing(false)
+                      setNewUsername('')
+                    }}
+                    className="px-4 py-2 bg-tarkov-secondary hover:bg-tarkov-primary text-white rounded-md transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-400">Username</p>
+                  <p className="text-white font-medium">{profile.username || 'Not set'}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setIsEditing(true)
+                    setNewUsername(profile.username || '')
+                  }}
+                  className="px-4 py-2 bg-tarkov-secondary hover:bg-tarkov-primary text-white rounded-md transition-colors"
+                >
+                  Edit
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Logout Section */}
+          <div className="bg-tarkov-dark rounded-lg p-6 shadow-lg">
+            <h2 className="text-xl font-tarkov font-bold text-white mb-4">Account Actions</h2>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400">Sign out of your account</p>
+                <p className="text-sm text-gray-500">You can sign back in anytime</p>
+              </div>
+              <button
+                onClick={signOut}
+                className="px-4 py-2 bg-tarkov-danger hover:bg-red-600 text-white rounded-md transition-colors"
+              >
+                <FontAwesomeSVGIcons.DoorOpen className="mr-2" size={16} />
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )
+    }
+  ]
+
+  return (
+    <div className="max-w-6xl mx-auto py-8 px-4">
+      {/* Page Header */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-4">
+            <div className="w-20 h-20 bg-tarkov-accent rounded-full flex items-center justify-center text-3xl font-bold text-tarkov-dark shadow-lg">
+              {profile.username?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || '?'}
+            </div>
+            <div>
+              <h1 className="text-3xl font-tarkov font-bold text-white">
+                {profile.username || 'Anonymous Operator'}
+              </h1>
+              <p className="text-gray-400">Member since {formatDate(profile.created_at)}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabbed Interface */}
+      <TarkovTabs 
+        tabs={tabs} 
+        defaultTab={activeTab}
+        onChange={handleTabChange}
+      />
 
       {/* Achievement System Modal */}
       <AchievementSystem
