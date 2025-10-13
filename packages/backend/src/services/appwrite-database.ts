@@ -260,14 +260,14 @@ export class AppwriteDatabaseService {
     try {
       console.log(`⚡ Atomically incrementing ${attribute} by ${value} in ${collectionId}/${documentId}`);
       
-      const response = await this.databases.incrementDocumentAttribute(
-        DATABASE_ID,
+      const response = await this.databases.incrementDocumentAttribute({
+        databaseId: DATABASE_ID,
         collectionId,
         documentId,
         attribute,
         value,
         max
-      );
+      });
       
       console.log(`✅ Atomic increment successful`);
       return { data: response, error: null };
@@ -291,14 +291,14 @@ export class AppwriteDatabaseService {
     try {
       console.log(`⚡ Atomically decrementing ${attribute} by ${value} in ${collectionId}/${documentId}`);
       
-      const response = await this.databases.decrementDocumentAttribute(
-        DATABASE_ID,
+      const response = await this.databases.decrementDocumentAttribute({
+        databaseId: DATABASE_ID,
         collectionId,
         documentId,
         attribute,
         value,
         min
-      );
+      });
       
       console.log(`✅ Atomic decrement successful`);
       return { data: response, error: null };

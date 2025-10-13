@@ -83,7 +83,7 @@ const CaseOpeningCarousel: React.FC<CaseOpeningCarouselProps> = ({
   finalItem,
   duration = 6000
 }) => {
-  const { playCaseOpen, playCaseReveal } = useSoundEffects()
+  const { playCaseOpen, playCaseReveal, playRarityReveal } = useSoundEffects()
 
   // Single layer carousel system
   const carouselRef = useRef<HTMLDivElement>(null)
@@ -182,6 +182,11 @@ const CaseOpeningCarousel: React.FC<CaseOpeningCarouselProps> = ({
         isWinningItem: items[centeredItemIndex]?.isWinning,
         finalItem: finalItem?.name
       })
+
+      // Play rarity-based sound when carousel lands (similar to quick open mode)
+      const rarity = finalItem?.rarity || 'common'
+      playRarityReveal(rarity as 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary')
+      console.log(`🔊 Playing ${rarity} rarity reveal sound`)
 
       // Cleanup event listener (store in ref for useEffect cleanup)
       if (carouselRef.current) {
