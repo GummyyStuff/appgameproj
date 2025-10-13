@@ -100,8 +100,11 @@ const CaseOpeningCarousel: React.FC<CaseOpeningCarouselProps> = ({
     }
   }, []) // Empty deps - only calculate once on mount
 
-  // Simple easing for smooth animation
-  const easingStyle = `transform ${duration}ms cubic-bezier(0.1, 0.4, 0.4, 1)`
+  // Memoize easing style based on duration (updates when duration changes)
+  const easingStyle = useMemo(() => 
+    `transform ${duration}ms cubic-bezier(0.1, 0.4, 0.4, 1)`,
+    [duration]
+  )
 
   // Calculate positions
   const safeWinningIndex = Math.max(0, Math.min(winningIndex, items.length - 1))
@@ -129,6 +132,9 @@ const CaseOpeningCarousel: React.FC<CaseOpeningCarouselProps> = ({
   const startCarouselAnimation = () => {
     setIsAnimating(true)
     playCaseOpen()
+
+    // Log duration for debugging
+    console.log(`🎰 Starting carousel animation with duration: ${duration}ms`)
 
     // Get the actual container width at animation start time
     const currentContainerWidth = carouselRef.current?.parentElement?.clientWidth || window.innerWidth

@@ -1,20 +1,23 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useGamePreferences, AnimationSpeed } from '../../hooks/useGamePreferences'
 import { TarkovCard } from '../ui/TarkovCard'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible'
 
 /**
  * Game settings component for case opening preferences
- * Based on CS2 case simulator's options system
+ * Based on CS2 case simulator's options system with shadcn/ui collapsible
  * 
  * Features:
+ * - Collapsible UI (hidden by default)
  * - Animation speed control (fast/normal/slow)
  * - Quick open toggle (skip animation entirely)
  * - Persistent localStorage storage
- * - Clean Tarkov-themed UI
+ * - shadcn/ui + Tarkov-themed styling
  * 
  * Research sources:
  * - CS2 simulator: /cs2-case-simulator-main/frontend/composables/optionsStore.ts
+ * - shadcn/ui: https://ui.shadcn.com/docs/components/collapsible
  * - React.dev: useCallback patterns for toggles
  * - Project pattern: useSoundPreferences.ts
  */
@@ -26,6 +29,8 @@ export const GameSettings: React.FC = () => {
     toggleQuickOpen,
     ANIMATION_DURATIONS 
   } = useGamePreferences()
+
+  const [isOpen, setIsOpen] = useState(false)
 
   const speedOptions: { value: AnimationSpeed; label: string; duration: number }[] = [
     { value: 'fast', label: 'Fast', duration: ANIMATION_DURATIONS.fast },
@@ -39,10 +44,43 @@ export const GameSettings: React.FC = () => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.3 }}
     >
-      <TarkovCard className="p-6">
-        <h3 className="text-xl font-tarkov font-bold text-tarkov-accent mb-4">
-          ⚙️ Animation Settings
-        </h3>
+      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+        <TarkovCard className="p-4">
+        {/* Collapsible Trigger */}
+        <CollapsibleTrigger asChild>
+          <motion.button
+            className="w-full flex items-center justify-between text-left group"
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.99 }}
+          >
+            <h3 className="text-lg font-tarkov font-bold text-tarkov-accent flex items-center gap-2">
+              <span className="text-2xl">⚙️</span>
+              <span>Animation Settings</span>
+              <span className="text-xs font-normal text-gray-400 ml-2">
+                {quickOpen ? '⚡ Quick' : `${(ANIMATION_DURATIONS[animationSpeed] / 1000).toFixed(1)}s`}
+              </span>
+            </h3>
+            <motion.div
+              animate={{ rotate: isOpen ? 180 : 0 }}
+              transition={{ duration: 0.2 }}
+              className="text-tarkov-accent text-xl"
+            >
+              ▼
+            </motion.div>
+          </motion.button>
+        </CollapsibleTrigger>
+
+        {/* Collapsible Content */}
+        <CollapsibleContent className="overflow-hidden">
+          <motion.div
+            initial={false}
+            animate={{
+              height: isOpen ? "auto" : 0,
+              opacity: isOpen ? 1 : 0
+            }}
+            transition={{ duration: 0.2, ease: "easeInOut" }}
+            className="pt-4"
+          >
 
         {/* Animation Speed Selector */}
         <div className="space-y-3 mb-6">
@@ -112,25 +150,28 @@ export const GameSettings: React.FC = () => {
           </p>
         </div>
 
-        {/* Info Box */}
-        <motion.div
-          className="mt-6 p-4 bg-tarkov-accent/10 border border-tarkov-accent/30 rounded-lg"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-        >
-          <div className="text-xs text-gray-300 space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="text-tarkov-accent">💾</span>
-              <span>Settings are saved automatically</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-tarkov-accent">🎮</span>
-              <span>Based on CS2 case opening mechanics</span>
-            </div>
-          </div>
-        </motion.div>
+            {/* Info Box */}
+            <motion.div
+              className="mt-6 p-4 bg-tarkov-accent/10 border border-tarkov-accent/30 rounded-lg"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2 }}
+            >
+              <div className="text-xs text-gray-300 space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-tarkov-accent">💾</span>
+                  <span>Settings are saved automatically</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-tarkov-accent">🎮</span>
+                  <span>Based on CS2 case opening mechanics</span>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        </CollapsibleContent>
       </TarkovCard>
+      </Collapsible>
     </motion.div>
   )
 }
