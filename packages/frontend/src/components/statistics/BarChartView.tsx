@@ -1,0 +1,115 @@
+import React from 'react'
+import { Bar, BarChart, XAxis, YAxis, LabelList } from 'recharts'
+import { motion } from 'framer-motion'
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from '@/components/ui/chart'
+
+interface BarChartDataItem {
+  name: string
+  value: number
+  fill: string
+  [key: string]: any
+}
+
+interface BarChartViewProps {
+  title: string
+  data: BarChartDataItem[]
+  dataKey: string
+  nameKey: string
+  chartConfig: ChartConfig
+  formatValue?: (value: number) => string
+  renderDetails: (item: any, index: number) => React.ReactNode
+}
+
+/**
+ * Reusable Horizontal Bar Chart View Component
+ * 
+ * Provides a horizontal bar chart visualization better suited for:
+ * - Comparing values across categories
+ * - Ranking items from highest to lowest
+ * - Displaying items with long names
+ * 
+ * Much more effective than pie charts for frequency and value comparisons.
+ * Based on shadcn/ui patterns for charts.
+ */
+const BarChartView: React.FC<BarChartViewProps> = ({
+  title,
+  data,
+  dataKey,
+  nameKey,
+  chartConfig,
+  formatValue,
+  renderDetails
+}) => {
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="bg-tarkov-dark rounded-lg p-6 lg:col-span-2"
+    >
+      <h3 className="text-xl font-semibold text-white mb-4">{title}</h3>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Horizontal Bar Chart */}
+        <ChartContainer
+          config={chartConfig}
+          className="min-h-[300px] w-full"
+        >
+          <BarChart 
+            data={data} 
+            layout="horizontal"
+            margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+          >
+            <XAxis type="number" stroke="#9ca3af" fontSize={12} />
+            <YAxis 
+              dataKey={nameKey} 
+              type="category" 
+              width={120}
+              stroke="#9ca3af" 
+              fontSize={11}
+              tickLine={false}
+              axisLine={false}
+              tickFormatter={(value) => {
+                // Truncate long names
+                return value.length > 15 ? value.substring(0, 15) + '...' : value
+              }}
+            />
+            <ChartTooltip 
+              content={
+                <ChartTooltipContent 
+                  hideLabel
+                  formatter={(value, name, props) => {
+                    const displayValue = formatValue ? formatValue(Number(value)) : value
+                    return [displayValue, props.payload[nameKey]]
+                  }}
+                />
+              } 
+            />
+            <Bar 
+              dataKey={dataKey} 
+              radius={[0, 4, 4, 0]}
+            >
+              <LabelList 
+                dataKey={dataKey} 
+                position="right" 
+                formatter={(value: number) => formatValue ? formatValue(value) : value}
+                className="fill-gray-300 text-xs"
+              />
+            </Bar>
+          </BarChart>
+        </ChartContainer>
+
+        {/* Details List */}
+        <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+          {data.map((item, index) => renderDetails(item, index))}
+        </div>
+      </div>
+    </motion.div>
+  )
+}
+
+export default BarChartView
+

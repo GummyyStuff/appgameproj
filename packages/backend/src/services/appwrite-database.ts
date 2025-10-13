@@ -245,6 +245,68 @@ export class AppwriteDatabaseService {
       Permission.update(Role.users()),
     ];
   }
+
+  /**
+   * Atomically increment a numeric attribute in a document
+   * Prevents race conditions for concurrent updates
+   */
+  async incrementDocumentAttribute(
+    collectionId: CollectionId,
+    documentId: string,
+    attribute: string,
+    value: number,
+    max?: number
+  ) {
+    try {
+      console.log(`⚡ Atomically incrementing ${attribute} by ${value} in ${collectionId}/${documentId}`);
+      
+      const response = await this.databases.incrementDocumentAttribute(
+        DATABASE_ID,
+        collectionId,
+        documentId,
+        attribute,
+        value,
+        max
+      );
+      
+      console.log(`✅ Atomic increment successful`);
+      return { data: response, error: null };
+    } catch (error: any) {
+      console.error(`❌ Error in atomic increment:`, error);
+      return { data: null, error: error.message || 'Failed to increment attribute' };
+    }
+  }
+
+  /**
+   * Atomically decrement a numeric attribute in a document
+   * Prevents race conditions for concurrent updates
+   */
+  async decrementDocumentAttribute(
+    collectionId: CollectionId,
+    documentId: string,
+    attribute: string,
+    value: number,
+    min?: number
+  ) {
+    try {
+      console.log(`⚡ Atomically decrementing ${attribute} by ${value} in ${collectionId}/${documentId}`);
+      
+      const response = await this.databases.decrementDocumentAttribute(
+        DATABASE_ID,
+        collectionId,
+        documentId,
+        attribute,
+        value,
+        min
+      );
+      
+      console.log(`✅ Atomic decrement successful`);
+      return { data: response, error: null };
+    } catch (error: any) {
+      console.error(`❌ Error in atomic decrement:`, error);
+      return { data: null, error: error.message || 'Failed to decrement attribute' };
+    }
+  }
 }
 
 // Export singleton instance

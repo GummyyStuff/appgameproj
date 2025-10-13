@@ -43,7 +43,11 @@ userRoutes.get('/profile', asyncHandler(async (c) => {
         balance: profile.balance,
         created_at: profile.createdAt,
         is_moderator: profile.isModerator,
-        avatar_path: profile.avatarPath
+        avatar_path: profile.avatarPath,
+        // Statistics fields for profile page
+        totalWagered: profile.totalWagered || 0,
+        totalWon: profile.totalWon || 0,
+        gamesPlayed: profile.gamesPlayed || 0
       }
     })
 

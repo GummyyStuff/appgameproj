@@ -234,6 +234,7 @@ export class CurrencyService {
 
   /**
    * Check daily bonus status
+   * FIXED: Check daily_bonuses collection directly to prevent race conditions
    */
   static async checkDailyBonusStatus(userId: string): Promise<DailyBonusStatus> {
     const profile = await UserService.getUserProfile(userId);
@@ -242,25 +243,38 @@ export class CurrencyService {
     }
 
     const now = new Date();
-    const lastBonus = profile.lastDailyBonus ? new Date(profile.lastDailyBonus) : null;
+    const todayDateKey = now.toISOString().split('T')[0]; // YYYY-MM-DD
+    const todayUserBonusKey = `${userId}_${todayDateKey}`;
 
-    let canClaim = true;
+    // Check if bonus was already claimed today by querying the daily_bonuses collection
+    // This is the source of truth, not the user profile's lastDailyBonus field
+    const { data: existingBonuses } = await appwriteDb.listDocuments<DailyBonus>(
+      COLLECTION_IDS.DAILY_BONUSES,
+      [appwriteDb.equal('userBonusKey', todayUserBonusKey)]
+    );
+
+    const alreadyClaimedToday = existingBonuses && existingBonuses.length > 0;
+    
+    let lastClaimedDate: string | undefined;
+    let nextAvailable: Date;
     let cooldownHours = 0;
 
-    if (lastBonus) {
-      const hoursSinceLastClaim = (now.getTime() - lastBonus.getTime()) / (1000 * 60 * 60);
-      canClaim = hoursSinceLastClaim >= 24;
-      cooldownHours = canClaim ? 0 : 24 - hoursSinceLastClaim;
+    if (alreadyClaimedToday) {
+      // Bonus already claimed today
+      const lastBonus = new Date(existingBonuses[0].bonusDate);
+      lastClaimedDate = existingBonuses[0].bonusDate;
+      nextAvailable = new Date(lastBonus.getTime() + 24 * 60 * 60 * 1000);
+      cooldownHours = Math.max(0, (nextAvailable.getTime() - now.getTime()) / (1000 * 60 * 60));
+    } else {
+      // Can claim bonus today
+      lastClaimedDate = profile.lastDailyBonus;
+      nextAvailable = now;
     }
 
-    const nextAvailable = lastBonus
-      ? new Date(lastBonus.getTime() + 24 * 60 * 60 * 1000)
-      : now;
-
     return {
-      canClaim,
+      canClaim: !alreadyClaimedToday,
       bonusAmount: this.DAILY_BONUS_AMOUNT,
-      lastClaimedDate: profile.lastDailyBonus,
+      lastClaimedDate,
       nextAvailableDate: nextAvailable.toISOString(),
       cooldownHours,
     };
@@ -268,11 +282,14 @@ export class CurrencyService {
 
   /**
    * Claim daily bonus
+   * FIXED: Improved error handling and duplicate detection
    */
   static async claimDailyBonus(userId: string) {
+    // Double-check status (prevents race conditions)
     const status = await this.checkDailyBonusStatus(userId);
 
     if (!status.canClaim) {
+      console.log(`⚠️  Daily bonus already claimed for user ${userId}`);
       return {
         success: false,
         error: 'Daily bonus already claimed today',
@@ -289,8 +306,10 @@ export class CurrencyService {
     const dateKey = now.toISOString().split('T')[0]; // YYYY-MM-DD
     const userBonusKey = `${userId}_${dateKey}`;
 
+    console.log(`🎁 Attempting to claim daily bonus for user ${userId} (key: ${userBonusKey})`);
+
     try {
-      // Record bonus claim
+      // Record bonus claim first (this will fail if duplicate due to unique index)
       const bonusRecord: Omit<DailyBonus, '$id'> = {
         userId,
         bonusDate: now.toISOString(),
@@ -299,41 +318,65 @@ export class CurrencyService {
         userBonusKey,
       };
 
-      const { error: bonusError } = await appwriteDb.createDocument<DailyBonus>(
+      const { data: bonusDoc, error: bonusError } = await appwriteDb.createDocument<DailyBonus>(
         COLLECTION_IDS.DAILY_BONUSES,
         bonusRecord,
         ID.unique()
       );
 
       if (bonusError) {
+        console.error(`❌ Failed to create bonus record:`, bonusError);
+        
+        // Check if it's a duplicate key error
+        if (bonusError.includes('unique') || bonusError.includes('duplicate') || bonusError.includes('already exists')) {
+          console.warn(`⚠️  Duplicate bonus claim detected for user ${userId}`);
+          return { 
+            success: false, 
+            error: 'Daily bonus already claimed today',
+            nextAvailableDate: new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString()
+          };
+        }
+        
         return { success: false, error: 'Failed to record bonus claim' };
       }
 
-      // Update user balance and last bonus date
-      const newBalance = profile.balance + this.DAILY_BONUS_AMOUNT;
-      const { data, error } = await appwriteDb.updateDocument(
+      console.log(`✅ Bonus record created successfully`);
+
+      // Update user balance atomically (prevents race conditions)
+      // Use atomic increment instead of read-modify-write pattern
+      const { data: balanceUpdate, error: balanceError } = await appwriteDb.incrementDocumentAttribute(
+        COLLECTION_IDS.USERS,
+        profile.$id!,
+        'balance',
+        this.DAILY_BONUS_AMOUNT
+      );
+
+      if (!balanceUpdate || balanceError) {
+        console.error(`❌ Failed to update user balance atomically:`, balanceError);
+        
+        // Rollback: delete the bonus record we just created
+        if (bonusDoc && bonusDoc.$id) {
+          console.log(`🔄 Rolling back bonus record ${bonusDoc.$id}`);
+          await appwriteDb.deleteDocument(COLLECTION_IDS.DAILY_BONUSES, bonusDoc.$id);
+        }
+
+        return { success: false, error: 'Failed to update balance' };
+      }
+
+      // Update last daily bonus date separately (not critical for atomicity)
+      await appwriteDb.updateDocument(
         COLLECTION_IDS.USERS,
         profile.$id!,
         {
-          balance: newBalance,
           lastDailyBonus: now.toISOString(),
           updatedAt: now.toISOString(),
         }
       );
 
-      if (!data || error) {
-        // Rollback bonus record
-        await appwriteDb.listDocuments<DailyBonus>(
-          COLLECTION_IDS.DAILY_BONUSES,
-          [appwriteDb.equal('userBonusKey', userBonusKey)]
-        ).then(({ data }) => {
-          if (data && data.length > 0) {
-            appwriteDb.deleteDocument(COLLECTION_IDS.DAILY_BONUSES, data[0].$id!);
-          }
-        });
+      // Get new balance from atomic operation result
+      const newBalance = (balanceUpdate as any).balance || profile.balance + this.DAILY_BONUS_AMOUNT;
 
-        return { success: false, error: 'Failed to update balance' };
-      }
+      console.log(`✅ Daily bonus claimed successfully for user ${userId}. New balance: ${newBalance}`);
 
       return {
         success: true,
@@ -341,8 +384,25 @@ export class CurrencyService {
         bonusAmount: this.DAILY_BONUS_AMOUNT,
         nextAvailableDate: new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString(),
       };
-    } catch (error) {
-      console.error('Error claiming daily bonus:', error);
+    } catch (error: any) {
+      console.error('❌ Error claiming daily bonus:', error);
+      console.error('Error details:', {
+        message: error?.message,
+        code: error?.code,
+        type: error?.type,
+      });
+      
+      // Check if it's a duplicate/constraint error
+      const errorMessage = error?.message || String(error);
+      if (errorMessage.includes('unique') || errorMessage.includes('duplicate') || errorMessage.includes('constraint')) {
+        console.warn(`⚠️  Duplicate constraint violation for user ${userId}`);
+        return { 
+          success: false, 
+          error: 'Daily bonus already claimed today',
+          nextAvailableDate: new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString()
+        };
+      }
+      
       return { success: false, error: 'Failed to claim daily bonus' };
     }
   }

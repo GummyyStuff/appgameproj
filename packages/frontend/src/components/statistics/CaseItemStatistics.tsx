@@ -11,6 +11,7 @@ import { formatCurrency } from '../../utils/currency'
 import { FontAwesomeSVGIcons } from '../ui'
 import { useAuth } from '../../hooks/useAuth'
 import PieChartView from './PieChartView'
+import BarChartView from './BarChartView'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 
 interface CaseItemStatisticsProps {
@@ -301,13 +302,13 @@ const CaseItemStatistics: React.FC<CaseItemStatisticsProps> = ({ isLoading: isLo
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* By Frequency */}
         {viewMode === 'frequency' && (
-          <PieChartView
+          <BarChartView
             title="Most Frequently Won Items"
             data={frequencyChartData}
             dataKey="count"
             nameKey="item_name"
             chartConfig={createChartConfig(frequencyChartData, 'item_name')}
-            formatLabel={(entry) => `${entry.item_name}: ${entry.count} (${entry.percentage.toFixed(1)}%)`}
+            formatValue={(value) => `${value}x`}
             renderDetails={(item) => (
               <div key={item.item_name} className="bg-tarkov-secondary rounded-lg p-3">
                 <div className="flex items-center justify-between mb-2">
@@ -340,13 +341,13 @@ const CaseItemStatistics: React.FC<CaseItemStatisticsProps> = ({ isLoading: isLo
 
         {/* By Value */}
         {viewMode === 'value' && (
-          <PieChartView
+          <BarChartView
             title="Highest Value Items"
             data={valueChartData}
             dataKey="total_value"
             nameKey="item_name"
             chartConfig={createChartConfig(valueChartData, 'item_name')}
-            formatLabel={(entry) => `${entry.item_name}: ${formatCurrency(entry.total_value, 'roubles')}`}
+            formatValue={(value) => formatCurrency(value, 'roubles')}
             renderDetails={(item) => {
               const maxValue = Math.max(...valueChartData.map(i => i.total_value))
               const percentage = (item.total_value / maxValue) * 100
