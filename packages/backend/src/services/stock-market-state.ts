@@ -8,7 +8,7 @@
  * - Broadcasts updates via Appwrite Realtime
  */
 
-import { Client, Databases, ID } from 'node-appwrite';
+import { Client, Databases, ID, Query } from 'node-appwrite';
 import { appwriteClient } from '../config/appwrite';
 import { SecureRandomGenerator } from './game-engine/random-generator';
 
@@ -315,8 +315,8 @@ export class StockMarketStateService {
         DATABASE_ID,
         'stock_market_candles',
         [
-          'orderDesc("timestamp")',
-          `limit(${limit})`
+          Query.orderDesc('timestamp'),
+          Query.limit(limit)
         ]
       )
       

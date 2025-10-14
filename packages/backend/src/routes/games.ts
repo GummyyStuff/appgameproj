@@ -5,7 +5,7 @@ import { gameBetRateLimit } from '../middleware/rate-limit'
 import { validationMiddleware, commonSchemas } from '../middleware/validation'
 import { auditGame, auditLog } from '../middleware/audit'
 import { z } from 'zod'
-import { Databases } from 'node-appwrite'
+import { Databases, Query } from 'node-appwrite'
 import { RouletteGame } from '../services/game-engine/roulette-game'
 import { CaseOpeningService } from '../services/case-opening-appwrite'
 import { StockMarketGame } from '../services/game-engine/stock-market-game'
@@ -601,8 +601,8 @@ gameRoutes.get('/stock-market/leaderboard', asyncHandler(async (c: Context) => {
 
     // Get all trades within timeframe
     const tradesQuery = [
-      'orderDesc("timestamp")',
-      `limit(10000)` // Get enough trades to calculate stats
+      Query.orderDesc('timestamp'),
+      Query.limit(10000) // Get enough trades to calculate stats
     ]
 
     const tradesResult = await databases.listDocuments(
