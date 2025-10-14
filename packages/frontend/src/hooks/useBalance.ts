@@ -25,7 +25,7 @@ export const useBalance = (options: {
     const queryClient = useQueryClient()
     const [previousBalance, setPreviousBalance] = useState<number | undefined>()
 
-    // Query for balance data from backend API
+    // Query for balance data from backend API with REAL-TIME updates via Appwrite Realtime
     const { data: balance, isLoading, error, refetch } = useQuery({
         queryKey: ['balance', user?.id],
         queryFn: async () => {
@@ -47,8 +47,11 @@ export const useBalance = (options: {
             return result.balance || 0;
         },
         enabled: !!user,
-        refetchInterval,
+        // Use real-time updates via Appwrite Realtime instead of polling
+        // Keep a slow fallback poll in case WebSocket disconnects
+        refetchInterval: enableRealtime ? 30000 : Math.min(refetchInterval, 3000), // 30s fallback if realtime enabled, 3s if not
         staleTime: 5000, // Consider data stale after 5 seconds
+        refetchIntervalInBackground: true, // Continue polling even when tab is in background
     })
 
     // Track balance changes for animations
@@ -64,18 +67,32 @@ export const useBalance = (options: {
         }
     }, [balance, previousBalance])
 
-    // Set up real-time subscription for balance updates using Appwrite
+    // Set up REAL-TIME subscription for balance updates using Appwrite Realtime
+    // This provides INSTANT updates when the user's balance changes in the database
     useEffect(() => {
-        if (!user || !enableRealtime) return
+        if (!user || !enableRealtime) {
+            console.log('⚠️ Real-time updates disabled for balance');
+            return;
+        }
+
+        console.log('🔔 Setting up real-time balance subscription for user:', user.id);
 
         const unsubscribe = subscribeToUserBalance(user.id, (newBalance) => {
+            console.log('💰 Balance updated via real-time:', newBalance);
             if (newBalance !== balance) {
-                // Update the query cache with new balance
-                queryClient.setQueryData(['balance', user.id], newBalance)
+                // Update the query cache with new balance - INSTANTLY!
+                queryClient.setQueryData(['balance', user.id], newBalance);
+                
+                // Also invalidate related queries to refresh stats
+                queryClient.invalidateQueries({ queryKey: ['currencyStats', user.id] });
+                queryClient.invalidateQueries({ queryKey: ['userStats', user.id] });
             }
         });
 
-        return unsubscribe;
+        return () => {
+            console.log('🔕 Unsubscribing from real-time balance updates');
+            unsubscribe();
+        };
     }, [user, balance, queryClient, enableRealtime])
 
     return {

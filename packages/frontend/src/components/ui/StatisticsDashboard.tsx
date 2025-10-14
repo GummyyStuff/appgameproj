@@ -71,7 +71,8 @@ const StatisticsDashboard: React.FC = () => {
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d' | 'all'>('30d')
   const [selectedChart, setSelectedChart] = useState<'profit' | 'volume' | 'games'>('profit')
 
-  // Fetch user statistics from backend
+  // Fetch user statistics from backend with REAL-TIME updates
+  // Uses Appwrite Realtime for instant updates when balance/stats change
   const { data: userStats, isLoading: statsLoading } = useQuery({
     queryKey: ['userStats', user?.id],
     queryFn: async () => {
@@ -91,7 +92,11 @@ const StatisticsDashboard: React.FC = () => {
       return result.stats;
     },
     enabled: !!user,
-    staleTime: 60000, // Cache for 1 minute
+    staleTime: 5000, // Consider data stale after 5 seconds
+    // Real-time updates via Appwrite Realtime (see useBalance hook)
+    // Fallback poll every 30 seconds in case WebSocket disconnects
+    refetchInterval: 30000,
+    refetchIntervalInBackground: true,
   })
 
   const { data: gameHistory, isLoading: historyLoading } = useQuery({
@@ -131,7 +136,11 @@ const StatisticsDashboard: React.FC = () => {
       return result.history as GameHistory[];
     },
     enabled: !!user,
-    staleTime: 60000, // Cache for 1 minute
+    staleTime: 10000, // Consider data stale after 10 seconds
+    // Real-time updates via Appwrite Realtime subscription to game_history collection
+    // Fallback poll every 30 seconds in case WebSocket disconnects
+    refetchInterval: 30000,
+    refetchIntervalInBackground: true,
   })
 
   // Calculate statistics from game history
