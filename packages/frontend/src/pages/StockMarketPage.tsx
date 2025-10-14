@@ -12,7 +12,6 @@ import { StockMarketLeaderboard } from '../components/games/StockMarketLeaderboa
 import { useStockMarketRealtime } from '../hooks/useStockMarketRealtime';
 import { getMarketState, getHistoricalCandles, type MarketState, type Candle } from '../services/stock-market-api';
 import { Activity, TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { RealtimeDiagnostic } from '../components/debug/RealtimeDiagnostic';
 
 export default function StockMarketPage() {
   const [marketState, setMarketState] = useState<MarketState | null>(null)
@@ -93,7 +92,6 @@ export default function StockMarketPage() {
 
   return (
     <div className="min-h-screen bg-tarkov-darker p-4 md:p-8">
-      <RealtimeDiagnostic />
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">

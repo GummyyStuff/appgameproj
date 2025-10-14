@@ -2,11 +2,18 @@
  * Stock Market Chart Component
  * 
  * Displays real-time price chart with candlestick visualization
- * Uses Recharts for rendering
+ * Uses TradingView Lightweight Charts for professional stock market charts
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { 
+  createChart, 
+  ColorType, 
+  type IChartApi, 
+  type ISeriesApi, 
+  type CandlestickData, 
+  type Time 
+} from 'lightweight-charts';
 import type { Candle } from '../../services/stock-market-api';
 
 interface StockMarketChartProps {
@@ -17,28 +24,149 @@ interface StockMarketChartProps {
 }
 
 export function StockMarketChart({ candles, currentPrice, trend }: StockMarketChartProps) {
-  const [chartData, setChartData] = useState<any[]>([])
+  const chartContainerRef = useRef<HTMLDivElement>(null)
+  const chartRef = useRef<IChartApi | null>(null)
+  const candlestickSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null)
+  const volumeSeriesRef = useRef<ISeriesApi<'Histogram'> | null>(null)
+  const [stats, setStats] = useState({ high: 0, low: 0, volume: 0 })
 
   useEffect(() => {
-    // Transform candles data for chart
-    const data = candles.map(candle => ({
-      time: new Date(candle.timestamp).toLocaleTimeString(),
-      timestamp: candle.timestamp,
-      price: candle.close,
+    if (!chartContainerRef.current) return
+
+    // Create chart instance with dark theme
+    const chart = createChart(chartContainerRef.current, {
+      layout: {
+        background: { type: ColorType.Solid, color: '#1a1d29' },
+        textColor: '#9ca3af',
+      },
+      grid: {
+        vertLines: { color: '#374151' },
+        horzLines: { color: '#374151' },
+      },
+      width: chartContainerRef.current.clientWidth,
+      height: 500,
+      timeScale: {
+        timeVisible: true,
+        secondsVisible: false,
+        borderColor: '#374151',
+      },
+      rightPriceScale: {
+        borderColor: '#374151',
+      },
+      crosshair: {
+        mode: 1,
+        vertLine: {
+          color: '#6b7280',
+          labelBackgroundColor: '#374151',
+        },
+        horzLine: {
+          color: '#6b7280',
+          labelBackgroundColor: '#374151',
+        },
+      },
+    })
+
+    chartRef.current = chart
+
+    // Add candlestick series
+    const candlestickSeries = (chart as any).addCandlestickSeries({
+      upColor: '#10b981',
+      downColor: '#ef4444',
+      borderVisible: false,
+      wickUpColor: '#10b981',
+      wickDownColor: '#ef4444',
+    })
+    candlestickSeriesRef.current = candlestickSeries
+
+    // Add volume series as histogram
+    const volumeSeries = (chart as any).addHistogramSeries({
+      color: '#6b7280',
+      priceFormat: {
+        type: 'volume',
+      },
+      priceScaleId: '',
+    })
+    volumeSeriesRef.current = volumeSeries
+
+    // Set volume series to the left
+    chart.priceScale('').applyOptions({
+      scaleMargins: {
+        top: 0.8,
+        bottom: 0,
+      },
+    })
+
+    // Handle resize
+    const handleResize = () => {
+      if (chartContainerRef.current && chartRef.current) {
+        chartRef.current.applyOptions({ 
+          width: chartContainerRef.current.clientWidth 
+        })
+      }
+    }
+
+    window.addEventListener('resize', handleResize)
+
+    return () => {
+      window.removeEventListener('resize', handleResize)
+      if (chartRef.current) {
+        chartRef.current.remove()
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!candlestickSeriesRef.current || !volumeSeriesRef.current || candles.length === 0) return
+
+    // Transform candles data for TradingView Lightweight Charts
+    const candlestickData: CandlestickData[] = candles.map(candle => ({
+      time: Math.floor(new Date(candle.timestamp).getTime() / 1000) as Time,
       open: candle.open,
       high: candle.high,
       low: candle.low,
       close: candle.close,
-      volume: candle.volume
     }))
 
-    setChartData(data)
+    // Transform volume data
+    const volumeData = candles.map(candle => ({
+      time: Math.floor(new Date(candle.timestamp).getTime() / 1000) as Time,
+      value: candle.volume,
+      color: candle.close >= candle.open ? '#10b98133' : '#ef444433',
+    }))
+
+    // Calculate statistics
+    const high = Math.max(...candles.map(c => c.high))
+    const low = Math.min(...candles.map(c => c.low))
+    const totalVolume = candles.reduce((sum, c) => sum + c.volume, 0)
+    
+    setStats({ high, low, volume: totalVolume })
+
+    // Set data
+    candlestickSeriesRef.current.setData(candlestickData)
+    volumeSeriesRef.current.setData(volumeData)
+
+    // Fit content to view
+    if (chartRef.current) {
+      chartRef.current.timeScale().fitContent()
+    }
   }, [candles])
 
-  // Color based on trend
-  const lineColor = trend === 'up' ? '#10b981' : trend === 'down' ? '#ef4444' : '#6b7280'
+  // Update current price line
+  useEffect(() => {
+    if (!candlestickSeriesRef.current || !chartRef.current) return
 
-  if (chartData.length === 0) {
+    // Create price line for current price
+    candlestickSeriesRef.current.createPriceLine({
+      price: currentPrice,
+      color: trend === 'up' ? '#10b981' : trend === 'down' ? '#ef4444' : '#6b7280',
+      lineWidth: 2,
+      lineStyle: 2, // Dashed
+      axisLabelVisible: true,
+      title: 'Current',
+    })
+  }, [currentPrice, trend])
+
+  if (candles.length === 0) {
     return (
       <div className="w-full h-96 bg-tarkov-dark rounded-lg flex items-center justify-center">
         <div className="text-center">
@@ -61,61 +189,31 @@ export function StockMarketChart({ candles, currentPrice, trend }: StockMarketCh
         </div>
       </div>
 
-      <ResponsiveContainer width="100%" height={400}>
-        <LineChart data={chartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-          <XAxis 
-            dataKey="time" 
-            stroke="#9ca3af"
-            style={{ fontSize: '12px' }}
-            interval="preserveStartEnd"
-          />
-          <YAxis 
-            stroke="#9ca3af"
-            style={{ fontSize: '12px' }}
-            domain={['dataMin - 5', 'dataMax + 5']}
-            tickFormatter={(value) => `$${value.toFixed(0)}`}
-          />
-          <Tooltip
-            contentStyle={{
-              backgroundColor: '#1f2937',
-              border: '1px solid #374151',
-              borderRadius: '8px',
-              color: '#f3f4f6'
-            }}
-            formatter={(value: number) => [`$${value.toFixed(2)}`, 'Price']}
-            labelStyle={{ color: '#9ca3af' }}
-          />
-          <Line
-            type="monotone"
-            dataKey="price"
-            stroke={lineColor}
-            strokeWidth={2}
-            dot={false}
-            isAnimationActive={false}
-          />
-          <ReferenceLine 
-            y={currentPrice} 
-            stroke={lineColor} 
-            strokeDasharray="5 5"
-            strokeOpacity={0.5}
-          />
-        </LineChart>
-      </ResponsiveContainer>
+      {/* Chart Container */}
+      <div ref={chartContainerRef} className="w-full" />
 
-      <div className="mt-4 flex items-center justify-between text-sm text-tarkov-text-secondary">
-        <div className="flex items-center gap-4">
+      {/* Statistics */}
+      <div className="mt-4 grid grid-cols-3 gap-4 text-sm">
+        <div className="bg-tarkov-darker rounded-lg p-3">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-green-500"></div>
-            <span>High: ${Math.max(...chartData.map(d => d.high)).toFixed(2)}</span>
+            <span className="text-tarkov-text-secondary">24h High</span>
           </div>
+          <p className="text-lg font-bold text-tarkov-text mt-1">${stats.high.toFixed(2)}</p>
+        </div>
+        <div className="bg-tarkov-darker rounded-lg p-3">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-red-500"></div>
-            <span>Low: ${Math.min(...chartData.map(d => d.low)).toFixed(2)}</span>
+            <span className="text-tarkov-text-secondary">24h Low</span>
           </div>
+          <p className="text-lg font-bold text-tarkov-text mt-1">${stats.low.toFixed(2)}</p>
         </div>
-        <div className="text-xs">
-          {candles.length} candles loaded
+        <div className="bg-tarkov-darker rounded-lg p-3">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+            <span className="text-tarkov-text-secondary">Total Volume</span>
+          </div>
+          <p className="text-lg font-bold text-tarkov-text mt-1">{stats.volume.toLocaleString()}</p>
         </div>
       </div>
     </div>

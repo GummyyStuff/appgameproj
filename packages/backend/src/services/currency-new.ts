@@ -7,8 +7,10 @@
 import { UserService } from './user-service';
 import { GameService } from './game-service';
 import { appwriteDb } from './appwrite-database';
+import { CacheService } from './cache-service';
 import { COLLECTION_IDS, DailyBonus } from '../config/collections';
-import { ID } from 'node-appwrite';
+import { ID, Databases } from 'node-appwrite';
+import { appwriteClient } from '../config/appwrite';
 import { env } from '../config/env';
 
 export interface CurrencyTransaction {
@@ -93,8 +95,14 @@ export class CurrencyService {
     gameResultData: any,
     gameDuration?: number
   ) {
-    // Validate bet amount
-    if (betAmount <= 0) {
+    // Validate bet amount - allow 0 for stock market sell operations
+    if (betAmount < 0) {
+      throw new Error('Bet amount cannot be negative');
+    }
+
+    // For stock market, betAmount can be 0 (sell operations don't cost money)
+    // For other games, betAmount must be positive
+    if (gameType !== 'stock_market' && betAmount <= 0) {
       throw new Error('Bet amount must be positive');
     }
 
@@ -102,22 +110,22 @@ export class CurrencyService {
       throw new Error('Win amount cannot be negative');
     }
 
-    // BUG FIX #9: Retry logic with optimistic locking
+    // PERFORMANCE OPTIMIZATION: Use Appwrite transactions to batch operations
+    // This reduces multiple sequential database calls to a single transaction
     const maxRetries = 3;
     let attempt = 0;
     let lastError: Error | null = null;
 
     while (attempt < maxRetries) {
       try {
-        // Get current balance and validate with version check
+        // Get current balance and validate
         const profile = await UserService.getUserProfile(userId);
         if (!profile) {
           throw new Error('User profile not found');
         }
 
         const currentBalance = profile.balance;
-        const profileVersion = profile.updatedAt; // Use timestamp as pseudo-version
-        
+
         if (currentBalance < betAmount) {
           throw new Error(
             `Insufficient balance. Required: ${betAmount}, Available: ${currentBalance}`
@@ -127,63 +135,67 @@ export class CurrencyService {
         // Calculate new balance
         const newBalance = currentBalance - betAmount + winAmount;
         const netResult = winAmount - betAmount;
-
-        // Step 1: Update balance and stats
         const previousBalance = currentBalance;
-        let balanceUpdated = false;
-        let statsUpdated = false;
-        let gameRecorded = false;
-        let gameId: string | undefined;
+
+        // PERFORMANCE OPTIMIZATION: Use Appwrite transaction to batch all operations
+        // Create transaction and perform all operations atomically
+        const databases = new Databases(appwriteClient);
+        const transaction = await databases.createTransaction({
+          ttl: 30 // 30 second timeout
+        });
+
+        const transactionId = transaction.transactionId;
 
         try {
-          // BUG FIX #9: Update balance with version check
-          const balanceResult = await UserService.updateBalanceWithVersion(
-            userId, 
-            newBalance, 
-            profileVersion
+          // Step 1: Update user balance atomically
+          await databases.updateDocument(
+            env.APPWRITE_DATABASE_ID,
+            COLLECTION_IDS.USERS,
+            profile.$id!,
+            {
+              balance: newBalance,
+              totalWagered: profile.totalWagered + betAmount,
+              totalWon: profile.totalWon + winAmount,
+              gamesPlayed: profile.gamesPlayed + 1,
+              updatedAt: new Date().toISOString(),
+            },
+            undefined, // permissions
+            transactionId
           );
-          
-          if (!balanceResult.success) {
-            // Version mismatch - retry
-            if (balanceResult.versionMismatch) {
-              console.log(`⚠️ Version mismatch on attempt ${attempt + 1}, retrying...`);
-              attempt++;
-              await new Promise(resolve => setTimeout(resolve, 100 * Math.pow(2, attempt))); // Exponential backoff
-              continue;
-            }
-            throw new Error('Failed to update balance');
-          }
-          balanceUpdated = true;
 
-          // Update statistics
-          const statsResult = await UserService.incrementStats(userId, betAmount, winAmount);
-          if (!statsResult.success) {
-            throw new Error('Failed to update statistics');
-          }
-          statsUpdated = true;
-
-          // Record game in history
-          const gameResult = await GameService.recordGameResult(
-            userId,
-            gameType,
-            betAmount,
-            winAmount,
-            gameResultData,
-            gameDuration
+          // Step 2: Record game in history
+          const gameId = ID.unique();
+          await databases.createDocument(
+            env.APPWRITE_DATABASE_ID,
+            COLLECTION_IDS.GAME_HISTORY,
+            gameId,
+            {
+              userId,
+              gameType,
+              betAmount,
+              winAmount,
+              resultData: gameResultData,
+              gameDuration: gameDuration || 0,
+              createdAt: new Date().toISOString(),
+            },
+            undefined, // permissions
+            transactionId
           );
-          if (!gameResult.success) {
-            throw new Error('Failed to record game');
-          }
-          gameRecorded = true;
-          gameId = gameResult.gameId;
 
-          // ✅ REAL-TIME UPDATES NOW HANDLED BY APPWRITE REALTIME
-          // When we update the user document, Appwrite Realtime automatically broadcasts
-          // the changes to all subscribed clients via WebSocket connections.
-          // No need for custom WebSocket server!
-          console.log(`✅ Transaction completed for user ${userId}. Appwrite Realtime will broadcast updates automatically.`);
+          // Step 3: Commit the transaction
+          await databases.updateTransaction(transactionId, {
+            commit: true
+          });
 
-          // Success! Return result
+          // Invalidate caches after successful transaction
+          await Promise.all([
+            CacheService.invalidateUserProfile(userId),
+            CacheService.invalidateUserBalance(userId),
+            CacheService.invalidateUserStats(userId),
+          ]);
+
+          console.log(`✅ Transaction completed for user ${userId} in single atomic operation`);
+
           return {
             success: true,
             newBalance,
@@ -191,58 +203,34 @@ export class CurrencyService {
             netResult,
             gameId,
           };
-        } catch (error: any) {
-          // Rollback on error
-          console.error('❌ Transaction error, attempting rollback:', error);
-          console.error('Error message:', error?.message);
-          console.error('Error stack:', error?.stack);
-          console.error('Transaction state:', { balanceUpdated, statsUpdated, gameRecorded });
 
-          if (balanceUpdated) {
-            // Rollback balance
-            console.log('Rolling back balance to:', previousBalance);
-            await UserService.updateBalance(userId, previousBalance);
+        } catch (transactionError: any) {
+          // Rollback transaction on error
+          console.error('❌ Transaction failed, rolling back:', transactionError);
+          try {
+            await databases.updateTransaction(transactionId, {
+              rollback: true
+            });
+          } catch (rollbackError) {
+            console.error('❌ Failed to rollback transaction:', rollbackError);
           }
-
-          if (statsUpdated) {
-            // Rollback stats
-            const profile = await UserService.getUserProfile(userId);
-            if (profile) {
-              console.log('Rolling back stats');
-              await appwriteDb.updateDocument(
-                COLLECTION_IDS.USERS,
-                profile.$id!,
-                {
-                  totalWagered: profile.totalWagered - betAmount,
-                  totalWon: profile.totalWon - winAmount,
-                  gamesPlayed: profile.gamesPlayed - 1,
-                }
-              );
-            }
-          }
-
-          if (gameRecorded && gameId) {
-            // Delete game record
-            console.log('Rolling back game record:', gameId);
-            await appwriteDb.deleteDocument(COLLECTION_IDS.GAME_HISTORY, gameId);
-          }
-
-          throw error;
+          throw transactionError;
         }
+
       } catch (error: any) {
         lastError = error;
         attempt++;
-        
+
         // If this was the last attempt, throw the error
         if (attempt >= maxRetries) {
           throw error;
         }
-        
+
         // Wait before retrying with exponential backoff
         await new Promise(resolve => setTimeout(resolve, 100 * Math.pow(2, attempt)));
       }
     }
-    
+
     // If we get here, all retries failed
     throw lastError || new Error('Transaction failed after maximum retries');
   }

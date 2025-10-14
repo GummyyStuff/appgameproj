@@ -28,6 +28,7 @@
     "appwrite": "catalog:default",
     "clsx": "2.1.1",
     "framer-motion": "^12.23.16",
+    "lightweight-charts": "5.0.9",
     "lucide-react": "0.545.0",
     "react": "catalog:default",
     "react-dom": "catalog:default",
