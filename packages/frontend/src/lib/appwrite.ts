@@ -1,7 +1,7 @@
 import { Client, Account, Databases, Storage, OAuthProvider } from 'appwrite';
 
 // Check if we're in test environment
-const isTestEnv = typeof process !== 'undefined' && process.env.NODE_ENV === 'test';
+const isTestEnv = import.meta.env.MODE === 'test';
 
 // Validate required environment variables (skip in test mode)
 const requiredEnvVars = {
@@ -44,6 +44,11 @@ if (
 export const appwriteClient = new Client()
   .setEndpoint(requiredEnvVars.VITE_APPWRITE_ENDPOINT)
   .setProject(requiredEnvVars.VITE_APPWRITE_PROJECT_ID);
+
+// Configure Realtime endpoint for WebSocket connections
+// Convert https:// to wss:// for WebSocket connections
+const realtimeEndpoint = requiredEnvVars.VITE_APPWRITE_ENDPOINT.replace('https://', 'wss://').replace('http://', 'ws://');
+appwriteClient.setEndpointRealtime(realtimeEndpoint);
 
 // Initialize Appwrite services
 export const account = new Account(appwriteClient);

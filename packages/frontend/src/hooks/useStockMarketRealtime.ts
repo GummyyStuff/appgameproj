@@ -7,6 +7,7 @@
  * - Candles (candles collection)
  * 
  * Uses Appwrite Client.subscribe() for Web/JavaScript
+ * Channel format: databases.<DATABASE_ID>.collections.<COLLECTION_ID>.documents.<DOCUMENT_ID>
  * See: https://appwrite.io/docs/apis/realtime
  */
 
@@ -36,18 +37,18 @@ export function useStockMarketRealtime({
   /**
    * Subscribe to market state updates
    * Uses client.subscribe() for Web/JavaScript
-   * Channel format: databases.<DATABASE_ID>.tables.<TABLE_ID>.rows.<ROW_ID>
+   * Channel format: databases.<DATABASE_ID>.collections.<COLLECTION_ID>.documents.<DOCUMENT_ID>
    */
   const subscribeToMarketState = useCallback(() => {
     if (!onPriceUpdate) return
 
     const unsubscribe = appwriteClient.subscribe(
-      `databases.${DATABASE_ID}.tables.stock_market_state.rows.current`,
+      `databases.${DATABASE_ID}.collections.stock_market_state.documents.current`,
       (response: any) => {
         // Check for update events
         if (response.events && (
-          response.events.includes('databases.*.tables.*.rows.*.update') ||
-          response.events.includes(`databases.${DATABASE_ID}.tables.stock_market_state.rows.current.update`)
+          response.events.includes('databases.*.collections.*.documents.*.update') ||
+          response.events.includes(`databases.${DATABASE_ID}.collections.stock_market_state.documents.current.update`)
         )) {
           console.log('📊 Market state updated:', response.payload)
           onPriceUpdate(response.payload as MarketState)
@@ -67,12 +68,12 @@ export function useStockMarketRealtime({
     if (!onTradeUpdate) return
 
     const unsubscribe = appwriteClient.subscribe(
-      `databases.${DATABASE_ID}.tables.stock_market_trades.rows`,
+      `databases.${DATABASE_ID}.collections.stock_market_trades.documents`,
       (response: any) => {
         // Check for create events
         if (response.events && (
-          response.events.includes('databases.*.tables.*.rows.*.create') ||
-          response.events.includes(`databases.${DATABASE_ID}.tables.stock_market_trades.rows.*.create`)
+          response.events.includes('databases.*.collections.*.documents.*.create') ||
+          response.events.includes(`databases.${DATABASE_ID}.collections.stock_market_trades.documents.*.create`)
         )) {
           console.log('💹 New trade:', response.payload)
           onTradeUpdate(response.payload as Trade)
@@ -92,12 +93,12 @@ export function useStockMarketRealtime({
     if (!onCandleUpdate) return
 
     const unsubscribe = appwriteClient.subscribe(
-      `databases.${DATABASE_ID}.tables.stock_market_candles.rows`,
+      `databases.${DATABASE_ID}.collections.stock_market_candles.documents`,
       (response: any) => {
         // Check for create events
         if (response.events && (
-          response.events.includes('databases.*.tables.*.rows.*.create') ||
-          response.events.includes(`databases.${DATABASE_ID}.tables.stock_market_candles.rows.*.create`)
+          response.events.includes('databases.*.collections.*.documents.*.create') ||
+          response.events.includes(`databases.${DATABASE_ID}.collections.stock_market_candles.documents.*.create`)
         )) {
           console.log('🕯️ New candle:', response.payload)
           onCandleUpdate(response.payload as Candle)

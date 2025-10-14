@@ -1,111 +1,140 @@
-# Stock Market Real-time Fix
+# Stock Market Realtime Connection Fix
 
-## Issues Fixed
+## Problem
+The Appwrite realtime connection for the stock market game was failing with the following errors:
+1. WebSocket connection to `wss://db.juanis.cool/v1/realtime` was failing
+2. WebSocket was closed before the connection was established
+3. Wrong channel format being used (tables/rows instead of collections/documents)
 
-### 1. Real-time Updates Not Working
-**Problem:** The stock market wasn't updating in real-time despite having a realtime hook.
+## Root Causes
 
-**Root Cause:** Incorrect channel format in the Appwrite Realtime subscription.
+### 1. Missing Realtime Endpoint Configuration
+The Appwrite client was configured with the HTTP endpoint (`https://db.juanis.cool/v1`) but the realtime WebSocket connection needs the WSS endpoint (`wss://db.juanis.cool/v1/realtime`).
 
-**Solution:** Updated the channel format from:
-- ❌ `databases.${DATABASE_ID}.collections.stock_market_state.documents.current`
-- ✅ `databases.${DATABASE_ID}.tables.stock_market_state.rows.current`
+### 2. Incorrect Channel Format
+The stock market collections use the old Appwrite API format (collections/documents), but the realtime hook was trying to subscribe using the new format (tables/rows).
 
-**Changes Made:**
-- Fixed channel format in `useStockMarketRealtime.ts` to use `tables` instead of `collections`
-- Updated event filtering to properly detect update/create events
-- Added console logging for debugging real-time updates
+## Fixes Applied
 
-### 2. Page Refresh on Buy/Sell
-**Problem:** Buying or selling stocks caused the entire page to refresh.
+### 1. Configured Realtime Endpoint
+**File:** `packages/frontend/src/lib/appwrite.ts`
 
-**Root Cause:** The `onTradeSuccess` callback was calling `loadInitialData()` which reloaded all market data.
+Added code to automatically convert the HTTP endpoint to WSS for WebSocket connections:
 
-**Solution:** Removed the unnecessary callback and let the component handle its own state updates.
-
-**Changes Made:**
-- Removed `onTradeSuccess` prop from `StockMarketTrading` component
-- Removed `loadInitialData` callback from `StockMarketPage`
-- Position and balance updates now happen locally without full page reload
-
-## Technical Details
-
-### Appwrite Realtime Channels
-
-The correct channel format for Appwrite Realtime subscriptions is:
-
-```
-databases.<DATABASE_ID>.tables.<TABLE_ID>.rows.<ROW_ID>
+```typescript
+// Configure Realtime endpoint for WebSocket connections
+// Convert https:// to wss:// for WebSocket connections
+const realtimeEndpoint = requiredEnvVars.VITE_APPWRITE_ENDPOINT.replace('https://', 'wss://').replace('http://', 'ws://');
+appwriteClient.setEndpointRealtime(realtimeEndpoint);
 ```
 
-For subscribing to all rows in a table:
+### 2. Fixed Channel Format
+**File:** `packages/frontend/src/hooks/useStockMarketRealtime.ts`
+
+Updated all channel subscriptions to use the correct format:
+
+**Before:**
+```typescript
+`databases.${DATABASE_ID}.tables.stock_market_state.rows.current`
+`databases.${DATABASE_ID}.tables.stock_market_trades.rows`
+`databases.${DATABASE_ID}.tables.stock_market_candles.rows`
 ```
-databases.<DATABASE_ID>.tables.<TABLE_ID>.rows
+
+**After:**
+```typescript
+`databases.${DATABASE_ID}.collections.stock_market_state.documents.current`
+`databases.${DATABASE_ID}.collections.stock_market_trades.documents`
+`databases.${DATABASE_ID}.collections.stock_market_candles.documents`
 ```
-
-### Event Types
-
-The following events are available for real-time updates:
-
-- `databases.*.tables.*.rows.*.create` - New row created
-- `databases.*.tables.*.rows.*.update` - Row updated
-- `databases.*.tables.*.rows.*.delete` - Row deleted
-
-### Files Modified
-
-1. **`packages/frontend/src/hooks/useStockMarketRealtime.ts`**
-   - Fixed channel format from `collections` to `tables`
-   - Added better event filtering
-   - Added console logging for debugging
-
-2. **`packages/frontend/src/pages/StockMarketPage.tsx`**
-   - Removed `onTradeSuccess` callback
-   - Simplified component props
-
-3. **`packages/frontend/src/components/games/StockMarketTrading.tsx`**
-   - Removed `onTradeSuccess` prop
-   - Position updates now happen locally
 
 ## Testing
 
-To verify the fixes work:
+To verify the fix works:
 
-1. **Real-time Updates:**
-   - Open the stock market page
-   - Open browser console
-   - You should see: `✅ Subscribed to market state updates`
-   - Watch the price update in real-time without manual refresh
+1. **Restart the frontend development server:**
+   ```bash
+   cd packages/frontend
+   bun run dev
+   ```
 
-2. **No Page Refresh:**
-   - Buy or sell shares
-   - The page should NOT reload
-   - Only the position and balance should update
+2. **Navigate to the Stock Market page:**
+   - Open your browser to the stock market page
+   - Open the browser console (F12)
+   - Look for these success messages:
+     - `✅ Subscribed to market state updates`
+     - `✅ Subscribed to trade feed updates`
+     - `✅ Subscribed to candle updates`
+     - `✅ All stock market subscriptions active`
 
-## Documentation References
+3. **Verify realtime updates:**
+   - The stock price should update in real-time
+   - The chart should update with new candles
+   - Trade feed should show new trades as they happen
 
-- [Appwrite Realtime API](https://appwrite.io/docs/apis/realtime)
-- [Appwrite Events](https://appwrite.io/docs/advanced/platform/events)
-- [Realtime Channels](https://appwrite.io/docs/apis/realtime#channels)
+## Expected Behavior
 
-## Future Improvements
+After the fix, the stock market page should:
+- ✅ Load the initial market data
+- ✅ Establish WebSocket connection to Appwrite Realtime
+- ✅ Subscribe to market state updates
+- ✅ Subscribe to trade feed updates
+- ✅ Subscribe to candle updates
+- ✅ Display real-time price changes on the chart
+- ✅ Update the current price display in real-time
+- ✅ Show new trades in the trade feed
 
-1. **Add Position Real-time Updates:**
-   - Subscribe to position changes in real-time
-   - Update position display automatically when trades execute
+## Troubleshooting
 
-2. **Add Trade Feed Real-time Updates:**
-   - Show recent trades in real-time
-   - Update trade history automatically
+If you still see errors:
 
-3. **Add Candle Real-time Updates:**
-   - Update chart candles in real-time
-   - Add new candles as they're created
+1. **Check the browser console for WebSocket errors**
+   - Should see `✅ Subscribed to...` messages
+   - Should NOT see `WebSocket connection failed` errors
 
-4. **Error Handling:**
-   - Add reconnection logic for WebSocket disconnections
-   - Show connection status to users
+2. **Verify environment variables:**
+   ```bash
+   cat packages/frontend/.env
+   ```
+   - Ensure `VITE_APPWRITE_ENDPOINT=https://db.juanis.cool/v1`
+   - Ensure `VITE_APPWRITE_PROJECT_ID=tarkovcas`
+   - Ensure `VITE_APPWRITE_DATABASE_ID=main_db`
 
-5. **Performance Optimization:**
-   - Debounce rapid price updates
-   - Batch multiple updates together
+3. **Check Appwrite server logs:**
+   - Verify the WebSocket endpoint is accessible
+   - Check if there are any permission issues
 
+4. **Verify stock market collections exist:**
+   ```bash
+   cd packages/backend
+   bun run packages/backend/scripts/setup-stock-market-collections.ts
+   ```
+
+## Technical Details
+
+### Channel Format
+Appwrite Realtime uses channels to subscribe to specific resources. The format is:
+```
+databases.<DATABASE_ID>.collections.<COLLECTION_ID>.documents.<DOCUMENT_ID>
+```
+
+For wildcards:
+- `databases.<DATABASE_ID>.collections.<COLLECTION_ID>.documents` - All documents in a collection
+- `databases.*.collections.*.documents.*` - All documents in all collections
+
+### Event Types
+- `create` - New document created
+- `update` - Document updated
+- `delete` - Document deleted
+
+### WebSocket Connection
+The Appwrite client automatically handles:
+- WebSocket connection establishment
+- Reconnection on disconnect
+- Heartbeat/ping messages
+- Authentication via session
+
+## References
+
+- [Appwrite Realtime Documentation](https://appwrite.io/docs/apis/realtime)
+- [Appwrite Client SDK](https://appwrite.io/docs/sdks/web)
+- [WebSocket Protocol](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket)
