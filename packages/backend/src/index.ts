@@ -225,8 +225,17 @@ app.use('/*', serveStatic({
     } else if (path.endsWith('.html')) {
       c.header('Content-Type', 'text/html; charset=utf-8')
     }
-    // Set cache headers for static assets
-    c.header('Cache-Control', 'public, max-age=31536000, immutable')
+    
+    // Set cache headers based on file type
+    if (path.endsWith('.html')) {
+      // Don't cache HTML files - always serve fresh
+      c.header('Cache-Control', 'no-cache, no-store, must-revalidate')
+      c.header('Pragma', 'no-cache')
+      c.header('Expires', '0')
+    } else if (path.match(/\.(js|css|woff|woff2|ttf|eot|svg|png|jpg|jpeg|gif|webp|ico|webmanifest)$/)) {
+      // Cache static assets for 1 year (they have content hashes in their names)
+      c.header('Cache-Control', 'public, max-age=31536000, immutable')
+    }
   },
   onNotFound: (path, c) => {
     console.log(`❌ [NOT FOUND] Static file not found: ${path}, Request path: ${c.req.path}`)
@@ -246,6 +255,12 @@ app.get('*', async (c) => {
   }
   // Otherwise serve index.html for SPA routing
   console.log(`📄 [SPA] Serving index.html for: ${path}`)
+  
+  // Don't cache HTML files - always serve fresh
+  c.header('Cache-Control', 'no-cache, no-store, must-revalidate')
+  c.header('Pragma', 'no-cache')
+  c.header('Expires', '0')
+  
   return serveStatic({ path: './public/index.html' })(c, async () => {})
 })
 
