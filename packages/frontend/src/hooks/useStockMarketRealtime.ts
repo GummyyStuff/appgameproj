@@ -40,11 +40,18 @@ export function useStockMarketRealtime({
    * Channel format: databases.<DATABASE_ID>.collections.<COLLECTION_ID>.documents.<DOCUMENT_ID>
    */
   const subscribeToMarketState = useCallback(() => {
-    if (!onPriceUpdate) return
+    if (!onPriceUpdate) {
+      console.log('[STOCK_MARKET] Skipping market state subscription - no callback')
+      return
+    }
+
+    const channel = `databases.${DATABASE_ID}.collections.stock_market_state.documents.current`
+    console.log('[STOCK_MARKET] Subscribing to channel:', channel)
 
     const unsubscribe = appwriteClient.subscribe(
-      `databases.${DATABASE_ID}.collections.stock_market_state.documents.current`,
+      channel,
       (response: any) => {
+        console.log('[STOCK_MARKET] Received update:', response)
         // Check for update events
         if (response.events && (
           response.events.includes('databases.*.collections.*.documents.*.update') ||
@@ -65,11 +72,18 @@ export function useStockMarketRealtime({
    * Uses client.subscribe() for Web/JavaScript
    */
   const subscribeToTrades = useCallback(() => {
-    if (!onTradeUpdate) return
+    if (!onTradeUpdate) {
+      console.log('[STOCK_MARKET] Skipping trades subscription - no callback')
+      return
+    }
+
+    const channel = `databases.${DATABASE_ID}.collections.stock_market_trades.documents`
+    console.log('[STOCK_MARKET] Subscribing to channel:', channel)
 
     const unsubscribe = appwriteClient.subscribe(
-      `databases.${DATABASE_ID}.collections.stock_market_trades.documents`,
+      channel,
       (response: any) => {
+        console.log('[STOCK_MARKET] Received trade update:', response)
         // Check for create events
         if (response.events && (
           response.events.includes('databases.*.collections.*.documents.*.create') ||
@@ -90,11 +104,18 @@ export function useStockMarketRealtime({
    * Uses client.subscribe() for Web/JavaScript
    */
   const subscribeToCandles = useCallback(() => {
-    if (!onCandleUpdate) return
+    if (!onCandleUpdate) {
+      console.log('[STOCK_MARKET] Skipping candles subscription - no callback')
+      return
+    }
+
+    const channel = `databases.${DATABASE_ID}.collections.stock_market_candles.documents`
+    console.log('[STOCK_MARKET] Subscribing to channel:', channel)
 
     const unsubscribe = appwriteClient.subscribe(
-      `databases.${DATABASE_ID}.collections.stock_market_candles.documents`,
+      channel,
       (response: any) => {
+        console.log('[STOCK_MARKET] Received candle update:', response)
         // Check for create events
         if (response.events && (
           response.events.includes('databases.*.collections.*.documents.*.create') ||
@@ -114,19 +135,38 @@ export function useStockMarketRealtime({
    * Subscribe to all realtime channels
    */
   const subscribeAll = useCallback(() => {
-    if (!enabled) return
+    console.log('[STOCK_MARKET] subscribeAll called, enabled:', enabled)
+    
+    if (!enabled) {
+      console.log('[STOCK_MARKET] Subscriptions disabled, skipping')
+      return
+    }
 
     try {
+      console.log('[STOCK_MARKET] Starting subscriptions...')
+      console.log('[STOCK_MARKET] Database ID:', DATABASE_ID)
+      
       subscribeToMarketState()
       subscribeToTrades()
       subscribeToCandles()
+      
       setIsConnected(true)
       setError(null)
       console.log('✅ All stock market subscriptions active')
+      
+      // Production logging
+      if (import.meta.env.PROD) {
+        console.log('[STOCK_MARKET_REALTIME] Connected and subscribed to all channels')
+      }
     } catch (err) {
       console.error('❌ Failed to subscribe to stock market realtime:', err)
       setError(err instanceof Error ? err.message : 'Failed to connect to realtime')
       setIsConnected(false)
+      
+      // Production logging
+      if (import.meta.env.PROD) {
+        console.error('[STOCK_MARKET_REALTIME] Connection failed:', err)
+      }
     }
   }, [enabled, subscribeToMarketState, subscribeToTrades, subscribeToCandles])
 

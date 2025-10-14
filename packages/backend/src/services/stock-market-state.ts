@@ -97,6 +97,13 @@ export class StockMarketStateService {
       this.startPriceGeneration()
       
       console.log('✅ Stock Market State Service initialized')
+      
+      // Production logging - log to a file or monitoring service
+      if (process.env.NODE_ENV === 'production') {
+        console.log(`[STOCK_MARKET_SERVICE] Initialized at ${new Date().toISOString()}`)
+        console.log(`[STOCK_MARKET_SERVICE] Current price: $${this.currentPrice.toFixed(2)}`)
+        console.log(`[STOCK_MARKET_SERVICE] Service is running and generating updates`)
+      }
     } catch (error) {
       console.error('❌ Failed to initialize Stock Market State Service:', error)
       throw error
@@ -262,6 +269,11 @@ export class StockMarketStateService {
         // Log periodically
         if (this.tickCount % 10 === 0) {
           console.log(`📈 Tick ${this.tickCount}: $${newPrice.toFixed(2)} (${this.trend}, vol: ${(this.volatility * 100).toFixed(2)}%)`)
+          
+          // Production logging
+          if (process.env.NODE_ENV === 'production') {
+            console.log(`[STOCK_MARKET_SERVICE] Tick ${this.tickCount}: Price $${newPrice.toFixed(2)}`)
+          }
         }
         
         // Success - break out of retry loop

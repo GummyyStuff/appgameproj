@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { env, config } from '../config/env'
 import { appwriteDb } from '../services/appwrite-database'
 import { COLLECTION_IDS } from '../config/collections'
+import { stockMarketStateService } from '../services/stock-market-state'
 
 const monitoring = new Hono()
 
@@ -169,6 +170,36 @@ monitoring.get('/metrics', async (c) => {
     })
   } catch (error) {
     return c.json({ error: 'Failed to generate metrics' }, 500)
+  }
+})
+
+// Stock Market Service Health Check
+monitoring.get('/health/stock-market', async (c) => {
+  try {
+    const state = await stockMarketStateService.getCurrentState()
+    
+    return c.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      service: 'stock-market-state-service',
+      state: {
+        current_price: state.current_price,
+        prev_price: state.prev_price,
+        trend: state.trend,
+        volatility: state.volatility,
+        tick_count: state.tick_count,
+        last_update: state.last_update
+      },
+      message: 'Stock market service is running and generating updates'
+    }, 200)
+  } catch (error) {
+    return c.json({
+      status: 'error',
+      timestamp: new Date().toISOString(),
+      service: 'stock-market-state-service',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      message: 'Stock market service is not running or encountered an error'
+    }, 503)
   }
 })
 
