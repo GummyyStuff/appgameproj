@@ -131,7 +131,15 @@ export class StockMarketStateService {
         'current_candle'
       )
       
-      this.currentCandle = doc as unknown as Candle
+      // Extract only the candle data, excluding Appwrite system attributes
+      this.currentCandle = {
+        timestamp: doc.timestamp,
+        open: doc.open,
+        high: doc.high,
+        low: doc.low,
+        close: doc.close,
+        volume: doc.volume,
+      }
       this.candleStartTime = new Date(doc.timestamp).getTime()
       
       console.log(`✅ Loaded current candle: O:$${this.currentCandle.open.toFixed(2)} H:$${this.currentCandle.high.toFixed(2)} L:$${this.currentCandle.low.toFixed(2)} C:$${this.currentCandle.close.toFixed(2)}`)
