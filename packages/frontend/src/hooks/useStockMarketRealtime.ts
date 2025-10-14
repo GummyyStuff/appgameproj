@@ -36,14 +36,20 @@ export function useStockMarketRealtime({
   /**
    * Subscribe to market state updates
    * Uses client.subscribe() for Web/JavaScript
+   * Channel format: databases.<DATABASE_ID>.tables.<TABLE_ID>.rows.<ROW_ID>
    */
   const subscribeToMarketState = useCallback(() => {
     if (!onPriceUpdate) return
 
     const unsubscribe = appwriteClient.subscribe(
-      `databases.${DATABASE_ID}.collections.stock_market_state.documents.current`,
+      `databases.${DATABASE_ID}.tables.stock_market_state.rows.current`,
       (response: any) => {
-        if (response.events.includes('databases.*.collections.*.documents.*.update')) {
+        // Check for update events
+        if (response.events && (
+          response.events.includes('databases.*.tables.*.rows.*.update') ||
+          response.events.includes(`databases.${DATABASE_ID}.tables.stock_market_state.rows.current.update`)
+        )) {
+          console.log('📊 Market state updated:', response.payload)
           onPriceUpdate(response.payload as MarketState)
         }
       }
@@ -61,9 +67,14 @@ export function useStockMarketRealtime({
     if (!onTradeUpdate) return
 
     const unsubscribe = appwriteClient.subscribe(
-      `databases.${DATABASE_ID}.collections.stock_market_trades.documents`,
+      `databases.${DATABASE_ID}.tables.stock_market_trades.rows`,
       (response: any) => {
-        if (response.events.includes('databases.*.collections.*.documents.*.create')) {
+        // Check for create events
+        if (response.events && (
+          response.events.includes('databases.*.tables.*.rows.*.create') ||
+          response.events.includes(`databases.${DATABASE_ID}.tables.stock_market_trades.rows.*.create`)
+        )) {
+          console.log('💹 New trade:', response.payload)
           onTradeUpdate(response.payload as Trade)
         }
       }
@@ -81,9 +92,14 @@ export function useStockMarketRealtime({
     if (!onCandleUpdate) return
 
     const unsubscribe = appwriteClient.subscribe(
-      `databases.${DATABASE_ID}.collections.stock_market_candles.documents`,
+      `databases.${DATABASE_ID}.tables.stock_market_candles.rows`,
       (response: any) => {
-        if (response.events.includes('databases.*.collections.*.documents.*.create')) {
+        // Check for create events
+        if (response.events && (
+          response.events.includes('databases.*.tables.*.rows.*.create') ||
+          response.events.includes(`databases.${DATABASE_ID}.tables.stock_market_candles.rows.*.create`)
+        )) {
+          console.log('🕯️ New candle:', response.payload)
           onCandleUpdate(response.payload as Candle)
         }
       }

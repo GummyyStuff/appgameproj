@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@radix-ui/react-collapsible": "1.1.12",
+    "@radix-ui/react-slot": "1.2.3",
     "@tanstack/react-query": "^5.89.0",
     "appwrite": "catalog:default",
     "clsx": "2.1.1",

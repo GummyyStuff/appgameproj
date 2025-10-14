@@ -6,7 +6,8 @@
 
 import { useState, useEffect } from 'react';
 import { Card } from '../ui/card';
-import { Trophy, TrendingUp, TrendingDown, Award, RefreshCw } from 'lucide-react';
+import { Badge } from '../ui/badge';
+import { Trophy, TrendingUp, TrendingDown, Award, RefreshCw, Medal } from 'lucide-react';
 import { getLeaderboard } from '../../services/stock-market-api';
 
 interface LeaderboardEntry {
@@ -110,30 +111,47 @@ export function StockMarketLeaderboard({ timeframe = 'all' }: StockMarketLeaderb
                   : 'bg-tarkov-darker border border-tarkov-border'
               }`}
             >
-              {/* Rank */}
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-tarkov-accent flex items-center justify-center">
-                <span className="text-sm font-bold text-tarkov-dark">
-                  {entry.rank}
-                </span>
+              {/* Rank with Medal Icon for Top 3 */}
+              <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
+                index === 0 ? 'bg-yellow-500' :
+                index === 1 ? 'bg-gray-400' :
+                index === 2 ? 'bg-orange-500' :
+                'bg-tarkov-accent'
+              }`}>
+                {index < 3 ? (
+                  <Medal className={`w-6 h-6 ${
+                    index === 0 ? 'text-yellow-900' :
+                    index === 1 ? 'text-gray-900' :
+                    'text-orange-900'
+                  }`} />
+                ) : (
+                  <span className="text-sm font-bold text-tarkov-dark">
+                    {entry.rank}
+                  </span>
+                )}
               </div>
 
               {/* Username */}
               <div className="flex-1">
                 <p className="font-semibold text-tarkov-text">{entry.username}</p>
-                <p className="text-xs text-tarkov-text-secondary">
-                  {entry.trades} trades
-                </p>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-xs text-tarkov-text-secondary">
+                    {entry.trades} trades
+                  </span>
+                  <Badge variant={entry.roi >= 0 ? 'default' : 'destructive'}>
+                    {entry.roi >= 0 ? '+' : ''}{entry.roi.toFixed(2)}% ROI
+                  </Badge>
+                </div>
               </div>
 
               {/* Profit/Loss */}
               <div className="text-right">
-                <p className={`font-bold ${entry.totalProfit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                <p className={`font-bold text-lg ${entry.totalProfit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                   {entry.totalProfit >= 0 ? '+' : ''}
                   ${entry.totalProfit.toFixed(2)}
                 </p>
-                <p className="text-xs text-tarkov-text-secondary">
-                  {entry.roi >= 0 ? '+' : ''}
-                  {entry.roi.toFixed(2)}% ROI
+                <p className="text-xs text-tarkov-text-secondary mt-0.5">
+                  Total Profit
                 </p>
               </div>
 

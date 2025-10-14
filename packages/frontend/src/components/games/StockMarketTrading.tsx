@@ -9,17 +9,18 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Card } from '../ui/card';
+import { Badge } from '../ui/badge';
+import { Alert, AlertDescription } from '../ui/alert';
 import { buyShares, sellShares, getUserPosition, type Position } from '../../services/stock-market-api';
 import { useAuth } from '../../hooks/useAuth';
 import { useBalance } from '../../hooks/useBalance';
-import { TrendingUp, TrendingDown, DollarSign, Package } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Package, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 interface StockMarketTradingProps {
   currentPrice: number
-  onTradeSuccess?: () => void
 }
 
-export function StockMarketTrading({ currentPrice, onTradeSuccess }: StockMarketTradingProps) {
+export function StockMarketTrading({ currentPrice }: StockMarketTradingProps) {
   const { user } = useAuth()
   const { balance, refetch: refreshBalance } = useBalance()
   const [position, setPosition] = useState<Position | null>(null)
@@ -67,15 +68,11 @@ export function StockMarketTrading({ currentPrice, onTradeSuccess }: StockMarket
       await buyShares(sharesNum)
       setSuccess(`Successfully bought ${sharesNum} shares at $${currentPrice.toFixed(2)}`)
       
-      // Refresh data
+      // Refresh data without page reload
       await Promise.all([loadPosition(), refreshBalance()])
       
       // Clear success message after 3 seconds
       setTimeout(() => setSuccess(null), 3000)
-      
-      if (onTradeSuccess) {
-        onTradeSuccess()
-      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to execute buy order')
     } finally {
@@ -106,15 +103,11 @@ export function StockMarketTrading({ currentPrice, onTradeSuccess }: StockMarket
       const proceeds = sharesNum * currentPrice
       setSuccess(`Successfully sold ${sharesNum} shares for $${proceeds.toFixed(2)}`)
       
-      // Refresh data
+      // Refresh data without page reload
       await Promise.all([loadPosition(), refreshBalance()])
       
       // Clear success message after 3 seconds
       setTimeout(() => setSuccess(null), 3000)
-      
-      if (onTradeSuccess) {
-        onTradeSuccess()
-      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to execute sell order')
     } finally {
@@ -142,6 +135,9 @@ export function StockMarketTrading({ currentPrice, onTradeSuccess }: StockMarket
               <Package className="w-5 h-5" />
               Current Position
             </h3>
+            <Badge variant={position.unrealized_pnl >= 0 ? 'default' : 'destructive'}>
+              {position.unrealized_pnl >= 0 ? '+' : ''}{position.unrealized_pnl.toFixed(2)} P&L
+            </Badge>
           </div>
           
           <div className="grid grid-cols-2 gap-4">
@@ -207,15 +203,17 @@ export function StockMarketTrading({ currentPrice, onTradeSuccess }: StockMarket
           </div>
 
           {error && (
-            <div className="p-3 bg-red-500/10 border border-red-500/50 rounded-lg text-red-400 text-sm">
-              {error}
-            </div>
+            <Alert variant="destructive">
+              <AlertCircle />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
           )}
 
           {success && (
-            <div className="p-3 bg-green-500/10 border border-green-500/50 rounded-lg text-green-400 text-sm">
-              {success}
-            </div>
+            <Alert>
+              <CheckCircle2 />
+              <AlertDescription>{success}</AlertDescription>
+            </Alert>
           )}
 
           <div className="flex gap-3">

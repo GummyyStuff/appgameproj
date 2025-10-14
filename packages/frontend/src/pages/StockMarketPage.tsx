@@ -142,7 +142,6 @@ export default function StockMarketPage() {
           <div>
             <StockMarketTrading
               currentPrice={marketState.current_price}
-              onTradeSuccess={loadInitialData}
             />
           </div>
         </div>
