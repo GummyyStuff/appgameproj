@@ -20,7 +20,7 @@ import { BaseGame, GameBet, GameResult } from './types';
 import { SecureRandomGenerator } from './random-generator';
 import { PayoutCalculator } from './payout-calculator';
 import { CurrencyService } from '../currency-new';
-import { Client, Databases, ID } from 'node-appwrite';
+import { Client, Databases, ID, Query } from 'node-appwrite';
 import { appwriteClient } from '../../config/appwrite';
 import { env } from '../../config/env';
 import Decimal from 'decimal.js';
@@ -109,8 +109,8 @@ export class StockMarketGame extends BaseGame {
         DATABASE_ID,
         'stock_market_positions',
         [
-          `equal("user_id", "${userId}")`,
-          'limit(1)'
+          Query.equal('user_id', [userId]),
+          Query.limit(1)
         ]
       )
       
@@ -577,9 +577,9 @@ export class StockMarketGame extends BaseGame {
         DATABASE_ID,
         'stock_market_trades',
         [
-          `equal("user_id", "${userId}")`,
-          `orderDesc("timestamp")`,
-          `limit(${limit})`
+          Query.equal('user_id', [userId]),
+          Query.orderDesc('timestamp'),
+          Query.limit(limit)
         ]
       )
       
@@ -599,8 +599,8 @@ export class StockMarketGame extends BaseGame {
         DATABASE_ID,
         'stock_market_trades',
         [
-          'orderDesc("timestamp")',
-          `limit(${limit})`
+          Query.orderDesc('timestamp'),
+          Query.limit(limit)
         ]
       )
       
