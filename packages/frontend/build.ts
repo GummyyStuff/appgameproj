@@ -59,8 +59,9 @@ const result = await Bun.build({
   outdir: './dist',
   target: 'browser',
   
-  // Enable code splitting for production (Bun 1.3 stable)
-  splitting: !isDev,
+  // Disable code splitting for deterministic builds (prevents chunk hash mismatches)
+  // splitting: !isDev, // Disabled to ensure consistent builds across environments
+  splitting: false,
   
   // Granular minification control
   minify: isDev ? false : {
