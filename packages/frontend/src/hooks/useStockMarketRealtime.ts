@@ -5,10 +5,12 @@
  * - Price updates (market state document)
  * - Trade feed (trades collection)
  * - Candles (candles collection)
+ * 
+ * Uses Appwrite Client.subscribe() for Web/JavaScript
+ * See: https://appwrite.io/docs/apis/realtime
  */
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { RealtimeResponseEvent } from 'appwrite';
 import { appwriteClient } from '../lib/appwrite';
 import type { MarketState, Trade, Candle } from '../services/stock-market-api';
 
@@ -33,13 +35,14 @@ export function useStockMarketRealtime({
 
   /**
    * Subscribe to market state updates
+   * Uses client.subscribe() for Web/JavaScript
    */
   const subscribeToMarketState = useCallback(() => {
     if (!onPriceUpdate) return
 
     const unsubscribe = appwriteClient.subscribe(
       `databases.${DATABASE_ID}.collections.stock_market_state.documents.current`,
-      (response: RealtimeResponseEvent<MarketState>) => {
+      (response: any) => {
         if (response.events.includes('databases.*.collections.*.documents.*.update')) {
           onPriceUpdate(response.payload as MarketState)
         }
@@ -52,13 +55,14 @@ export function useStockMarketRealtime({
 
   /**
    * Subscribe to trade feed updates
+   * Uses client.subscribe() for Web/JavaScript
    */
   const subscribeToTrades = useCallback(() => {
     if (!onTradeUpdate) return
 
     const unsubscribe = appwriteClient.subscribe(
       `databases.${DATABASE_ID}.collections.stock_market_trades.documents`,
-      (response: RealtimeResponseEvent<Trade>) => {
+      (response: any) => {
         if (response.events.includes('databases.*.collections.*.documents.*.create')) {
           onTradeUpdate(response.payload as Trade)
         }
@@ -71,13 +75,14 @@ export function useStockMarketRealtime({
 
   /**
    * Subscribe to candle updates
+   * Uses client.subscribe() for Web/JavaScript
    */
   const subscribeToCandles = useCallback(() => {
     if (!onCandleUpdate) return
 
     const unsubscribe = appwriteClient.subscribe(
       `databases.${DATABASE_ID}.collections.stock_market_candles.documents`,
-      (response: RealtimeResponseEvent<Candle>) => {
+      (response: any) => {
         if (response.events.includes('databases.*.collections.*.documents.*.create')) {
           onCandleUpdate(response.payload as Candle)
         }

@@ -92,11 +92,10 @@ const StatisticsDashboard: React.FC = () => {
       return result.stats;
     },
     enabled: !!user,
-    staleTime: 5000, // Consider data stale after 5 seconds
-    // Real-time updates via Appwrite Realtime (see useBalance hook)
-    // Fallback poll every 30 seconds in case WebSocket disconnects
-    refetchInterval: 30000,
-    refetchIntervalInBackground: true,
+    staleTime: Infinity, // Data never goes stale - WebSocket keeps it fresh
+    // Use WebSocket for real-time updates - no polling needed!
+    refetchInterval: false, // Disable polling - WebSocket handles updates
+    refetchIntervalInBackground: false,
   })
 
   const { data: gameHistory, isLoading: historyLoading } = useQuery({
@@ -136,11 +135,10 @@ const StatisticsDashboard: React.FC = () => {
       return result.history as GameHistory[];
     },
     enabled: !!user,
-    staleTime: 10000, // Consider data stale after 10 seconds
-    // Real-time updates via Appwrite Realtime subscription to game_history collection
-    // Fallback poll every 30 seconds in case WebSocket disconnects
-    refetchInterval: 30000,
-    refetchIntervalInBackground: true,
+    staleTime: Infinity, // Data never goes stale - WebSocket keeps it fresh
+    // Use WebSocket for real-time updates - no polling needed!
+    refetchInterval: false, // Disable polling - WebSocket handles updates
+    refetchIntervalInBackground: false,
   })
 
   // Calculate statistics from game history

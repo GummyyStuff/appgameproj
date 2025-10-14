@@ -12,6 +12,7 @@ import { performanceMiddleware } from './middleware/performance'
 import { apiRoutes } from './routes/api'
 import { monitoring } from './routes/monitoring'
 // Supabase realtime service removed - now using Appwrite realtime
+// Custom WebSocket server removed - now using Appwrite Realtime
 
 const app = new Hono()
 
@@ -314,7 +315,15 @@ console.log(`📊 Metrics: ${config.metricsEnabled ? 'enabled' : 'disabled'}`)
 // Initialize services
 initializeServices()
 
-export default {
+// Start Hono server
+// Note: Real-time updates are now handled by Appwrite Realtime
+// No custom WebSocket server needed!
+const server = Bun.serve({
   port,
   fetch: app.fetch,
-}
+})
+
+console.log(`✅ Server running on http://localhost:${port}`)
+console.log(`📡 Real-time updates via Appwrite Realtime`)
+
+export default server

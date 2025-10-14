@@ -25,7 +25,7 @@ export const useBalance = (options: {
     const queryClient = useQueryClient()
     const [previousBalance, setPreviousBalance] = useState<number | undefined>()
 
-    // Query for balance data from backend API with REAL-TIME updates via Appwrite Realtime
+    // Query for balance data from backend API with REAL-TIME updates via WebSocket
     const { data: balance, isLoading, error, refetch } = useQuery({
         queryKey: ['balance', user?.id],
         queryFn: async () => {
@@ -47,11 +47,10 @@ export const useBalance = (options: {
             return result.balance || 0;
         },
         enabled: !!user,
-        // Use real-time updates via Appwrite Realtime instead of polling
-        // Keep a slow fallback poll in case WebSocket disconnects
-        refetchInterval: enableRealtime ? 30000 : Math.min(refetchInterval, 3000), // 30s fallback if realtime enabled, 3s if not
-        staleTime: 5000, // Consider data stale after 5 seconds
-        refetchIntervalInBackground: true, // Continue polling even when tab is in background
+        // Use WebSocket for real-time updates - no polling needed!
+        refetchInterval: false, // Disable polling - WebSocket handles updates
+        staleTime: Infinity, // Data never goes stale - WebSocket keeps it fresh
+        refetchIntervalInBackground: false, // No background polling
     })
 
     // Track balance changes for animations

@@ -177,6 +177,12 @@ export class CurrencyService {
           gameRecorded = true;
           gameId = gameResult.gameId;
 
+          // ✅ REAL-TIME UPDATES NOW HANDLED BY APPWRITE REALTIME
+          // When we update the user document, Appwrite Realtime automatically broadcasts
+          // the changes to all subscribed clients via WebSocket connections.
+          // No need for custom WebSocket server!
+          console.log(`✅ Transaction completed for user ${userId}. Appwrite Realtime will broadcast updates automatically.`);
+
           // Success! Return result
           return {
             success: true,

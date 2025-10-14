@@ -44,11 +44,10 @@ const CurrencyManager: React.FC = () => {
       } as CurrencyStats
     },
     enabled: !!user,
-    staleTime: 5000, // Consider data stale after 5 seconds
-    // Real-time updates via Appwrite Realtime (see useBalance hook)
-    // Fallback poll every 30 seconds in case WebSocket disconnects
-    refetchInterval: 30000,
-    refetchIntervalInBackground: true,
+    staleTime: Infinity, // Data never goes stale - WebSocket keeps it fresh
+    // Use WebSocket for real-time updates - no polling needed!
+    refetchInterval: false, // Disable polling - WebSocket handles updates
+    refetchIntervalInBackground: false,
   })
 
   const formatCurrency = (amount: number) => {

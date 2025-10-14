@@ -1,10 +1,13 @@
 /**
  * Appwrite Realtime Service (Frontend)
- * Handles real-time subscriptions for chat, game updates, and presence
+ * Handles real-time subscriptions for balance, stats, and game updates
+ * Uses Appwrite's built-in Realtime API with WebSocket connections
+ * 
+ * Uses Appwrite Client.subscribe() for Web/JavaScript
+ * See: https://appwrite.io/docs/apis/realtime
  */
 
 import { appwriteClient } from '../lib/appwrite';
-import { RealtimeResponseEvent } from 'appwrite';
 
 const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID || 'main_db';
 
@@ -18,7 +21,7 @@ export const COLLECTION_IDS = {
 export type CollectionId = typeof COLLECTION_IDS[keyof typeof COLLECTION_IDS];
 
 /**
- * Subscribe to a collection for real-time updates
+ * Subscribe to a collection for real-time updates using Appwrite Realtime
  */
 export function subscribeToCollection<T>(
   collectionId: CollectionId,
@@ -30,9 +33,9 @@ export function subscribeToCollection<T>(
 ) {
   const channel = `databases.${DATABASE_ID}.collections.${collectionId}.documents`;
 
-  const unsubscribe = appwriteClient.subscribe<RealtimeResponseEvent<T>>(
+  const unsubscribe = appwriteClient.subscribe(
     channel,
-    (response) => {
+    (response: any) => {
       const payload = response.payload;
       
       if (!payload) return;
@@ -54,7 +57,7 @@ export function subscribeToCollection<T>(
 }
 
 /**
- * Subscribe to a specific document
+ * Subscribe to a specific document using Appwrite Realtime
  */
 export function subscribeToDocument<T>(
   collectionId: CollectionId,
@@ -66,9 +69,9 @@ export function subscribeToDocument<T>(
 ) {
   const channel = `databases.${DATABASE_ID}.collections.${collectionId}.documents.${documentId}`;
 
-  const unsubscribe = appwriteClient.subscribe<RealtimeResponseEvent<T>>(
+  const unsubscribe = appwriteClient.subscribe(
     channel,
-    (response) => {
+    (response: any) => {
       const payload = response.payload;
       
       if (!payload) return;
@@ -117,29 +120,67 @@ export function subscribeToChatPresence(callbacks: {
 }
 
 /**
- * Subscribe to user balance updates
+ * Subscribe to user balance updates via Appwrite Realtime
+ * Subscribes to the user document in the users collection
  */
 export function subscribeToUserBalance(
   userId: string,
   onBalanceUpdate: (balance: number) => void
 ) {
-  return subscribeToDocument(COLLECTION_IDS.USERS, userId, {
-    onUpdate: (user: any) => {
-      if (user.balance !== undefined) {
-        onBalanceUpdate(user.balance);
+  console.log(`🔔 Subscribing to balance updates for user ${userId}`)
+  
+  // Subscribe to the specific user document using Appwrite Realtime
+  const unsubscribe = appwriteClient.subscribe(
+    `databases.${DATABASE_ID}.collections.${COLLECTION_IDS.USERS}.documents.${userId}`,
+    (response: any) => {
+      const payload = response.payload;
+      
+      if (!payload) return;
+
+      const events = response.events || [];
+      
+      // Check if this is an update event
+      if (events.some(e => e.includes('.update'))) {
+        console.log('💰 User document updated:', payload);
+        
+        // Extract balance from the updated user document
+        if (payload.balance !== undefined) {
+          console.log('💰 Balance updated via realtime:', payload.balance);
+          onBalanceUpdate(payload.balance);
+        }
       }
-    },
-  });
+    }
+  );
+
+  return unsubscribe;
 }
 
 /**
- * Subscribe to game history (for activity feed)
+ * Subscribe to game history updates via Appwrite Realtime
  */
 export function subscribeToGameHistory(callbacks: {
   onNewGame?: (game: any) => void;
 }) {
-  return subscribeToCollection(COLLECTION_IDS.GAME_HISTORY, {
-    onCreate: callbacks.onNewGame,
-  });
+  console.log('🔔 Subscribing to game history updates')
+  
+  // Subscribe to the game_history collection
+  const unsubscribe = appwriteClient.subscribe(
+    `databases.${DATABASE_ID}.collections.${COLLECTION_IDS.GAME_HISTORY}.documents`,
+    (response: any) => {
+      const payload = response.payload;
+      
+      if (!payload) return;
+
+      const events = response.events || [];
+      
+      // Check if this is a create event (new game)
+      if (events.some(e => e.includes('.create'))) {
+        console.log('🎮 New game created:', payload);
+        callbacks.onNewGame?.(payload);
+      }
+    }
+  );
+
+  return unsubscribe;
 }
 
