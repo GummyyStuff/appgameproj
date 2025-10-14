@@ -315,15 +315,13 @@ console.log(`📊 Metrics: ${config.metricsEnabled ? 'enabled' : 'disabled'}`)
 // Initialize services
 initializeServices()
 
-// Start Hono server
+// Export the Hono app for Coolify/Bun to handle server initialization
 // Note: Real-time updates are now handled by Appwrite Realtime
 // No custom WebSocket server needed!
-const server = Bun.serve({
-  port,
-  fetch: app.fetch,
-})
-
-console.log(`✅ Server running on http://localhost:${port}`)
+console.log(`✅ Server configured for port ${port}`)
 console.log(`📡 Real-time updates via Appwrite Realtime`)
 
-export default server
+export default {
+  port,
+  fetch: app.fetch,
+}
