@@ -22,6 +22,12 @@ export function LiveTradeFeed({ maxTrades = 20 }: LiveTradeFeedProps) {
   // Subscribe to trade updates
   useStockMarketRealtime({
     onTradeUpdate: (newTrade) => {
+      // Validate trade data before adding
+      if (!newTrade || !newTrade.user_id || !newTrade.timestamp) {
+        console.warn('Invalid trade data received:', newTrade)
+        return
+      }
+
       setTrades((prev) => {
         const updated = [newTrade, ...prev]
         return updated.slice(0, maxTrades)
@@ -42,7 +48,11 @@ export function LiveTradeFeed({ maxTrades = 20 }: LiveTradeFeedProps) {
         const response = await fetch('/api/games/stock-market/trades?limit=20')
         if (response.ok) {
           const data = await response.json()
-          setTrades(data.trades || [])
+          // Filter out any invalid trades
+          const validTrades = (data.trades || []).filter((trade: any) => 
+            trade && trade.user_id && trade.timestamp && trade.price !== null && trade.price !== undefined
+          )
+          setTrades(validTrades)
         }
       } catch (error) {
         console.error('Failed to load initial trades:', error)
@@ -52,17 +62,24 @@ export function LiveTradeFeed({ maxTrades = 20 }: LiveTradeFeedProps) {
     loadInitialTrades()
   }, [])
 
-  const formatTime = (timestamp: string) => {
-    const date = new Date(timestamp)
-    return date.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false
-    })
+  const formatTime = (timestamp: string | null | undefined) => {
+    if (!timestamp) return '--:--:--'
+    try {
+      const date = new Date(timestamp)
+      if (isNaN(date.getTime())) return '--:--:--'
+      return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      })
+    } catch {
+      return '--:--:--'
+    }
   }
 
-  const formatUsername = (username: string) => {
+  const formatUsername = (username: string | null | undefined) => {
+    if (!username) return 'Anonymous'
     if (username.length > 12) {
       return username.substring(0, 12) + '...'
     }
@@ -96,7 +113,7 @@ export function LiveTradeFeed({ maxTrades = 20 }: LiveTradeFeedProps) {
           </div>
         ) : (
           <div className="divide-y divide-tarkov-secondary/30">
-            {trades.map((trade, index) => (
+            {trades.filter(trade => trade && trade.user_id && trade.timestamp).map((trade, index) => (
               <div
                 key={`${trade.user_id}-${trade.timestamp}-${index}`}
                 className={`px-4 py-2 hover:bg-tarkov-darker/50 transition-colors ${
@@ -129,14 +146,14 @@ export function LiveTradeFeed({ maxTrades = 20 }: LiveTradeFeedProps) {
                         {trade.trade_type.toUpperCase()}
                       </span>
                       <span className="text-xs text-tarkov-text-secondary">
-                        {trade.shares}
+                        {trade.shares ? trade.shares.toFixed(0) : '0'}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="text-xs text-tarkov-accent font-mono">
-                        @${trade.price.toFixed(2)}
+                        @${trade.price ? trade.price.toFixed(2) : '0.00'}
                       </span>
-                      {trade.pnl !== undefined && trade.pnl !== 0 && (
+                      {trade.pnl !== undefined && trade.pnl !== null && trade.pnl !== 0 && (
                         <span className={`text-xs font-semibold ${
                           trade.pnl >= 0 ? 'text-tarkov-success' : 'text-tarkov-danger'
                         }`}>
