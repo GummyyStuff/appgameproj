@@ -46,12 +46,29 @@ const rouletteBetSchema = z.object({
   )
 })
 
+// BUG FIX #7: Improved validation for shares with decimal precision check
 const stockMarketBuySchema = z.object({
-  shares: z.number().positive().max(1000000)
+  shares: z.number()
+    .positive('Shares must be positive')
+    .min(0.01, 'Minimum 0.01 shares')
+    .max(1000000, 'Maximum 1,000,000 shares')
+    .refine(val => {
+      // Check decimal places (max 2)
+      const decimalPlaces = (val.toString().split('.')[1] || '').length
+      return decimalPlaces <= 2
+    }, 'Shares can have maximum 2 decimal places')
 })
 
 const stockMarketSellSchema = z.object({
-  shares: z.number().positive().max(1000000)
+  shares: z.number()
+    .positive('Shares must be positive')
+    .min(0.01, 'Minimum 0.01 shares')
+    .max(1000000, 'Maximum 1,000,000 shares')
+    .refine(val => {
+      // Check decimal places (max 2)
+      const decimalPlaces = (val.toString().split('.')[1] || '').length
+      return decimalPlaces <= 2
+    }, 'Shares can have maximum 2 decimal places')
 })
 
 
@@ -516,26 +533,70 @@ gameRoutes.post('/stock-market/buy',
     const { shares } = c.get('validatedData')
 
     try {
-      // Get current market price
-      const state = await stockMarketStateService.getCurrentState()
-      const currentPrice = state.current_price
-
-      // Execute buy order
-      const game = StockMarketGame.getInstance()
-      const result = await game.executeBuy(user.id, user.username || user.email, shares, currentPrice)
-
-      if (!result.success) {
-        return c.json({ error: result.error || 'Failed to execute buy order' }, 400)
+      // BUG FIX #12: Request deduplication to prevent duplicate buy orders
+      const requestId = c.req.header('X-Request-ID') || `${Date.now()}-${Math.random()}`
+      const dedupKey = `stock_market_buy_${user.id}_${requestId}`
+      const requestPromises = (global as any).requestPromises as Map<string, Promise<any>> | undefined
+      
+      if (requestPromises) {
+        const existingPromise = requestPromises.get(dedupKey)
+        if (existingPromise) {
+          console.log(`🔄 Deduplicating buy request: ${dedupKey}`)
+          return await existingPromise
+        }
       }
 
-      // Log game activity
-      const ip = c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP')
-      await auditLog.gamePlayStarted(user.id, 'stock_market', shares * currentPrice, ip)
+      const processRequest = async () => {
+        // BUG FIX #14: Get current market price and validate expected price
+        const state = await stockMarketStateService.getCurrentState()
+        const currentPrice = state.current_price
+        
+        // Optional: Check if price has changed significantly since request
+        // This helps prevent unexpected slippage
+        const expectedPrice = parseFloat(c.req.query('expectedPrice') || '0')
+        if (expectedPrice > 0) {
+          const priceChange = Math.abs((currentPrice - expectedPrice) / expectedPrice)
+          if (priceChange > 0.05) { // 5% price change threshold
+            return c.json({ 
+              error: `Price changed significantly. Expected: $${expectedPrice.toFixed(2)}, Current: $${currentPrice.toFixed(2)}` 
+            }, 400)
+          }
+        }
 
-      return c.json({
-        success: true,
-        result: result.resultData
+        // Execute buy order
+        const game = StockMarketGame.getInstance()
+        const result = await game.executeBuy(user.id, user.username || user.email, shares, currentPrice)
+
+        if (!result.success) {
+          return c.json({ error: result.error || 'Failed to execute buy order' }, 400)
+        }
+
+        // Log game activity
+        const ip = c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP')
+        await auditLog.gamePlayStarted(user.id, 'stock_market', shares * currentPrice, ip)
+
+        return c.json({
+          success: true,
+          result: result.resultData
+        })
+      }
+
+      // Store promise for deduplication and execute
+      if (!(global as any).requestPromises) {
+        (global as any).requestPromises = new Map<string, Promise<any>>()
+      }
+      
+      const promiseCache = (global as any).requestPromises as Map<string, Promise<any>>
+      
+      const requestPromise = processRequest().finally(() => {
+        // Clean up after request completes
+        setTimeout(() => {
+          promiseCache.delete(dedupKey)
+        }, 30000) // Keep for 30s to handle retries
       })
+      
+      promiseCache.set(dedupKey, requestPromise)
+      return await requestPromise
     } catch (error) {
       console.error('Buy order error:', error)
       return c.json({ error: 'Failed to execute buy order' }, 500)
@@ -556,26 +617,70 @@ gameRoutes.post('/stock-market/sell',
     const { shares } = c.get('validatedData')
 
     try {
-      // Get current market price
-      const state = await stockMarketStateService.getCurrentState()
-      const currentPrice = state.current_price
-
-      // Execute sell order
-      const game = StockMarketGame.getInstance()
-      const result = await game.executeSell(user.id, user.username || user.email, shares, currentPrice)
-
-      if (!result.success) {
-        return c.json({ error: result.error || 'Failed to execute sell order' }, 400)
+      // BUG FIX #12: Request deduplication to prevent duplicate sell orders
+      const requestId = c.req.header('X-Request-ID') || `${Date.now()}-${Math.random()}`
+      const dedupKey = `stock_market_sell_${user.id}_${requestId}`
+      const requestPromises = (global as any).requestPromises as Map<string, Promise<any>> | undefined
+      
+      if (requestPromises) {
+        const existingPromise = requestPromises.get(dedupKey)
+        if (existingPromise) {
+          console.log(`🔄 Deduplicating sell request: ${dedupKey}`)
+          return await existingPromise
+        }
       }
 
-      // Log game activity
-      const ip = c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP')
-      await auditLog.gamePlayStarted(user.id, 'stock_market', shares * currentPrice, ip)
+      const processRequest = async () => {
+        // BUG FIX #14: Get current market price and validate expected price
+        const state = await stockMarketStateService.getCurrentState()
+        const currentPrice = state.current_price
+        
+        // Optional: Check if price has changed significantly since request
+        // This helps prevent unexpected slippage
+        const expectedPrice = parseFloat(c.req.query('expectedPrice') || '0')
+        if (expectedPrice > 0) {
+          const priceChange = Math.abs((currentPrice - expectedPrice) / expectedPrice)
+          if (priceChange > 0.05) { // 5% price change threshold
+            return c.json({ 
+              error: `Price changed significantly. Expected: $${expectedPrice.toFixed(2)}, Current: $${currentPrice.toFixed(2)}` 
+            }, 400)
+          }
+        }
 
-      return c.json({
-        success: true,
-        result: result.resultData
+        // Execute sell order
+        const game = StockMarketGame.getInstance()
+        const result = await game.executeSell(user.id, user.username || user.email, shares, currentPrice)
+
+        if (!result.success) {
+          return c.json({ error: result.error || 'Failed to execute sell order' }, 400)
+        }
+
+        // Log game activity
+        const ip = c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP')
+        await auditLog.gamePlayStarted(user.id, 'stock_market', shares * currentPrice, ip)
+
+        return c.json({
+          success: true,
+          result: result.resultData
+        })
+      }
+
+      // Store promise for deduplication and execute
+      if (!(global as any).requestPromises) {
+        (global as any).requestPromises = new Map<string, Promise<any>>()
+      }
+      
+      const promiseCache = (global as any).requestPromises as Map<string, Promise<any>>
+      
+      const requestPromise = processRequest().finally(() => {
+        // Clean up after request completes
+        setTimeout(() => {
+          promiseCache.delete(dedupKey)
+        }, 30000) // Keep for 30s to handle retries
       })
+      
+      promiseCache.set(dedupKey, requestPromise)
+      return await requestPromise
     } catch (error) {
       console.error('Sell order error:', error)
       return c.json({ error: 'Failed to execute sell order' }, 500)

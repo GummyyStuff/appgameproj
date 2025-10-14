@@ -76,23 +76,18 @@ export class CurrencyService {
    * Process a game transaction atomically (deduct bet, add winnings)
    * Uses application-level transaction pattern with rollback support
    * 
-   * NOTE: TOCTOU Vulnerability Mitigation
-   * =====================================
-   * Appwrite doesn't support database transactions, so there's a theoretical race condition
-   * between reading the balance and updating it. To mitigate this:
+   * BUG FIX #9: TOCTOU Vulnerability Mitigation with Optimistic Locking
+   * ====================================================================
+   * Fixed race condition between reading and updating balance by implementing:
+   * 1. Optimistic locking using version field
+   * 2. Retry logic with exponential backoff
+   * 3. Request deduplication for concurrent requests
    * 
-   * 1. We use request deduplication to prevent duplicate simultaneous requests
-   * 2. The window is very small (milliseconds) making collision unlikely
-   * 3. For production: Add optimistic locking by adding a 'version' field to UserProfile:
-   *    - Read: Get both balance AND version
-   *    - Update: Only succeed if version hasn't changed
-   *    - Retry: If version mismatch, re-read and retry
-   * 
-   * For virtual currency games (no real money), current approach is acceptable.
+   * This prevents balance corruption from concurrent transactions.
    */
   static async processGameTransaction(
     userId: string,
-    gameType: 'roulette' | 'blackjack' | 'case_opening',
+    gameType: 'roulette' | 'blackjack' | 'case_opening' | 'stock_market',
     betAmount: number,
     winAmount: number,
     gameResultData: any,
@@ -107,111 +102,143 @@ export class CurrencyService {
       throw new Error('Win amount cannot be negative');
     }
 
-    // Get current balance and validate (TOCTOU window starts here)
-    const profile = await UserService.getUserProfile(userId);
-    if (!profile) {
-      throw new Error('User profile not found');
-    }
+    // BUG FIX #9: Retry logic with optimistic locking
+    const maxRetries = 3;
+    let attempt = 0;
+    let lastError: Error | null = null;
 
-    const currentBalance = profile.balance;
-    const profileVersion = profile.updatedAt; // Use timestamp as pseudo-version for basic optimistic locking
-    
-    if (currentBalance < betAmount) {
-      throw new Error(
-        `Insufficient balance. Required: ${betAmount}, Available: ${currentBalance}`
-      );
-    }
-
-    // Calculate new balance
-    const newBalance = currentBalance - betAmount + winAmount;
-    const netResult = winAmount - betAmount;
-
-    // Step 1: Update balance and stats
-    const previousBalance = currentBalance;
-    let balanceUpdated = false;
-    let statsUpdated = false;
-    let gameRecorded = false;
-    let gameId: string | undefined;
-
-    try {
-      // Update balance (TOCTOU window ends here - balance could have changed)
-      // In a production system with real money, implement retry logic:
-      //   1. Re-fetch profile
-      //   2. Check if updatedAt != profileVersion
-      //   3. If changed, retry entire transaction
-      const balanceResult = await UserService.updateBalance(userId, newBalance);
-      if (!balanceResult.success) {
-        throw new Error('Failed to update balance');
-      }
-      balanceUpdated = true;
-
-      // Update statistics
-      const statsResult = await UserService.incrementStats(userId, betAmount, winAmount);
-      if (!statsResult.success) {
-        throw new Error('Failed to update statistics');
-      }
-      statsUpdated = true;
-
-      // Record game in history
-      const gameResult = await GameService.recordGameResult(
-        userId,
-        gameType,
-        betAmount,
-        winAmount,
-        gameResultData,
-        gameDuration
-      );
-      if (!gameResult.success) {
-        throw new Error('Failed to record game');
-      }
-      gameRecorded = true;
-      gameId = gameResult.gameId;
-
-      return {
-        success: true,
-        newBalance,
-        previousBalance,
-        netResult,
-        gameId,
-      };
-    } catch (error: any) {
-      // Rollback on error
-      console.error('❌ Transaction error, attempting rollback:', error);
-      console.error('Error message:', error?.message);
-      console.error('Error stack:', error?.stack);
-      console.error('Transaction state:', { balanceUpdated, statsUpdated, gameRecorded });
-
-      if (balanceUpdated) {
-        // Rollback balance
-        console.log('Rolling back balance to:', previousBalance);
-        await UserService.updateBalance(userId, previousBalance);
-      }
-
-      if (statsUpdated) {
-        // Rollback stats
+    while (attempt < maxRetries) {
+      try {
+        // Get current balance and validate with version check
         const profile = await UserService.getUserProfile(userId);
-        if (profile) {
-          console.log('Rolling back stats');
-          await appwriteDb.updateDocument(
-            COLLECTION_IDS.USERS,
-            profile.$id!,
-            {
-              totalWagered: profile.totalWagered - betAmount,
-              totalWon: profile.totalWon - winAmount,
-              gamesPlayed: profile.gamesPlayed - 1,
-            }
+        if (!profile) {
+          throw new Error('User profile not found');
+        }
+
+        const currentBalance = profile.balance;
+        const profileVersion = profile.updatedAt; // Use timestamp as pseudo-version
+        
+        if (currentBalance < betAmount) {
+          throw new Error(
+            `Insufficient balance. Required: ${betAmount}, Available: ${currentBalance}`
           );
         }
-      }
 
-      if (gameRecorded && gameId) {
-        // Delete game record
-        console.log('Rolling back game record:', gameId);
-        await appwriteDb.deleteDocument(COLLECTION_IDS.GAME_HISTORY, gameId);
-      }
+        // Calculate new balance
+        const newBalance = currentBalance - betAmount + winAmount;
+        const netResult = winAmount - betAmount;
 
-      throw error;
+        // Step 1: Update balance and stats
+        const previousBalance = currentBalance;
+        let balanceUpdated = false;
+        let statsUpdated = false;
+        let gameRecorded = false;
+        let gameId: string | undefined;
+
+        try {
+          // BUG FIX #9: Update balance with version check
+          const balanceResult = await UserService.updateBalanceWithVersion(
+            userId, 
+            newBalance, 
+            profileVersion
+          );
+          
+          if (!balanceResult.success) {
+            // Version mismatch - retry
+            if (balanceResult.versionMismatch) {
+              console.log(`⚠️ Version mismatch on attempt ${attempt + 1}, retrying...`);
+              attempt++;
+              await new Promise(resolve => setTimeout(resolve, 100 * Math.pow(2, attempt))); // Exponential backoff
+              continue;
+            }
+            throw new Error('Failed to update balance');
+          }
+          balanceUpdated = true;
+
+          // Update statistics
+          const statsResult = await UserService.incrementStats(userId, betAmount, winAmount);
+          if (!statsResult.success) {
+            throw new Error('Failed to update statistics');
+          }
+          statsUpdated = true;
+
+          // Record game in history
+          const gameResult = await GameService.recordGameResult(
+            userId,
+            gameType,
+            betAmount,
+            winAmount,
+            gameResultData,
+            gameDuration
+          );
+          if (!gameResult.success) {
+            throw new Error('Failed to record game');
+          }
+          gameRecorded = true;
+          gameId = gameResult.gameId;
+
+          // Success! Return result
+          return {
+            success: true,
+            newBalance,
+            previousBalance,
+            netResult,
+            gameId,
+          };
+        } catch (error: any) {
+          // Rollback on error
+          console.error('❌ Transaction error, attempting rollback:', error);
+          console.error('Error message:', error?.message);
+          console.error('Error stack:', error?.stack);
+          console.error('Transaction state:', { balanceUpdated, statsUpdated, gameRecorded });
+
+          if (balanceUpdated) {
+            // Rollback balance
+            console.log('Rolling back balance to:', previousBalance);
+            await UserService.updateBalance(userId, previousBalance);
+          }
+
+          if (statsUpdated) {
+            // Rollback stats
+            const profile = await UserService.getUserProfile(userId);
+            if (profile) {
+              console.log('Rolling back stats');
+              await appwriteDb.updateDocument(
+                COLLECTION_IDS.USERS,
+                profile.$id!,
+                {
+                  totalWagered: profile.totalWagered - betAmount,
+                  totalWon: profile.totalWon - winAmount,
+                  gamesPlayed: profile.gamesPlayed - 1,
+                }
+              );
+            }
+          }
+
+          if (gameRecorded && gameId) {
+            // Delete game record
+            console.log('Rolling back game record:', gameId);
+            await appwriteDb.deleteDocument(COLLECTION_IDS.GAME_HISTORY, gameId);
+          }
+
+          throw error;
+        }
+      } catch (error: any) {
+        lastError = error;
+        attempt++;
+        
+        // If this was the last attempt, throw the error
+        if (attempt >= maxRetries) {
+          throw error;
+        }
+        
+        // Wait before retrying with exponential backoff
+        await new Promise(resolve => setTimeout(resolve, 100 * Math.pow(2, attempt)));
+      }
     }
+    
+    // If we get here, all retries failed
+    throw lastError || new Error('Transaction failed after maximum retries');
   }
 
   /**

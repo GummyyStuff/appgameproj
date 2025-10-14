@@ -49,6 +49,7 @@ export class StockMarketStateService {
   
   // Current market state
   private currentPrice: number = this.STARTING_PRICE
+  private prevPrice: number = this.STARTING_PRICE  // Bug #3: Track previous price correctly
   private trend: 'up' | 'down' | 'neutral' = 'neutral'
   private volatility: number = this.BASE_VOLATILITY
   private tickCount: number = 0
@@ -142,9 +143,13 @@ export class StockMarketStateService {
 
   /**
    * Generate new price using hybrid provably fair + realistic algorithm
+   * BUG FIX #3: Now correctly tracks prev_price
    */
   private async generateNewPrice(): Promise<void> {
     try {
+      // Bug #3: Save current price as previous before updating
+      this.prevPrice = this.currentPrice
+      
       // Generate provably fair random value
       const seed = {
         serverSeed: process.env.PROVABLY_FAIR_SERVER_SEED || 'default-seed',
@@ -271,6 +276,7 @@ export class StockMarketStateService {
 
   /**
    * Save current state to database
+   * BUG FIX #3: Now correctly saves prev_price
    */
   private async saveState(): Promise<void> {
     try {
@@ -280,7 +286,7 @@ export class StockMarketStateService {
         'current',
         {
           current_price: this.currentPrice,
-          prev_price: this.currentPrice, // Will be updated on next tick
+          prev_price: this.prevPrice,  // Bug #3: Now correctly tracks previous price
           volatility: this.volatility,
           trend: this.trend,
           last_update: new Date().toISOString(),
@@ -294,11 +300,12 @@ export class StockMarketStateService {
 
   /**
    * Get current market state
+   * BUG FIX #3: Now correctly returns prev_price
    */
   async getCurrentState(): Promise<MarketState> {
     return {
       current_price: this.currentPrice,
-      prev_price: this.currentPrice,
+      prev_price: this.prevPrice,  // Bug #3: Now correctly returns previous price
       volatility: this.volatility,
       trend: this.trend,
       last_update: new Date().toISOString(),

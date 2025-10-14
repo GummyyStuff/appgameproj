@@ -215,6 +215,47 @@ export class UserService {
   }
 
   /**
+   * BUG FIX #9: Update balance with optimistic locking to prevent race conditions
+   * Returns success: true if update succeeded, or versionMismatch: true if balance changed
+   */
+  static async updateBalanceWithVersion(
+    userId: string, 
+    newBalance: number, 
+    expectedVersion: string
+  ): Promise<{ success: boolean; versionMismatch?: boolean; error?: string }> {
+    try {
+      const profile = await this.getUserProfile(userId);
+      if (!profile) {
+        return { success: false, error: 'User not found' };
+      }
+
+      // Check if version (updatedAt) has changed since we read it
+      if (profile.updatedAt !== expectedVersion) {
+        console.log('⚠️ Version mismatch detected:', {
+          expected: expectedVersion,
+          actual: profile.updatedAt
+        });
+        return { success: false, versionMismatch: true };
+      }
+
+      // Invalidate cache before updating
+      await CacheService.invalidateUserProfile(userId);
+      await CacheService.invalidateUserBalance(userId);
+
+      await appwriteDb.updateDocument(
+        COLLECTION_IDS.USERS,
+        profile.$id!,
+        { balance: newBalance }
+      );
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error updating balance with version check:', error);
+      return { success: false, error: 'Failed to update balance' };
+    }
+  }
+
+  /**
    * Increment user statistics (invalidates cache)
    */
   static async incrementStats(

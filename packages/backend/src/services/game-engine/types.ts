@@ -8,7 +8,7 @@ import { GameResultData } from '../../types/database'
 export interface GameBet {
   userId: string
   amount: number
-  gameType: 'roulette' | 'blackjack' | 'case_opening'
+  gameType: 'roulette' | 'blackjack' | 'case_opening' | 'stock_market'
 }
 
 export interface GameResult {

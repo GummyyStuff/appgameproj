@@ -37,6 +37,7 @@
   "dependencies": {
     "@types/pg": "^8.15.5",
     "bun-plugin-tailwind": "^0.1.2",
+    "decimal.js": "10.6.0",
     "dotenv": "17.2.3",
     "hono": "catalog:default",
     "hono-rate-limiter": "^0.4.2",
@@ -46,6 +47,7 @@
   },
   "devDependencies": {
     "@types/bun": "catalog:default",
+    "@types/decimal.js": "7.4.3",
     "@types/dotenv": "8.2.3",
     "typescript": "catalog:default"
   }
