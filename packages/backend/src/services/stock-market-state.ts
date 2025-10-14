@@ -57,7 +57,7 @@ export class StockMarketStateService {
   // Candle tracking
   private currentCandle: Partial<Candle> | null = null
   private candleStartTime: number = Date.now()
-  private readonly CANDLE_INTERVAL_MS = 60000 // 1 minute candles
+  private readonly CANDLE_INTERVAL_MS = 15000 // 15 second candles for fast-paced trading!
 
   private constructor() {
     this.databases = new Databases(appwriteClient)

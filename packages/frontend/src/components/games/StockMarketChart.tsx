@@ -40,22 +40,22 @@ export function StockMarketChart({ candles, currentPrice, trend }: StockMarketCh
     if (!chartContainerRef.current) return
 
     try {
-      // Create chart instance with professional dark theme
+      // Create chart instance with TARKOV military tactical theme
       const chart = createChart(chartContainerRef.current, {
       layout: {
-        background: { type: ColorType.Solid, color: '#0f1116' },
-        textColor: '#d1d4dc',
+        background: { type: ColorType.Solid, color: '#171923' }, // tarkov-darker
+        textColor: '#9ca3af', // Muted gray - easy on eyes
         fontSize: 12,
-        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+        fontFamily: '"Roboto Condensed", "Arial", sans-serif', // Tarkov font
       },
       grid: {
         vertLines: { 
-          color: '#1e222d',
-          style: 1, // Solid lines
+          color: '#2D3748', // Subtle grid lines
+          style: 1,
           visible: true,
         },
         horzLines: { 
-          color: '#1e222d',
+          color: '#2D3748',
           style: 1,
           visible: true,
         },
@@ -64,34 +64,34 @@ export function StockMarketChart({ candles, currentPrice, trend }: StockMarketCh
       height: 500,
       timeScale: {
         timeVisible: true,
-        secondsVisible: false,
-        borderColor: '#2a2e39',
-        barSpacing: 12,
-        minBarSpacing: 8,
+        secondsVisible: true, // Show seconds for fast trading
+        borderColor: '#4A5568', // Tarkov gray
+        barSpacing: 15,
+        minBarSpacing: 10,
         fixLeftEdge: true,
         fixRightEdge: true,
       },
       rightPriceScale: {
-        borderColor: '#2a2e39',
+        borderColor: '#4A5568',
         scaleMargins: {
-          top: 0.1,
-          bottom: 0.2,
+          top: 0.12,
+          bottom: 0.25,
         },
         autoScale: true,
       },
       crosshair: {
         mode: CrosshairMode.Normal,
         vertLine: {
-          color: '#758696',
+          color: '#F6AD55', // Tarkov accent (tan)
           width: 1,
-          style: 3, // Dashed
-          labelBackgroundColor: '#363a45',
+          style: 3, // Dashed - subtle
+          labelBackgroundColor: '#2D3748',
         },
         horzLine: {
-          color: '#758696',
+          color: '#F6AD55', // Tarkov accent
           width: 1,
           style: 3, // Dashed
-          labelBackgroundColor: '#363a45',
+          labelBackgroundColor: '#2D3748',
         },
       },
       handleScroll: {
@@ -109,15 +109,15 @@ export function StockMarketChart({ candles, currentPrice, trend }: StockMarketCh
 
     chartRef.current = chart
 
-    // Add candlestick series with professional colors
+    // Add candlestick series with Tarkov military colors
     const candlestickSeries = chart.addSeries(CandlestickSeries, {
-      upColor: '#26a69a',        // Professional teal/green for bullish
-      downColor: '#ef5350',      // Professional red for bearish
+      upColor: '#38A169',        // Tarkov success green
+      downColor: '#E53E3E',      // Tarkov danger red
       borderVisible: false,
-      wickUpColor: '#26a69a',
-      wickDownColor: '#ef5350',
-      borderUpColor: '#26a69a',
-      borderDownColor: '#ef5350',
+      wickUpColor: '#38A169',
+      wickDownColor: '#E53E3E',
+      borderUpColor: '#38A169',
+      borderDownColor: '#E53E3E',
     })
     candlestickSeriesRef.current = candlestickSeries
 
@@ -230,7 +230,7 @@ export function StockMarketChart({ candles, currentPrice, trend }: StockMarketCh
         const volumeData = validCandles.map(candle => ({
           time: candle.timeNum as Time,
           value: candle.volume,
-          color: candle.close >= candle.open ? 'rgba(38, 166, 154, 0.3)' : 'rgba(239, 83, 80, 0.3)',
+          color: candle.close >= candle.open ? 'rgba(56, 161, 105, 0.35)' : 'rgba(229, 62, 62, 0.35)', // Tarkov colors
         }))
 
         candlestickSeriesRef.current.setData(candlestickData)
@@ -257,7 +257,7 @@ export function StockMarketChart({ candles, currentPrice, trend }: StockMarketCh
         const volumeUpdate = {
           time: latestCandle.timeNum as Time,
           value: latestCandle.volume,
-          color: latestCandle.close >= latestCandle.open ? 'rgba(38, 166, 154, 0.3)' : 'rgba(239, 83, 80, 0.3)',
+          color: latestCandle.close >= latestCandle.open ? 'rgba(56, 161, 105, 0.35)' : 'rgba(229, 62, 62, 0.35)',
         }
 
         candlestickSeriesRef.current.update(candlestickUpdate)
@@ -279,7 +279,7 @@ export function StockMarketChart({ candles, currentPrice, trend }: StockMarketCh
         const volumeUpdate = {
           time: latestCandle.timeNum as Time,
           value: latestCandle.volume,
-          color: latestCandle.close >= latestCandle.open ? 'rgba(38, 166, 154, 0.3)' : 'rgba(239, 83, 80, 0.3)',
+          color: latestCandle.close >= latestCandle.open ? 'rgba(56, 161, 105, 0.35)' : 'rgba(229, 62, 62, 0.35)',
         }
 
         candlestickSeriesRef.current.update(candlestickUpdate)
@@ -312,12 +312,12 @@ export function StockMarketChart({ candles, currentPrice, trend }: StockMarketCh
         candlestickSeriesRef.current.removePriceLine(priceLineRef.current)
       }
 
-      // Create new price line for current price with professional colors
+      // Create new price line for current price with Tarkov colors
       const priceLine = candlestickSeriesRef.current.createPriceLine({
         price: currentPrice,
-        color: trend === 'up' ? '#26a69a' : trend === 'down' ? '#ef5350' : '#758696',
+        color: trend === 'up' ? '#38A169' : trend === 'down' ? '#E53E3E' : '#F6AD55', // Tarkov accent for neutral
         lineWidth: 2,
-        lineStyle: LineStyle.Dashed, // v5 API: Use enum instead of number
+        lineStyle: LineStyle.Solid,
         axisLabelVisible: true,
         title: 'Current',
       })
@@ -342,42 +342,48 @@ export function StockMarketChart({ candles, currentPrice, trend }: StockMarketCh
   }
 
   return (
-    <div className="w-full bg-tarkov-dark rounded-lg p-4">
+    <div className="w-full bg-tarkov-dark rounded-lg p-4 border border-tarkov-secondary">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-tarkov-text">Price Chart</h3>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-tarkov-text-secondary">Current Price:</span>
-          <span className={`text-xl font-bold ${trend === 'up' ? 'text-[#26a69a]' : trend === 'down' ? 'text-[#ef5350]' : 'text-gray-400'}`}>
+        <h3 className="text-lg font-semibold text-tarkov-text font-tarkov">LIVE PRICE CHART</h3>
+        <div className="flex items-center gap-3 px-4 py-2 rounded bg-tarkov-darker border" style={{
+          borderColor: trend === 'up' ? '#38A169' : trend === 'down' ? '#E53E3E' : '#F6AD55'
+        }}>
+          <span className="text-xs text-tarkov-text-secondary uppercase tracking-wider">Current:</span>
+          <span className="text-xl font-bold font-tarkov" style={{
+            color: trend === 'up' ? '#38A169' : trend === 'down' ? '#E53E3E' : '#F6AD55'
+          }}>
             ${currentPrice.toFixed(2)}
           </span>
         </div>
       </div>
 
       {/* Chart Container */}
-      <div ref={chartContainerRef} className="w-full" />
+      <div ref={chartContainerRef} className="w-full rounded border border-tarkov-secondary" />
 
-      {/* Statistics */}
+      {/* Statistics - Tarkov Military Style */}
       <div className="mt-4 grid grid-cols-3 gap-4 text-sm">
-        <div className="bg-tarkov-darker rounded-lg p-3 border border-[#1e222d]">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-[#26a69a]"></div>
-            <span className="text-[#d1d4dc] text-xs">24h High</span>
+        <div className="bg-tarkov-darker rounded p-3 border border-tarkov-secondary">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-2 h-2 rounded-full bg-tarkov-success"></div>
+            <span className="text-tarkov-text-secondary text-xs uppercase tracking-wide">High</span>
           </div>
-          <p className="text-lg font-bold text-[#26a69a] mt-1">${stats.high.toFixed(2)}</p>
+          <p className="text-lg font-bold text-tarkov-success font-tarkov">${stats.high.toFixed(2)}</p>
         </div>
-        <div className="bg-tarkov-darker rounded-lg p-3 border border-[#1e222d]">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-[#ef5350]"></div>
-            <span className="text-[#d1d4dc] text-xs">24h Low</span>
+        
+        <div className="bg-tarkov-darker rounded p-3 border border-tarkov-secondary">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-2 h-2 rounded-full bg-tarkov-danger"></div>
+            <span className="text-tarkov-text-secondary text-xs uppercase tracking-wide">Low</span>
           </div>
-          <p className="text-lg font-bold text-[#ef5350] mt-1">${stats.low.toFixed(2)}</p>
+          <p className="text-lg font-bold text-tarkov-danger font-tarkov">${stats.low.toFixed(2)}</p>
         </div>
-        <div className="bg-tarkov-darker rounded-lg p-3 border border-[#1e222d]">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-[#758696]"></div>
-            <span className="text-[#d1d4dc] text-xs">Total Volume</span>
+        
+        <div className="bg-tarkov-darker rounded p-3 border border-tarkov-secondary">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-2 h-2 rounded-full bg-tarkov-accent"></div>
+            <span className="text-tarkov-text-secondary text-xs uppercase tracking-wide">Volume</span>
           </div>
-          <p className="text-lg font-bold text-[#758696] mt-1">{stats.volume.toLocaleString()}</p>
+          <p className="text-lg font-bold text-tarkov-accent font-tarkov">{stats.volume.toLocaleString()}</p>
         </div>
       </div>
     </div>
