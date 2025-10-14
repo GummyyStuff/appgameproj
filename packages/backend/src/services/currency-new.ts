@@ -137,17 +137,11 @@ export class CurrencyService {
         const netResult = winAmount - betAmount;
         const previousBalance = currentBalance;
 
-        // PERFORMANCE OPTIMIZATION: Use Appwrite transaction to batch all operations
-        // Create transaction and perform all operations atomically
+        // Use standard Appwrite Databases API (transactions not supported with Databases API)
         const databases = new Databases(appwriteClient);
-        const transaction = await databases.createTransaction({
-          ttl: 30 // 30 second timeout
-        });
-
-        const transactionId = transaction.transactionId;
 
         try {
-          // Step 1: Update user balance atomically
+          // Step 1: Update user balance
           await databases.updateDocument(
             env.APPWRITE_DATABASE_ID,
             COLLECTION_IDS.USERS,
@@ -158,9 +152,7 @@ export class CurrencyService {
               totalWon: profile.totalWon + winAmount,
               gamesPlayed: profile.gamesPlayed + 1,
               updatedAt: new Date().toISOString(),
-            },
-            undefined, // permissions
-            transactionId
+            }
           );
 
           // Step 2: Record game in history
@@ -177,24 +169,17 @@ export class CurrencyService {
               resultData: gameResultData,
               gameDuration: gameDuration || 0,
               createdAt: new Date().toISOString(),
-            },
-            undefined, // permissions
-            transactionId
+            }
           );
 
-          // Step 3: Commit the transaction
-          await databases.updateTransaction(transactionId, {
-            commit: true
-          });
-
-          // Invalidate caches after successful transaction
+          // Invalidate caches after successful update
           await Promise.all([
             CacheService.invalidateUserProfile(userId),
             CacheService.invalidateUserBalance(userId),
             CacheService.invalidateUserStats(userId),
           ]);
 
-          console.log(`✅ Transaction completed for user ${userId} in single atomic operation`);
+          console.log(`✅ Game transaction completed for user ${userId}`);
 
           return {
             success: true,
@@ -204,17 +189,9 @@ export class CurrencyService {
             gameId,
           };
 
-        } catch (transactionError: any) {
-          // Rollback transaction on error
-          console.error('❌ Transaction failed, rolling back:', transactionError);
-          try {
-            await databases.updateTransaction(transactionId, {
-              rollback: true
-            });
-          } catch (rollbackError) {
-            console.error('❌ Failed to rollback transaction:', rollbackError);
-          }
-          throw transactionError;
+        } catch (error: any) {
+          console.error('❌ Game transaction failed:', error);
+          throw error;
         }
 
       } catch (error: any) {

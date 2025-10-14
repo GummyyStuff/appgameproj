@@ -20,6 +20,7 @@ import { BaseGame, GameBet, GameResult } from './types';
 import { SecureRandomGenerator } from './random-generator';
 import { PayoutCalculator } from './payout-calculator';
 import { CurrencyService } from '../currency-new';
+import { AchievementService } from '../achievement-service';
 import { Client, Databases, ID, Query } from 'node-appwrite';
 import { appwriteClient } from '../../config/appwrite';
 import { env } from '../../config/env';
@@ -270,6 +271,16 @@ export class StockMarketGame extends BaseGame {
 
       const newBalance = previousBalance - totalCost
 
+      // Track achievements for stock trading (async, don't block)
+      AchievementService.batchUpdateProgress(userId, [
+        { achievementId: 'first-trade', progress: 1 },
+        { achievementId: 'day-trader', progress: 1 },
+        { achievementId: 'active-trader', progress: 1 },
+        { achievementId: 'trading-veteran', progress: 1 },
+        { achievementId: 'wall-street-wolf', progress: 1 },
+        { achievementId: 'market-maker', progress: sharesDecimal.toNumber() },
+      ]).catch(err => console.error('Achievement tracking error:', err))
+
       return {
         success: true,
         winAmount: 0,
@@ -474,6 +485,35 @@ export class StockMarketGame extends BaseGame {
         { action: 'sell', shares, price: currentPrice, realized_pnl: realizedPnL }
       )
       balanceCredited = true
+
+      // Track achievements for selling (async, don't block)
+      const achievementUpdates = [
+        { achievementId: 'first-trade', progress: 1 },
+        { achievementId: 'day-trader', progress: 1 },
+        { achievementId: 'active-trader', progress: 1 },
+        { achievementId: 'trading-veteran', progress: 1 },
+        { achievementId: 'wall-street-wolf', progress: 1 },
+        { achievementId: 'market-maker', progress: sharesDecimal.toNumber() },
+      ]
+
+      // Track profit-based achievements
+      if (realizedPnL > 0) {
+        achievementUpdates.push({ achievementId: 'first-profit', progress: 1 })
+        achievementUpdates.push({ achievementId: 'bull-market-king', progress: Math.floor(realizedPnL) })
+        
+        if (realizedPnL >= 5000) {
+          achievementUpdates.push({ achievementId: 'big-win', progress: Math.floor(realizedPnL) })
+        }
+        if (realizedPnL >= 10000) {
+          achievementUpdates.push({ achievementId: 'huge-win', progress: Math.floor(realizedPnL) })
+        }
+        if (realizedPnL >= 25000) {
+          achievementUpdates.push({ achievementId: 'mega-win', progress: Math.floor(realizedPnL) })
+        }
+      }
+
+      AchievementService.batchUpdateProgress(userId, achievementUpdates)
+        .catch(err => console.error('Achievement tracking error:', err))
 
       return {
         success: true,

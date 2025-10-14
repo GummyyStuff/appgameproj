@@ -120,6 +120,26 @@ export function StockMarketTrading({ currentPrice }: StockMarketTradingProps) {
     setShares(position.shares.toString())
   }
 
+  // Quick action handlers
+  const buyMax = () => {
+    const maxShares = Math.floor(balance / currentPrice)
+    setShares(maxShares.toString())
+  }
+
+  const setPresetShares = (amount: number) => {
+    setShares(amount.toString())
+  }
+
+  const sellHalf = () => {
+    if (!position) return
+    setShares((position.shares / 2).toFixed(2))
+  }
+
+  const sell75 = () => {
+    if (!position) return
+    setShares((position.shares * 0.75).toFixed(2))
+  }
+
   const sharesNum = parseFloat(shares) || 0
   const totalCost = sharesNum * currentPrice
   const canBuy = balance >= totalCost && sharesNum > 0
@@ -183,6 +203,45 @@ export function StockMarketTrading({ currentPrice }: StockMarketTradingProps) {
         </div>
 
         <div className="space-y-4">
+          {/* Quick Action Buttons */}
+          <div className="space-y-2">
+            <Label className="text-tarkov-text text-xs uppercase tracking-wide">⚡ Quick Buy</Label>
+            <div className="grid grid-cols-4 gap-2">
+              <Button
+                onClick={() => setPresetShares(10)}
+                variant="outline"
+                size="sm"
+                className="bg-tarkov-darker border-tarkov-accent/30 text-tarkov-accent hover:bg-tarkov-accent/10 text-xs font-bold"
+              >
+                10
+              </Button>
+              <Button
+                onClick={() => setPresetShares(50)}
+                variant="outline"
+                size="sm"
+                className="bg-tarkov-darker border-tarkov-accent/30 text-tarkov-accent hover:bg-tarkov-accent/10 text-xs font-bold"
+              >
+                50
+              </Button>
+              <Button
+                onClick={() => setPresetShares(100)}
+                variant="outline"
+                size="sm"
+                className="bg-tarkov-darker border-tarkov-accent/30 text-tarkov-accent hover:bg-tarkov-accent/10 text-xs font-bold"
+              >
+                100
+              </Button>
+              <Button
+                onClick={buyMax}
+                variant="outline"
+                size="sm"
+                className="bg-tarkov-accent/20 border-tarkov-accent text-tarkov-accent hover:bg-tarkov-accent/30 text-xs font-bold"
+              >
+                MAX
+              </Button>
+            </div>
+          </div>
+
           <div>
             <Label htmlFor="shares" className="text-tarkov-text">
               Number of Shares
@@ -237,13 +296,35 @@ export function StockMarketTrading({ currentPrice }: StockMarketTradingProps) {
           </div>
 
           {position && position.shares > 0 && (
-            <Button
-              onClick={handleSellAll}
-              variant="outline"
-              className="w-full border-tarkov-border text-tarkov-text hover:bg-tarkov-darker"
-            >
-              Sell All ({position.shares.toFixed(2)} shares)
-            </Button>
+            <div className="space-y-2">
+              <Label className="text-tarkov-text text-xs uppercase tracking-wide">⚡ Quick Sell</Label>
+              <div className="grid grid-cols-3 gap-2">
+                <Button
+                  onClick={sellHalf}
+                  variant="outline"
+                  size="sm"
+                  className="bg-tarkov-darker border-tarkov-danger/30 text-tarkov-danger hover:bg-tarkov-danger/10 text-xs font-bold"
+                >
+                  50%
+                </Button>
+                <Button
+                  onClick={sell75}
+                  variant="outline"
+                  size="sm"
+                  className="bg-tarkov-darker border-tarkov-danger/30 text-tarkov-danger hover:bg-tarkov-danger/10 text-xs font-bold"
+                >
+                  75%
+                </Button>
+                <Button
+                  onClick={handleSellAll}
+                  variant="outline"
+                  size="sm"
+                  className="bg-tarkov-danger/20 border-tarkov-danger text-tarkov-danger hover:bg-tarkov-danger/30 text-xs font-bold"
+                >
+                  ALL
+                </Button>
+              </div>
+            </div>
           )}
         </div>
       </Card>

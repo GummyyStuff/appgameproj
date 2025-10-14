@@ -57,7 +57,7 @@ export class StockMarketStateService {
   // Candle tracking
   private currentCandle: Partial<Candle> | null = null
   private candleStartTime: number = Date.now()
-  private readonly CANDLE_INTERVAL_MS = 15000 // 15 second candles for fast-paced trading!
+  private readonly CANDLE_INTERVAL_MS = 5000 // 5 second candles for ULTRA-FAST trading! ⚡
 
   private constructor() {
     this.databases = new Databases(appwriteClient)
@@ -171,7 +171,7 @@ export class StockMarketStateService {
     // Start immediately
     generatePrice()
     
-    // Start candle generation (every minute)
+    // Start candle generation (every 5 seconds for fast-paced action!)
     this.candleUpdateInterval = setInterval(() => {
       this.closeCandle()
     }, this.CANDLE_INTERVAL_MS)

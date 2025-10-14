@@ -9,6 +9,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { StockMarketChart } from '../components/games/StockMarketChart';
 import { StockMarketTrading } from '../components/games/StockMarketTrading';
 import { StockMarketLeaderboard } from '../components/games/StockMarketLeaderboard';
+import { LiveTradeFeed } from '../components/games/LiveTradeFeed';
 import { useStockMarketRealtime } from '../hooks/useStockMarketRealtime';
 import { getMarketState, getHistoricalCandles, type MarketState, type Candle } from '../services/stock-market-api';
 import { Activity, TrendingUp, TrendingDown, Minus } from 'lucide-react';
@@ -146,9 +147,12 @@ export default function StockMarketPage() {
           </div>
         </div>
 
-        {/* Leaderboard */}
+        {/* Live Feed & Leaderboard */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-3">
+          <div className="lg:col-span-1">
+            <LiveTradeFeed maxTrades={20} />
+          </div>
+          <div className="lg:col-span-2">
             <StockMarketLeaderboard timeframe="all" />
           </div>
         </div>
