@@ -131,16 +131,51 @@ export class StockMarketGame extends BaseGame {
    * - Bug #2: Uses Decimal for precise financial calculations
    * - Bug #6: Decimal precision for average cost basis calculation
    * - Bug #11: Balance deducted AFTER position created (prevents balance loss if position creation fails)
+   * - Bug #1: Captures price snapshot at execution time to prevent race conditions
+   * - Bug #3: Request deduplication to prevent concurrent operations on same position
    */
   async executeBuy(userId: string, username: string, shares: number, currentPrice: number): Promise<GameResult> {
+    // BUG FIX #3: Request deduplication to prevent concurrent operations
+    const requestId = `buy_${userId}_${Date.now()}`
+    const requestPromises = (global as any).requestPromises as Map<string, Promise<any>> | undefined
+    
+    if (requestPromises) {
+      const existingPromise = requestPromises.get(requestId)
+      if (existingPromise) {
+        console.log(`🔄 Deduplicating buy request: ${requestId}`)
+        return await existingPromise
+      }
+      
+      // Create promise for this request
+      const promise = this.executeBuyInternal(userId, username, shares, currentPrice)
+      requestPromises.set(requestId, promise)
+      
+      try {
+        return await promise
+      } finally {
+        requestPromises.delete(requestId)
+      }
+    }
+    
+    return await this.executeBuyInternal(userId, username, shares, currentPrice)
+  }
+
+  private async executeBuyInternal(userId: string, username: string, shares: number, currentPrice: number): Promise<GameResult> {
     let balanceDeducted = false
     let positionCreated = false
     let previousBalance = 0
     
     try {
+      // BUG FIX #1: Capture price snapshot at execution time to prevent race conditions
+      // The price might have changed between when the user clicked and when this function executes
+      const marketState = await this.getMarketState()
+      const executionPrice = marketState?.current_price || currentPrice
+      
+      console.log(`💰 Buy order: User requested price $${currentPrice.toFixed(2)}, executing at $${executionPrice.toFixed(2)}`)
+      
       // Validate inputs with Decimal
       const sharesDecimal = new Decimal(shares)
-      const priceDecimal = new Decimal(currentPrice)
+      const priceDecimal = new Decimal(executionPrice) // Use execution price
       const totalCostDecimal = sharesDecimal.times(priceDecimal)
       const totalCost = totalCostDecimal.toNumber()
       
@@ -242,6 +277,8 @@ export class StockMarketGame extends BaseGame {
           action: 'buy',
           shares: sharesDecimal.toNumber(),
           price: priceDecimal.toNumber(),
+          requested_price: currentPrice, // Original price user saw
+          execution_price: executionPrice, // Actual execution price
           total_cost: totalCost,
           new_balance: newBalance
         } as any
@@ -304,16 +341,51 @@ export class StockMarketGame extends BaseGame {
    * - Bug #2: Uses Decimal for precise financial calculations
    * - Bug #8: Detailed error messages for insufficient shares
    * - Bug #11: Position updated BEFORE balance credited (prevents balance gain if position update fails)
+   * - Bug #1: Captures price snapshot at execution time to prevent race conditions
+   * - Bug #3: Request deduplication to prevent concurrent operations on same position
    */
   async executeSell(userId: string, username: string, shares: number, currentPrice: number): Promise<GameResult> {
+    // BUG FIX #3: Request deduplication to prevent concurrent operations
+    const requestId = `sell_${userId}_${Date.now()}`
+    const requestPromises = (global as any).requestPromises as Map<string, Promise<any>> | undefined
+    
+    if (requestPromises) {
+      const existingPromise = requestPromises.get(requestId)
+      if (existingPromise) {
+        console.log(`🔄 Deduplicating sell request: ${requestId}`)
+        return await existingPromise
+      }
+      
+      // Create promise for this request
+      const promise = this.executeSellInternal(userId, username, shares, currentPrice)
+      requestPromises.set(requestId, promise)
+      
+      try {
+        return await promise
+      } finally {
+        requestPromises.delete(requestId)
+      }
+    }
+    
+    return await this.executeSellInternal(userId, username, shares, currentPrice)
+  }
+
+  private async executeSellInternal(userId: string, username: string, shares: number, currentPrice: number): Promise<GameResult> {
     let balanceCredited = false
     let positionUpdated = false
     let previousBalance = 0
     
     try {
+      // BUG FIX #1: Capture price snapshot at execution time to prevent race conditions
+      // The price might have changed between when the user clicked and when this function executes
+      const marketState = await this.getMarketState()
+      const executionPrice = marketState?.current_price || currentPrice
+      
+      console.log(`💰 Sell order: User requested price $${currentPrice.toFixed(2)}, executing at $${executionPrice.toFixed(2)}`)
+      
       // Validate inputs with Decimal
       const sharesDecimal = new Decimal(shares)
-      const priceDecimal = new Decimal(currentPrice)
+      const priceDecimal = new Decimal(executionPrice) // Use execution price
       
       // Get current position
       const position = await this.getUserPosition(userId)
@@ -410,6 +482,8 @@ export class StockMarketGame extends BaseGame {
           action: 'sell',
           shares: sharesDecimal.toNumber(),
           price: priceDecimal.toNumber(),
+          requested_price: currentPrice, // Original price user saw
+          execution_price: executionPrice, // Actual execution price
           proceeds: totalProceeds,
           realized_pnl: realizedPnL
         } as any

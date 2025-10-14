@@ -4,6 +4,8 @@
  * Handles all API calls for the stock market trading game
  */
 
+import { account } from '../lib/appwrite'
+
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 export interface MarketState {
@@ -98,10 +100,14 @@ export async function getHistoricalCandles(limit: number = 100): Promise<Candle[
  * Get user's current position
  */
 export async function getUserPosition(): Promise<Position> {
+  // Get current user for authentication header
+  const user = await account.get();
+  
   const response = await fetch(`${API_URL}/games/stock-market/position`, {
     credentials: 'include',
     headers: {
       'Accept': 'application/json',
+      'X-Appwrite-User-Id': user.$id, // Required for auth
     },
   });
 
@@ -117,10 +123,14 @@ export async function getUserPosition(): Promise<Position> {
  * Get user's trade history
  */
 export async function getUserTradeHistory(limit: number = 50): Promise<Trade[]> {
+  // Get current user for authentication header
+  const user = await account.get();
+  
   const response = await fetch(`${API_URL}/games/stock-market/history?limit=${limit}`, {
     credentials: 'include',
     headers: {
       'Accept': 'application/json',
+      'X-Appwrite-User-Id': user.$id, // Required for auth
     },
   });
 
@@ -155,12 +165,16 @@ export async function getRecentTrades(limit: number = 20): Promise<Trade[]> {
  * Buy shares
  */
 export async function buyShares(shares: number): Promise<BuyOrderResult> {
+  // Get current user for authentication header
+  const user = await account.get();
+  
   const response = await fetch(`${API_URL}/games/stock-market/buy`, {
     method: 'POST',
     credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
+      'X-Appwrite-User-Id': user.$id, // Required for auth
     },
     body: JSON.stringify({ shares }),
   });
@@ -178,12 +192,16 @@ export async function buyShares(shares: number): Promise<BuyOrderResult> {
  * Sell shares
  */
 export async function sellShares(shares: number): Promise<SellOrderResult> {
+  // Get current user for authentication header
+  const user = await account.get();
+  
   const response = await fetch(`${API_URL}/games/stock-market/sell`, {
     method: 'POST',
     credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
+      'X-Appwrite-User-Id': user.$id, // Required for auth
     },
     body: JSON.stringify({ shares }),
   });

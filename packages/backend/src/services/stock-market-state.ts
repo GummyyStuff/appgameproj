@@ -90,6 +90,9 @@ export class StockMarketStateService {
         console.log('✅ Starting with default state')
       }
       
+      // BUG FIX #5: Load current candle from database to prevent data loss on restart
+      await this.loadCurrentCandle()
+      
       // Start price generation
       this.startPriceGeneration()
       
@@ -114,6 +117,26 @@ export class StockMarketStateService {
     } catch (error) {
       console.log('No previous state found, starting fresh')
       return null
+    }
+  }
+
+  /**
+   * BUG FIX #5: Load current candle from database to prevent data loss on restart
+   */
+  private async loadCurrentCandle(): Promise<void> {
+    try {
+      const doc = await this.databases.getDocument(
+        DATABASE_ID,
+        'stock_market_candles',
+        'current_candle'
+      )
+      
+      this.currentCandle = doc as unknown as Candle
+      this.candleStartTime = new Date(doc.timestamp).getTime()
+      
+      console.log(`✅ Loaded current candle: O:$${this.currentCandle.open.toFixed(2)} H:$${this.currentCandle.high.toFixed(2)} L:$${this.currentCandle.low.toFixed(2)} C:$${this.currentCandle.close.toFixed(2)}`)
+    } catch (error) {
+      console.log('No current candle found, starting fresh')
     }
   }
 
@@ -144,11 +167,16 @@ export class StockMarketStateService {
   /**
    * Generate new price using hybrid provably fair + realistic algorithm
    * BUG FIX #3: Now correctly tracks prev_price
+   * BUG FIX #6: Add error recovery and retry logic
    */
   private async generateNewPrice(): Promise<void> {
-    try {
-      // Bug #3: Save current price as previous before updating
-      this.prevPrice = this.currentPrice
+    const maxRetries = 3
+    let retries = 0
+    
+    while (retries < maxRetries) {
+      try {
+        // Bug #3: Save current price as previous before updating
+        this.prevPrice = this.currentPrice
       
       // Generate provably fair random value
       const seed = {
@@ -184,11 +212,20 @@ export class StockMarketStateService {
       const priceChange = drift + diffusion + momentum + meanReversion
       let newPrice = this.currentPrice * (1 + priceChange)
       
-      // Apply bounds (soft boundaries)
+      // BUG FIX #8: Apply strict bounds validation with hard limits
+      // Ensure price stays within acceptable range
       if (newPrice < this.MIN_PRICE) {
-        newPrice = this.MIN_PRICE + (this.MIN_PRICE - newPrice) * 0.1
+        console.warn(`⚠️ Price ${newPrice.toFixed(2)} below minimum ${this.MIN_PRICE}, clamping to minimum`)
+        newPrice = this.MIN_PRICE
       } else if (newPrice > this.MAX_PRICE) {
-        newPrice = this.MAX_PRICE - (newPrice - this.MAX_PRICE) * 0.1
+        console.warn(`⚠️ Price ${newPrice.toFixed(2)} above maximum ${this.MAX_PRICE}, clamping to maximum`)
+        newPrice = this.MAX_PRICE
+      }
+      
+      // Additional validation: ensure price is a valid number
+      if (!isFinite(newPrice) || isNaN(newPrice)) {
+        console.error(`❌ Invalid price calculated: ${newPrice}, using previous price`)
+        newPrice = this.currentPrice
       }
       
       // Update trend
@@ -214,17 +251,33 @@ export class StockMarketStateService {
       // Save to database
       await this.saveState()
       
-      // Log periodically
-      if (this.tickCount % 10 === 0) {
-        console.log(`📈 Tick ${this.tickCount}: $${newPrice.toFixed(2)} (${this.trend}, vol: ${(this.volatility * 100).toFixed(2)}%)`)
+        // Log periodically
+        if (this.tickCount % 10 === 0) {
+          console.log(`📈 Tick ${this.tickCount}: $${newPrice.toFixed(2)} (${this.trend}, vol: ${(this.volatility * 100).toFixed(2)}%)`)
+        }
+        
+        // Success - break out of retry loop
+        return
+      } catch (error) {
+        retries++
+        console.error(`Failed to generate new price (attempt ${retries}/${maxRetries}):`, error)
+        
+        if (retries >= maxRetries) {
+          console.error('❌ Max retries reached, skipping this price update')
+          // BUG FIX #6: Don't crash the service, just skip this update
+          // The next scheduled update will try again
+          return
+        }
+        
+        // Wait before retrying (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, 1000 * retries))
       }
-    } catch (error) {
-      console.error('Failed to generate new price:', error)
     }
   }
 
   /**
    * Update current candle with new price
+   * BUG FIX #5: Save current candle periodically to prevent data loss
    */
   private updateCandle(price: number): void {
     const now = Date.now()
@@ -240,6 +293,9 @@ export class StockMarketStateService {
         volume: 0
       }
       this.candleStartTime = now
+      
+      // Save new candle to database
+      this.saveCurrentCandle()
     } else {
       // Update existing candle
       if (this.currentCandle) {
@@ -247,6 +303,39 @@ export class StockMarketStateService {
         this.currentCandle.low = Math.min(this.currentCandle.low, price)
         this.currentCandle.close = price
         this.currentCandle.volume = (this.currentCandle.volume || 0) + 1
+        
+        // Save current candle every 10 ticks to prevent data loss
+        if (this.tickCount % 10 === 0) {
+          this.saveCurrentCandle()
+        }
+      }
+    }
+  }
+
+  /**
+   * BUG FIX #5: Save current candle to database to prevent data loss on restart
+   */
+  private async saveCurrentCandle(): Promise<void> {
+    if (!this.currentCandle) return
+    
+    try {
+      await this.databases.updateDocument(
+        DATABASE_ID,
+        'stock_market_candles',
+        'current_candle',
+        this.currentCandle
+      )
+    } catch (error) {
+      // If document doesn't exist, create it
+      try {
+        await this.databases.createDocument(
+          DATABASE_ID,
+          'stock_market_candles',
+          'current_candle',
+          this.currentCandle
+        )
+      } catch (createError) {
+        console.error('Failed to save current candle:', createError)
       }
     }
   }
@@ -336,6 +425,7 @@ export class StockMarketStateService {
 
   /**
    * Shutdown the service
+   * BUG FIX #5: Save current candle before shutdown to prevent data loss
    */
   shutdown(): void {
     console.log('🛑 Shutting down Stock Market State Service...')
@@ -348,9 +438,13 @@ export class StockMarketStateService {
       clearInterval(this.candleUpdateInterval)
     }
     
-    // Close final candle
+    // BUG FIX #5: Save current candle before closing to prevent data loss
     if (this.currentCandle) {
-      this.closeCandle()
+      this.saveCurrentCandle().then(() => {
+        this.closeCandle()
+      }).catch(error => {
+        console.error('Failed to save current candle on shutdown:', error)
+      })
     }
     
     console.log('✅ Stock Market State Service shut down')

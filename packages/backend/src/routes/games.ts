@@ -704,19 +704,39 @@ gameRoutes.get('/stock-market/leaderboard', asyncHandler(async (c: Context) => {
       dateFilter.setDate(dateFilter.getDate() - 7)
     }
 
-    // Get all trades within timeframe
-    const tradesQuery = [
-      Query.orderDesc('timestamp'),
-      Query.limit(10000) // Get enough trades to calculate stats
-    ]
-
-    const tradesResult = await databases.listDocuments(
-      DATABASE_ID,
-      'stock_market_trades',
-      tradesQuery
-    )
-
-    const trades = tradesResult.documents as any[]
+    // BUG FIX #7: Remove hard-coded limit - fetch all trades
+    // Use pagination to get all trades without hitting query limits
+    let allTrades: any[] = []
+    let lastId: string | null = null
+    const pageSize = 1000 // Process in batches
+    
+    while (true) {
+      const tradesQuery: string[] = [
+        Query.orderDesc('timestamp'),
+        Query.limit(pageSize)
+      ]
+      
+      if (lastId) {
+        tradesQuery.push(Query.cursorAfter(lastId))
+      }
+      
+      const tradesResult = await databases.listDocuments(
+        DATABASE_ID,
+        'stock_market_trades',
+        tradesQuery
+      )
+      
+      allTrades = allTrades.concat(tradesResult.documents as any[])
+      
+      // Check if we got all results
+      if (tradesResult.documents.length < pageSize) {
+        break
+      }
+      
+      lastId = tradesResult.documents[tradesResult.documents.length - 1].$id
+    }
+    
+    const trades = allTrades
 
     // Filter trades by timeframe if specified
     const filteredTrades = dateFilter
@@ -767,6 +787,42 @@ gameRoutes.get('/stock-market/leaderboard', asyncHandler(async (c: Context) => {
       }
     }
 
+    // BUG FIX #4: Include unrealized PnL from open positions in leaderboard
+    // Get all current positions to calculate unrealized profit/loss
+    const positionsResult = await databases.listDocuments(
+      DATABASE_ID,
+      'stock_market_positions',
+      []
+    )
+    
+    const positions = positionsResult.documents as any[]
+    
+    // Get current market price for calculating unrealized PnL
+    const marketState = await stockMarketStateService.getCurrentState()
+    const currentPrice = marketState.current_price
+    
+    // Add unrealized PnL to user stats
+    for (const position of positions) {
+      const unrealizedPnL = (currentPrice - position.avg_price) * position.shares
+      
+      if (userStats.has(position.user_id)) {
+        const stats = userStats.get(position.user_id)!
+        stats.totalProfit += unrealizedPnL
+      } else {
+        // User has position but no trades yet - add them to stats
+        userStats.set(position.user_id, {
+          userId: position.user_id,
+          username: 'Unknown', // Will be filled from position if available
+          totalProfit: unrealizedPnL,
+          totalTrades: 0,
+          totalSharesBought: position.shares,
+          totalSharesSold: 0,
+          totalCostBasis: position.shares * position.avg_price,
+          totalProceeds: 0
+        })
+      }
+    }
+    
     // Calculate ROI and prepare leaderboard entries
     const leaderboard = Array.from(userStats.values())
       .map(stats => {
