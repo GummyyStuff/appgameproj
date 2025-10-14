@@ -40,48 +40,84 @@ export function StockMarketChart({ candles, currentPrice, trend }: StockMarketCh
     if (!chartContainerRef.current) return
 
     try {
-      // Create chart instance with dark theme
+      // Create chart instance with professional dark theme
       const chart = createChart(chartContainerRef.current, {
       layout: {
-        background: { type: ColorType.Solid, color: '#1a1d29' },
-        textColor: '#9ca3af',
+        background: { type: ColorType.Solid, color: '#0f1116' },
+        textColor: '#d1d4dc',
+        fontSize: 12,
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
       },
       grid: {
-        vertLines: { color: '#374151' },
-        horzLines: { color: '#374151' },
+        vertLines: { 
+          color: '#1e222d',
+          style: 1, // Solid lines
+          visible: true,
+        },
+        horzLines: { 
+          color: '#1e222d',
+          style: 1,
+          visible: true,
+        },
       },
       width: chartContainerRef.current.clientWidth,
       height: 500,
       timeScale: {
         timeVisible: true,
         secondsVisible: false,
-        borderColor: '#374151',
+        borderColor: '#2a2e39',
+        barSpacing: 12,
+        minBarSpacing: 8,
+        fixLeftEdge: true,
+        fixRightEdge: true,
       },
       rightPriceScale: {
-        borderColor: '#374151',
+        borderColor: '#2a2e39',
+        scaleMargins: {
+          top: 0.1,
+          bottom: 0.2,
+        },
+        autoScale: true,
       },
       crosshair: {
-        mode: CrosshairMode.Normal, // v5 API: Use enum instead of number
+        mode: CrosshairMode.Normal,
         vertLine: {
-          color: '#6b7280',
-          labelBackgroundColor: '#374151',
+          color: '#758696',
+          width: 1,
+          style: 3, // Dashed
+          labelBackgroundColor: '#363a45',
         },
         horzLine: {
-          color: '#6b7280',
-          labelBackgroundColor: '#374151',
+          color: '#758696',
+          width: 1,
+          style: 3, // Dashed
+          labelBackgroundColor: '#363a45',
         },
+      },
+      handleScroll: {
+        mouseWheel: true,
+        pressedMouseMove: true,
+        horzTouchDrag: true,
+        vertTouchDrag: true,
+      },
+      handleScale: {
+        axisPressedMouseMove: true,
+        mouseWheel: true,
+        pinch: true,
       },
     })
 
     chartRef.current = chart
 
-    // Add candlestick series (v5 API: addSeries with type parameter)
+    // Add candlestick series with professional colors
     const candlestickSeries = chart.addSeries(CandlestickSeries, {
-      upColor: '#10b981',
-      downColor: '#ef4444',
+      upColor: '#26a69a',        // Professional teal/green for bullish
+      downColor: '#ef5350',      // Professional red for bearish
       borderVisible: false,
-      wickUpColor: '#10b981',
-      wickDownColor: '#ef4444',
+      wickUpColor: '#26a69a',
+      wickDownColor: '#ef5350',
+      borderUpColor: '#26a69a',
+      borderDownColor: '#ef5350',
     })
     candlestickSeriesRef.current = candlestickSeries
 
@@ -129,6 +165,9 @@ export function StockMarketChart({ candles, currentPrice, trend }: StockMarketCh
     }
   }, [])
 
+  // Track previous candles length for update vs setData decision
+  const prevCandlesLengthRef = useRef(0)
+
   useEffect(() => {
     if (!candlestickSeriesRef.current || !volumeSeriesRef.current || candles.length === 0) return
 
@@ -167,22 +206,6 @@ export function StockMarketChart({ candles, currentPrice, trend }: StockMarketCh
         return
       }
 
-      // Transform to lightweight-charts format
-      const candlestickData: CandlestickData[] = validCandles.map(candle => ({
-        time: candle.timeNum as Time,
-        open: candle.open,
-        high: candle.high,
-        low: candle.low,
-        close: candle.close,
-      }))
-
-      // Transform volume data
-      const volumeData = validCandles.map(candle => ({
-        time: candle.timeNum as Time,
-        value: candle.volume,
-        color: candle.close >= candle.open ? '#10b98133' : '#ef444433',
-      }))
-
       // Calculate statistics
       const high = Math.max(...validCandles.map(c => c.high))
       const low = Math.min(...validCandles.map(c => c.low))
@@ -190,14 +213,83 @@ export function StockMarketChart({ candles, currentPrice, trend }: StockMarketCh
       
       setStats({ high, low, volume: totalVolume })
 
-      // Set data (lightweight-charts expects sorted data)
-      candlestickSeriesRef.current.setData(candlestickData)
-      volumeSeriesRef.current.setData(volumeData)
+      // Determine if this is initial load or real-time update
+      const isInitialLoad = prevCandlesLengthRef.current === 0
+      const isNewCandle = validCandles.length > prevCandlesLengthRef.current
 
-      // Fit content to view
-      if (chartRef.current) {
-        chartRef.current.timeScale().fitContent()
+      if (isInitialLoad) {
+        // Initial load: use setData for all candles
+        const candlestickData: CandlestickData[] = validCandles.map(candle => ({
+          time: candle.timeNum as Time,
+          open: candle.open,
+          high: candle.high,
+          low: candle.low,
+          close: candle.close,
+        }))
+
+        const volumeData = validCandles.map(candle => ({
+          time: candle.timeNum as Time,
+          value: candle.volume,
+          color: candle.close >= candle.open ? 'rgba(38, 166, 154, 0.3)' : 'rgba(239, 83, 80, 0.3)',
+        }))
+
+        candlestickSeriesRef.current.setData(candlestickData)
+        volumeSeriesRef.current.setData(volumeData)
+
+        // Fit content to view on initial load
+        if (chartRef.current) {
+          chartRef.current.timeScale().fitContent()
+        }
+
+        console.log('📊 Chart initialized with', validCandles.length, 'candles')
+      } else if (isNewCandle) {
+        // Real-time update: use update() for the latest candle
+        const latestCandle = validCandles[validCandles.length - 1]
+        
+        const candlestickUpdate: CandlestickData = {
+          time: latestCandle.timeNum as Time,
+          open: latestCandle.open,
+          high: latestCandle.high,
+          low: latestCandle.low,
+          close: latestCandle.close,
+        }
+
+        const volumeUpdate = {
+          time: latestCandle.timeNum as Time,
+          value: latestCandle.volume,
+          color: latestCandle.close >= latestCandle.open ? 'rgba(38, 166, 154, 0.3)' : 'rgba(239, 83, 80, 0.3)',
+        }
+
+        candlestickSeriesRef.current.update(candlestickUpdate)
+        volumeSeriesRef.current.update(volumeUpdate)
+
+        console.log('📊 Chart updated with new candle at', new Date(latestCandle.timeNum * 1000).toISOString())
+      } else {
+        // Update existing candle (price changes within the same time period)
+        const latestCandle = validCandles[validCandles.length - 1]
+        
+        const candlestickUpdate: CandlestickData = {
+          time: latestCandle.timeNum as Time,
+          open: latestCandle.open,
+          high: latestCandle.high,
+          low: latestCandle.low,
+          close: latestCandle.close,
+        }
+
+        const volumeUpdate = {
+          time: latestCandle.timeNum as Time,
+          value: latestCandle.volume,
+          color: latestCandle.close >= latestCandle.open ? 'rgba(38, 166, 154, 0.3)' : 'rgba(239, 83, 80, 0.3)',
+        }
+
+        candlestickSeriesRef.current.update(candlestickUpdate)
+        volumeSeriesRef.current.update(volumeUpdate)
+
+        console.log('📊 Chart updated existing candle at', new Date(latestCandle.timeNum * 1000).toISOString())
       }
+
+      // Store the current length for next comparison
+      prevCandlesLengthRef.current = validCandles.length
     } catch (error) {
       console.error('Error updating chart data:', error)
       // Don't crash the app, just log the error
@@ -220,10 +312,10 @@ export function StockMarketChart({ candles, currentPrice, trend }: StockMarketCh
         candlestickSeriesRef.current.removePriceLine(priceLineRef.current)
       }
 
-      // Create new price line for current price
+      // Create new price line for current price with professional colors
       const priceLine = candlestickSeriesRef.current.createPriceLine({
         price: currentPrice,
-        color: trend === 'up' ? '#10b981' : trend === 'down' ? '#ef4444' : '#6b7280',
+        color: trend === 'up' ? '#26a69a' : trend === 'down' ? '#ef5350' : '#758696',
         lineWidth: 2,
         lineStyle: LineStyle.Dashed, // v5 API: Use enum instead of number
         axisLabelVisible: true,
@@ -255,7 +347,7 @@ export function StockMarketChart({ candles, currentPrice, trend }: StockMarketCh
         <h3 className="text-lg font-semibold text-tarkov-text">Price Chart</h3>
         <div className="flex items-center gap-2">
           <span className="text-sm text-tarkov-text-secondary">Current Price:</span>
-          <span className={`text-xl font-bold ${trend === 'up' ? 'text-green-500' : trend === 'down' ? 'text-red-500' : 'text-gray-400'}`}>
+          <span className={`text-xl font-bold ${trend === 'up' ? 'text-[#26a69a]' : trend === 'down' ? 'text-[#ef5350]' : 'text-gray-400'}`}>
             ${currentPrice.toFixed(2)}
           </span>
         </div>
@@ -266,26 +358,26 @@ export function StockMarketChart({ candles, currentPrice, trend }: StockMarketCh
 
       {/* Statistics */}
       <div className="mt-4 grid grid-cols-3 gap-4 text-sm">
-        <div className="bg-tarkov-darker rounded-lg p-3">
+        <div className="bg-tarkov-darker rounded-lg p-3 border border-[#1e222d]">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-green-500"></div>
-            <span className="text-tarkov-text-secondary">24h High</span>
+            <div className="w-3 h-3 rounded-full bg-[#26a69a]"></div>
+            <span className="text-[#d1d4dc] text-xs">24h High</span>
           </div>
-          <p className="text-lg font-bold text-tarkov-text mt-1">${stats.high.toFixed(2)}</p>
+          <p className="text-lg font-bold text-[#26a69a] mt-1">${stats.high.toFixed(2)}</p>
         </div>
-        <div className="bg-tarkov-darker rounded-lg p-3">
+        <div className="bg-tarkov-darker rounded-lg p-3 border border-[#1e222d]">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-red-500"></div>
-            <span className="text-tarkov-text-secondary">24h Low</span>
+            <div className="w-3 h-3 rounded-full bg-[#ef5350]"></div>
+            <span className="text-[#d1d4dc] text-xs">24h Low</span>
           </div>
-          <p className="text-lg font-bold text-tarkov-text mt-1">${stats.low.toFixed(2)}</p>
+          <p className="text-lg font-bold text-[#ef5350] mt-1">${stats.low.toFixed(2)}</p>
         </div>
-        <div className="bg-tarkov-darker rounded-lg p-3">
+        <div className="bg-tarkov-darker rounded-lg p-3 border border-[#1e222d]">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-            <span className="text-tarkov-text-secondary">Total Volume</span>
+            <div className="w-3 h-3 rounded-full bg-[#758696]"></div>
+            <span className="text-[#d1d4dc] text-xs">Total Volume</span>
           </div>
-          <p className="text-lg font-bold text-tarkov-text mt-1">{stats.volume.toLocaleString()}</p>
+          <p className="text-lg font-bold text-[#758696] mt-1">{stats.volume.toLocaleString()}</p>
         </div>
       </div>
     </div>
