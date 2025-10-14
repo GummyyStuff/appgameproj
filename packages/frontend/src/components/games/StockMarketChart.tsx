@@ -39,8 +39,9 @@ export function StockMarketChart({ candles, currentPrice, trend }: StockMarketCh
   useEffect(() => {
     if (!chartContainerRef.current) return
 
-    // Create chart instance with dark theme
-    const chart = createChart(chartContainerRef.current, {
+    try {
+      // Create chart instance with dark theme
+      const chart = createChart(chartContainerRef.current, {
       layout: {
         background: { type: ColorType.Solid, color: '#1a1d29' },
         textColor: '#9ca3af',
@@ -116,68 +117,125 @@ export function StockMarketChart({ candles, currentPrice, trend }: StockMarketCh
     return () => {
       window.removeEventListener('resize', handleResize)
       if (chartRef.current) {
-        chartRef.current.remove()
+        try {
+          chartRef.current.remove()
+        } catch (error) {
+          console.error('Error removing chart:', error)
+        }
       }
+    }
+    } catch (error) {
+      console.error('Error initializing chart:', error)
     }
   }, [])
 
   useEffect(() => {
     if (!candlestickSeriesRef.current || !volumeSeriesRef.current || candles.length === 0) return
 
-    // Transform candles data for TradingView Lightweight Charts
-    const candlestickData: CandlestickData[] = candles.map(candle => ({
-      time: Math.floor(new Date(candle.timestamp).getTime() / 1000) as Time,
-      open: candle.open,
-      high: candle.high,
-      low: candle.low,
-      close: candle.close,
-    }))
+    try {
+      // Validate and transform candles data with strict checks
+      const validCandles = candles
+        .filter(candle => {
+          // Filter out invalid candles
+          if (!candle || !candle.timestamp) return false
+          const timestamp = new Date(candle.timestamp).getTime()
+          if (isNaN(timestamp)) return false
+          // Check all OHLC values are valid numbers
+          if (typeof candle.open !== 'number' || isNaN(candle.open)) return false
+          if (typeof candle.high !== 'number' || isNaN(candle.high)) return false
+          if (typeof candle.low !== 'number' || isNaN(candle.low)) return false
+          if (typeof candle.close !== 'number' || isNaN(candle.close)) return false
+          if (typeof candle.volume !== 'number' || isNaN(candle.volume)) return false
+          // Validate OHLC relationships (high >= low, etc.)
+          if (candle.high < candle.low) return false
+          return true
+        })
+        .map(candle => ({
+          ...candle,
+          timeNum: Math.floor(new Date(candle.timestamp).getTime() / 1000)
+        }))
+        // Sort by time ascending (required by lightweight-charts)
+        .sort((a, b) => a.timeNum - b.timeNum)
+        // Remove duplicates (keep last entry for each timestamp)
+        .filter((candle, index, arr) => {
+          if (index === arr.length - 1) return true
+          return candle.timeNum !== arr[index + 1].timeNum
+        })
 
-    // Transform volume data
-    const volumeData = candles.map(candle => ({
-      time: Math.floor(new Date(candle.timestamp).getTime() / 1000) as Time,
-      value: candle.volume,
-      color: candle.close >= candle.open ? '#10b98133' : '#ef444433',
-    }))
+      if (validCandles.length === 0) {
+        console.warn('No valid candles to display')
+        return
+      }
 
-    // Calculate statistics
-    const high = Math.max(...candles.map(c => c.high))
-    const low = Math.min(...candles.map(c => c.low))
-    const totalVolume = candles.reduce((sum, c) => sum + c.volume, 0)
-    
-    setStats({ high, low, volume: totalVolume })
+      // Transform to lightweight-charts format
+      const candlestickData: CandlestickData[] = validCandles.map(candle => ({
+        time: candle.timeNum as Time,
+        open: candle.open,
+        high: candle.high,
+        low: candle.low,
+        close: candle.close,
+      }))
 
-    // Set data
-    candlestickSeriesRef.current.setData(candlestickData)
-    volumeSeriesRef.current.setData(volumeData)
+      // Transform volume data
+      const volumeData = validCandles.map(candle => ({
+        time: candle.timeNum as Time,
+        value: candle.volume,
+        color: candle.close >= candle.open ? '#10b98133' : '#ef444433',
+      }))
 
-    // Fit content to view
-    if (chartRef.current) {
-      chartRef.current.timeScale().fitContent()
+      // Calculate statistics
+      const high = Math.max(...validCandles.map(c => c.high))
+      const low = Math.min(...validCandles.map(c => c.low))
+      const totalVolume = validCandles.reduce((sum, c) => sum + c.volume, 0)
+      
+      setStats({ high, low, volume: totalVolume })
+
+      // Set data (lightweight-charts expects sorted data)
+      candlestickSeriesRef.current.setData(candlestickData)
+      volumeSeriesRef.current.setData(volumeData)
+
+      // Fit content to view
+      if (chartRef.current) {
+        chartRef.current.timeScale().fitContent()
+      }
+    } catch (error) {
+      console.error('Error updating chart data:', error)
+      // Don't crash the app, just log the error
     }
   }, [candles])
 
   // Update current price line (v5 API compliant)
   useEffect(() => {
     if (!candlestickSeriesRef.current || !chartRef.current) return
-
-    // Remove existing price line before creating new one
-    if (priceLineRef.current && candlestickSeriesRef.current) {
-      candlestickSeriesRef.current.removePriceLine(priceLineRef.current)
+    
+    // Validate current price
+    if (typeof currentPrice !== 'number' || isNaN(currentPrice) || !isFinite(currentPrice)) {
+      console.warn('Invalid current price:', currentPrice)
+      return
     }
 
-    // Create new price line for current price
-    const priceLine = candlestickSeriesRef.current.createPriceLine({
-      price: currentPrice,
-      color: trend === 'up' ? '#10b981' : trend === 'down' ? '#ef4444' : '#6b7280',
-      lineWidth: 2,
-      lineStyle: LineStyle.Dashed, // v5 API: Use enum instead of number
-      axisLabelVisible: true,
-      title: 'Current',
-    })
-    
-    // Store reference to the price line
-    priceLineRef.current = priceLine
+    try {
+      // Remove existing price line before creating new one
+      if (priceLineRef.current && candlestickSeriesRef.current) {
+        candlestickSeriesRef.current.removePriceLine(priceLineRef.current)
+      }
+
+      // Create new price line for current price
+      const priceLine = candlestickSeriesRef.current.createPriceLine({
+        price: currentPrice,
+        color: trend === 'up' ? '#10b981' : trend === 'down' ? '#ef4444' : '#6b7280',
+        lineWidth: 2,
+        lineStyle: LineStyle.Dashed, // v5 API: Use enum instead of number
+        axisLabelVisible: true,
+        title: 'Current',
+      })
+      
+      // Store reference to the price line
+      priceLineRef.current = priceLine
+    } catch (error) {
+      console.error('Error updating price line:', error)
+      // Don't crash the app
+    }
   }, [currentPrice, trend])
 
   if (candles.length === 0) {
