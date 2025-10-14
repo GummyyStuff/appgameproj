@@ -8,10 +8,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { 
   createChart, 
-  ColorType, 
+  ColorType,
+  CandlestickSeries,
+  HistogramSeries,
+  CrosshairMode,
+  LineStyle,
   type IChartApi, 
   type ISeriesApi, 
-  type CandlestickData, 
+  type CandlestickData,
+  type IPriceLine,
   type Time 
 } from 'lightweight-charts';
 import type { Candle } from '../../services/stock-market-api';
@@ -28,6 +33,7 @@ export function StockMarketChart({ candles, currentPrice, trend }: StockMarketCh
   const chartRef = useRef<IChartApi | null>(null)
   const candlestickSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null)
   const volumeSeriesRef = useRef<ISeriesApi<'Histogram'> | null>(null)
+  const priceLineRef = useRef<IPriceLine | null>(null) // Store reference to current price line (v5 API)
   const [stats, setStats] = useState({ high: 0, low: 0, volume: 0 })
 
   useEffect(() => {
@@ -54,7 +60,7 @@ export function StockMarketChart({ candles, currentPrice, trend }: StockMarketCh
         borderColor: '#374151',
       },
       crosshair: {
-        mode: 1,
+        mode: CrosshairMode.Normal, // v5 API: Use enum instead of number
         vertLine: {
           color: '#6b7280',
           labelBackgroundColor: '#374151',
@@ -68,8 +74,8 @@ export function StockMarketChart({ candles, currentPrice, trend }: StockMarketCh
 
     chartRef.current = chart
 
-    // Add candlestick series
-    const candlestickSeries = (chart as any).addCandlestickSeries({
+    // Add candlestick series (v5 API: addSeries with type parameter)
+    const candlestickSeries = chart.addSeries(CandlestickSeries, {
       upColor: '#10b981',
       downColor: '#ef4444',
       borderVisible: false,
@@ -78,8 +84,8 @@ export function StockMarketChart({ candles, currentPrice, trend }: StockMarketCh
     })
     candlestickSeriesRef.current = candlestickSeries
 
-    // Add volume series as histogram
-    const volumeSeries = (chart as any).addHistogramSeries({
+    // Add volume series as histogram (v5 API)
+    const volumeSeries = chart.addSeries(HistogramSeries, {
       color: '#6b7280',
       priceFormat: {
         type: 'volume',
@@ -151,19 +157,27 @@ export function StockMarketChart({ candles, currentPrice, trend }: StockMarketCh
     }
   }, [candles])
 
-  // Update current price line
+  // Update current price line (v5 API compliant)
   useEffect(() => {
     if (!candlestickSeriesRef.current || !chartRef.current) return
 
-    // Create price line for current price
-    candlestickSeriesRef.current.createPriceLine({
+    // Remove existing price line before creating new one
+    if (priceLineRef.current && candlestickSeriesRef.current) {
+      candlestickSeriesRef.current.removePriceLine(priceLineRef.current)
+    }
+
+    // Create new price line for current price
+    const priceLine = candlestickSeriesRef.current.createPriceLine({
       price: currentPrice,
       color: trend === 'up' ? '#10b981' : trend === 'down' ? '#ef4444' : '#6b7280',
       lineWidth: 2,
-      lineStyle: 2, // Dashed
+      lineStyle: LineStyle.Dashed, // v5 API: Use enum instead of number
       axisLabelVisible: true,
       title: 'Current',
     })
+    
+    // Store reference to the price line
+    priceLineRef.current = priceLine
   }, [currentPrice, trend])
 
   if (candles.length === 0) {
