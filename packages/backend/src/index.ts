@@ -29,9 +29,10 @@ app.use('*', requestTimeoutMiddleware())
 // Performance monitoring middleware
 app.use('*', performanceMiddleware)
 
-// Sentry middleware (adds request context)
+// Sentry middleware (adds request context) - only in production
+// Note: Middleware is imported statically to avoid top-level await
+import { sentryMiddleware } from './middleware/sentry'
 if (isProduction()) {
-  const { sentryMiddleware } = await import('./middleware/sentry')
   app.use('*', sentryMiddleware)
 }
 
