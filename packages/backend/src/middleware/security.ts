@@ -15,10 +15,11 @@ export function securityHeadersMiddleware() {
     const csp = [
       "default-src 'self'",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com", // Allow inline scripts for React and Cloudflare
+      "worker-src 'self' blob:", // Allow Sentry Session Replay Web Workers
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com", // Allow inline styles for Tailwind and Google Fonts
       "img-src 'self' data: https:",
       "font-src 'self' data: https://fonts.gstatic.com", // Allow Google Fonts
-      "connect-src 'self' wss: https: https://static.cloudflareinsights.com", // Allow Cloudflare Insights
+      "connect-src 'self' wss: https: https://static.cloudflareinsights.com https://*.ingest.sentry.io https://o4510190949695488.ingest.us.sentry.io", // Allow Cloudflare Insights and Sentry
       "media-src 'self'",
       "object-src 'none'",
       "base-uri 'self'",
