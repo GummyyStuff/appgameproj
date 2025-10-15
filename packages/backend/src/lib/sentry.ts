@@ -51,7 +51,7 @@ export function initSentry() {
     tracesSampleRate: 0.1,
 
     // Filter out some common errors
-    beforeSend(event, hint) {
+    beforeSend(event) {
       // Filter out expected errors
       if (event.exception?.values?.[0]?.value?.includes('ECONNREFUSED')) {
         return null;
