@@ -1,7 +1,8 @@
 import type { Context } from 'hono'
 import { HTTPException } from 'hono/http-exception'
-import { env, isDevelopment, isTest } from '../config/env'
+import { env, isDevelopment, isTest, isProduction } from '../config/env'
 import { logger } from './logger'
+import { logError } from '../lib/sentry'
 
 export interface ErrorResponse {
   error: {
@@ -49,9 +50,22 @@ export function errorHandler(err: Error, c: Context): Response {
     details: {
       requestId,
       errorName: err.name,
-      ...(isDevelopment && { stack: err.stack })
+      ...(isDevelopment() && { stack: err.stack })
     }
   })
+  
+  // Log to Sentry in production
+  if (isProduction()) {
+    logError(err, {
+      requestId,
+      method,
+      path,
+      userId,
+      ip,
+      userAgent,
+      errorName: err.name
+    })
+  }
 
   // Handle HTTP exceptions (thrown by middleware or route handlers)
   if (err instanceof HTTPException) {
@@ -60,7 +74,7 @@ export function errorHandler(err: Error, c: Context): Response {
         message: err.message,
         code: `HTTP_${err.status}`,
         requestId,
-        ...(isDevelopment && { details: err.cause })
+        ...(isDevelopment() && { details: err.cause })
       },
       timestamp,
       path,
@@ -77,7 +91,7 @@ export function errorHandler(err: Error, c: Context): Response {
         message: 'Validation failed',
         code: 'VALIDATION_ERROR',
         requestId,
-        details: isDevelopment() && !isTest ? err : undefined
+        details: isDevelopment() && !isTest() ? err : undefined
       },
       timestamp,
       path,
@@ -110,7 +124,7 @@ export function errorHandler(err: Error, c: Context): Response {
         message: 'Database operation failed',
         code: 'DATABASE_ERROR',
         requestId,
-        details: isDevelopment ? err.message : undefined
+        details: isDevelopment() ? err.message : undefined
       },
       timestamp,
       path,
@@ -139,10 +153,10 @@ export function errorHandler(err: Error, c: Context): Response {
   // Handle generic errors
   const response: ErrorResponse = {
     error: {
-      message: isDevelopment ? err.message : 'Internal server error',
+      message: isDevelopment() ? err.message : 'Internal server error',
       code: 'INTERNAL_ERROR',
       requestId,
-      details: isDevelopment ? err.stack : undefined
+      details: isDevelopment() ? err.stack : undefined
     },
     timestamp,
     path,

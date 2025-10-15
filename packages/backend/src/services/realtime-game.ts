@@ -251,6 +251,7 @@ export class RealtimeGameService {
 
   /**
    * Subscribe to database changes for game history
+   * NOTE: Disabled for Appwrite migration - use Appwrite Realtime on client side
    */
   async subscribeToGameHistory(userId: string, callback: (gameHistory: GameHistory) => void) {
     const channelName = `game-history-${userId}`
@@ -259,44 +260,26 @@ export class RealtimeGameService {
       return this.channels.get(channelName)
     }
 
-    const channel = supabase
-      .channel(channelName)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'game_history',
-          filter: `user_id=eq.${userId}`
-        },
-        (payload) => {
-          callback(payload.new as GameHistory)
-        }
-      )
-      .subscribe()
-
-    this.channels.set(channelName, channel)
-    return channel
+    // Appwrite realtime is handled client-side, not server-side
+    console.log(`Game history subscription requested for user ${userId} - handled by Appwrite client`)
+    return null
   }
 
   /**
    * Unsubscribe from a channel
+   * NOTE: Disabled for Appwrite migration
    */
   async unsubscribe(channelName: string) {
-    const channel = this.channels.get(channelName)
-    if (channel) {
-      await supabase.removeChannel(channel)
-      this.channels.delete(channelName)
-    }
+    // No-op: Appwrite Realtime subscriptions are client-side only
+    this.channels.delete(channelName)
   }
 
   /**
    * Unsubscribe from all channels
+   * NOTE: Disabled for Appwrite migration
    */
   async unsubscribeAll() {
-    for (const [channelName, channel] of this.channels.entries()) {
-      await supabase.removeChannel(channel)
-    }
+    // No-op: Appwrite Realtime subscriptions are client-side only
     this.channels.clear()
   }
 

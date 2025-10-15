@@ -4,7 +4,7 @@
  */
 
 import { describe, test, expect, beforeEach, mock } from 'bun:test';
-import { CurrencyService } from '../currency-new';
+import { CurrencyService } from '../currency';
 import { UserService } from '../user-service';
 
 describe('CurrencyService - Balance Validation', () => {

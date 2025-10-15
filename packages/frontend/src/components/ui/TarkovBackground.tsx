@@ -147,7 +147,7 @@ const scanKeyframes = `
 `
 
 // Inject the keyframes
-if (typeof document !== 'undefined') {
+if (typeof document !== 'undefined' && typeof document.createElement === 'function' && document.head) {
   const style = document.createElement('style')
   style.textContent = scanKeyframes
   document.head.appendChild(style)

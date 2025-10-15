@@ -2,6 +2,7 @@ import { useState, useEffect, createContext, useContext, useCallback } from 'rea
 import type { ReactNode } from 'react';
 import { account } from '../lib/appwrite';
 import { OAuthProvider } from 'appwrite';
+import { setUserContext, clearUserContext } from '../lib/sentry';
 
 export const API_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -71,17 +72,31 @@ export function AuthProvider({ children }: AuthProviderProps) {
         if (response.ok) {
           const userData = await response.json();
           setUser(userData);
+          
+          // Set user context in Sentry
+          setUserContext(userData.id, {
+            email: userData.email,
+            username: userData.username || userData.name
+          });
         } else {
           // Backend couldn't find profile, trigger creation
-          setUser({
+          const newUser = {
             id: appwriteUser.$id,
             email: appwriteUser.email,
             name: appwriteUser.name,
+          };
+          setUser(newUser);
+          
+          // Set user context in Sentry
+          setUserContext(newUser.id, {
+            email: newUser.email,
+            username: newUser.name
           });
         }
       } catch (error) {
         // No session
         setUser(null);
+        clearUserContext();
       } finally {
         setLoading(false);
       }
@@ -141,6 +156,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         method: 'POST',
         credentials: 'include',
       }).catch(() => {}); // Ignore errors
+      
+      // Clear user context from Sentry
+      clearUserContext();
       
       setUser(null);
       window.location.href = '/login';

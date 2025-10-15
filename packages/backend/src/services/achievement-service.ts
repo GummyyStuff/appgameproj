@@ -5,7 +5,7 @@
 
 import { appwriteDb } from './appwrite-database';
 import { COLLECTION_IDS, AchievementDefinition, UserAchievement } from '../config/collections';
-import { CurrencyService } from './currency-new';
+import { CurrencyService } from './currency';
 import { ID, Query } from 'node-appwrite';
 
 export interface AchievementWithProgress {

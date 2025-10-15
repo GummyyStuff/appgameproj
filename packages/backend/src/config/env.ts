@@ -33,6 +33,9 @@ const envSchema = z.object({
   HEALTH_CHECK_TIMEOUT: z.string().default('5000'),
   METRICS_ENABLED: z.string().default('true'),
   
+  // Sentry Configuration
+  SENTRY_DSN: z.string().url().optional(),
+  
   // Redis Configuration
   REDIS_URL: z.string().url().optional(), // e.g., redis://localhost:6379
   REDIS_HOST: z.string().default('localhost'),

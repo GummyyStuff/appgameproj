@@ -12,6 +12,14 @@
 import { describe, test, expect, beforeAll } from 'bun:test';
 import { CaseOpeningService, CaseType, TarkovItem, WeightedItem } from '../case-opening-appwrite';
 
+// Check if Appwrite is available for integration tests
+const isAppwriteAvailable = () => {
+  return process.env.APPWRITE_ENDPOINT && 
+         process.env.APPWRITE_PROJECT_ID && 
+         process.env.APPWRITE_API_KEY &&
+         process.env.APPWRITE_API_KEY !== 'test-key';
+};
+
 // Expected item boosts that were applied
 const RARITY_BOOSTS = {
   common: 2.3,
@@ -34,6 +42,11 @@ let globalCaseTypes: CaseType[] = [];
 let globalItemsByRarity: Map<string, TarkovItem[]> = new Map();
 
 beforeAll(async () => {
+  if (!isAppwriteAvailable()) {
+    console.log('⏭️  Skipping Appwrite integration tests - no credentials available');
+    return;
+  }
+  
   // Load all case types
   globalCaseTypes = await CaseOpeningService.getCaseTypes();
   
@@ -55,9 +68,9 @@ beforeAll(async () => {
       }
     }
   }
-});
+}, 10000); // Increase timeout to 10 seconds for network operations
 
-describe('Case Opening RTP Verification', () => {
+describe.skipIf(!isAppwriteAvailable())('Case Opening RTP Verification - Integration', () => {
 
   test('all cases should exist with correct prices', () => {
     expect(globalCaseTypes.length).toBe(4);

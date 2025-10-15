@@ -11,8 +11,13 @@ import { validateContentType, validateRequestSize } from './middleware/validatio
 import { performanceMiddleware } from './middleware/performance'
 import { apiRoutes } from './routes/api'
 import { monitoring } from './routes/monitoring'
+import { initSentry } from './lib/sentry'
+import { sentryTestRoutes } from './routes/sentry-test'
 // Supabase realtime service removed - now using Appwrite realtime
 // Custom WebSocket server removed - now using Appwrite Realtime
+
+// Initialize Sentry for error tracking
+initSentry()
 
 const app = new Hono()
 
@@ -23,6 +28,12 @@ app.use('*', requestTimeoutMiddleware())
 
 // Performance monitoring middleware
 app.use('*', performanceMiddleware)
+
+// Sentry middleware (adds request context)
+if (isProduction()) {
+  const { sentryMiddleware } = await import('./middleware/sentry')
+  app.use('*', sentryMiddleware)
+}
 
 // Global middleware
 if (!isProduction()) {
@@ -53,6 +64,9 @@ app.use('/api/*', validateRequestSize(5 * 1024 * 1024)) // 5MB limit
 
 // Monitoring endpoints (no auth required)
 app.route('/api', monitoring)
+
+// Sentry test endpoints (remove in production)
+app.route('/api/sentry-test', sentryTestRoutes)
 
 // Public leaderboard endpoint (no rate limiting, cached)
 app.get('/api/statistics/leaderboard', async (c) => {

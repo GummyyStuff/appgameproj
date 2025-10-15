@@ -1,6 +1,10 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
+import { initSentry } from './lib/sentry'
+
+// Initialize Sentry for error tracking
+initSentry()
 
 // Import auth test helpers in development
 if (import.meta.env.DEV) {

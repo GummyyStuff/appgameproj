@@ -133,20 +133,6 @@ export function extractUserIdFromToken(authHeader?: string): string | null {
   }
 }
 
-/**
- * Verify JWT token with Supabase - DEPRECATED
- * 
- * ⚠️ This function is deprecated. Use validateSession from config/appwrite.ts instead
- * 
- * @deprecated Use validateSession from config/appwrite.ts for Appwrite authentication
- */
-export async function verifyAuthToken(token: string): Promise<{ userId: string } | null> {
-  console.warn('verifyAuthToken is deprecated. Use validateSession from config/appwrite.ts instead');
-  
-  // This function no longer works as supabaseAdmin has been removed
-  // Keeping it for backward compatibility but it will always return null
-  return null;
-}
 
 /**
  * Auth middleware configuration for different routes

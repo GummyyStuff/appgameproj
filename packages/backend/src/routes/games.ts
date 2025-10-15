@@ -11,7 +11,7 @@ import { CaseOpeningService } from '../services/case-opening-appwrite'
 import { StockMarketGame } from '../services/game-engine/stock-market-game'
 import { stockMarketStateService } from '../services/stock-market-state'
 
-import { CurrencyService } from '../services/currency-new'
+import { CurrencyService } from '../services/currency'
 import { realtimeGameService } from '../services/realtime-game'
 import { appwriteClient } from '../config/appwrite'
 

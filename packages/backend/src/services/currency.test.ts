@@ -9,10 +9,8 @@ process.env.JWT_SECRET = 'test-jwt-secret'
 process.env.STARTING_BALANCE = '10000'
 process.env.DAILY_BONUS = '1000'
 
-// NOTE: currency.ts is deprecated - use currency-new.ts in production
-// This test file tests the old service which relies on deprecated DatabaseService
-// Skipping these tests as the service is no longer in use
-import { CurrencyService } from './currency-new'
+// NOTE: This test file tests the static utility methods of CurrencyService
+import { CurrencyService } from './currency'
 
 describe('CurrencyService Static Methods', () => {
   describe('formatCurrency', () => {

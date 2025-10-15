@@ -8,9 +8,18 @@ import { GlobalRegistrator } from '@happy-dom/global-registrator';
 // Register Happy DOM globals (document, window, etc.)
 GlobalRegistrator.register();
 
-// Ensure document.body exists
-if (typeof document !== 'undefined' && !document.body) {
-  document.body = document.createElement('body');
-  document.documentElement.appendChild(document.body);
+// Ensure document structure exists and is properly set up
+if (typeof document !== 'undefined') {
+  // Create body if it doesn't exist
+  if (!document.body) {
+    const body = document.createElement('body');
+    document.documentElement.appendChild(body);
+  }
+  
+  // Create head if it doesn't exist
+  if (!document.head) {
+    const head = document.createElement('head');
+    document.documentElement.appendChild(head);
+  }
 }
 

@@ -49,8 +49,8 @@ describe('Statistics API Routes', () => {
       
       // Test game type validation
       expect(isValidGameType('roulette')).toBe(true)
-      expect(isValidGameType('blackjack')).toBe(true)
-
+      expect(isValidGameType('case_opening')).toBe(true)
+      expect(isValidGameType('stock_market')).toBe(true)
       expect(isValidGameType('invalid')).toBe(false)
       
       // Test that zod is available for validation
@@ -112,13 +112,12 @@ describe('Statistics API Routes', () => {
         {
           $id: '2',
           userId: 'test-user',
-          gameType: 'blackjack',
+          gameType: 'case_opening',
           betAmount: 50,
           winAmount: 0,
           resultData: JSON.stringify({ 
-            player_hand: [{ suit: 'hearts', value: 'K' }, { suit: 'spades', value: '7' }],
-            dealer_hand: [{ suit: 'diamonds', value: 'A' }, { suit: 'clubs', value: 'K' }],
-            result: 'dealer_win'
+            caseId: 'test-case',
+            itemWon: { name: 'Test Item', rarity: 'common', value: 0 }
           }),
           createdAt: '2024-01-15T11:00:00Z'
         }
@@ -132,17 +131,17 @@ describe('Statistics API Routes', () => {
       expect(overview.winRate).toBe(50) // 1 win out of 2 games
 
       const breakdown = StatisticsService.calculateGameTypeBreakdown(sampleGames)
-      expect(breakdown).toHaveLength(3) // All game types should be included
+      expect(breakdown).toHaveLength(3) // All game types should be included: roulette, stock_market, case_opening
       
       const rouletteBreakdown = breakdown.find(b => b.gameType === 'roulette')
       expect(rouletteBreakdown).toBeDefined()
       expect(rouletteBreakdown!.statistics.totalGames).toBe(1)
       expect(rouletteBreakdown!.statistics.winRate).toBe(100)
 
-      const blackjackBreakdown = breakdown.find(b => b.gameType === 'blackjack')
-      expect(blackjackBreakdown).toBeDefined()
-      expect(blackjackBreakdown!.statistics.totalGames).toBe(1)
-      expect(blackjackBreakdown!.statistics.winRate).toBe(0)
+      const caseOpeningBreakdown = breakdown.find(b => b.gameType === 'case_opening')
+      expect(caseOpeningBreakdown).toBeDefined()
+      expect(caseOpeningBreakdown!.statistics.totalGames).toBe(1)
+      expect(caseOpeningBreakdown!.statistics.winRate).toBe(0)
 
       const timeSeries = StatisticsService.calculateTimeSeriesData(sampleGames)
       expect(timeSeries).toHaveLength(1) // Both games on same date
@@ -215,7 +214,7 @@ describe('Statistics API Routes', () => {
       expect(GAME_CONFIG).toBeDefined()
       expect(GAME_CONFIG.STARTING_BALANCE).toBe(10000)
       expect(GAME_CONFIG.DAILY_BONUS_AMOUNT).toBe(1000)
-      expect(GAME_CONFIG.GAME_TYPES).toEqual(['roulette', 'blackjack', 'case_opening'])
+      expect(GAME_CONFIG.GAME_TYPES).toEqual(['roulette', 'case_opening', 'stock_market'])
     })
   })
 

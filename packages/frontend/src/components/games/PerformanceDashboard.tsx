@@ -37,6 +37,37 @@ export const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
   const { subscribeToDashboard } = usePerformanceMonitoring()
   const { getPerformanceScore, getCoreWebVitals, getEngagementMetrics, getQualityMetrics } = useUserExperienceMonitoring()
 
+  const updateDashboard = () => {
+    try {
+      const newDashboard = performanceMonitoring.getDashboard()
+      console.log('Dashboard data:', newDashboard) // Debug logging
+      setDashboard(newDashboard)
+    } catch (error) {
+      console.error('Error getting dashboard data:', error)
+      // Set fallback dashboard data
+      setDashboard({
+        current: {
+          frameRate: 60,
+          memoryUsage: 50,
+          activeConnections: 1,
+          domElements: 500
+        },
+        averages: {
+          apiResponseTime: 500,
+          successRate: 100,
+          errorRate: 0
+        },
+        trends: {
+          frameRate: [60, 60, 60, 60, 60],
+          memoryUsage: [50, 50, 50, 50, 50],
+          apiResponseTime: [500, 500, 500, 500, 500]
+        },
+        alerts: [],
+        lastUpdated: Date.now()
+      })
+    }
+  }
+
   useEffect(() => {
     if (!isVisible) return
 
@@ -84,38 +115,7 @@ export const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
       unsubscribe()
       clearInterval(interval)
     }
-  }, [isVisible, subscribeToDashboard, getPerformanceScore, getCoreWebVitals, getEngagementMetrics, getQualityMetrics])
-
-  const updateDashboard = () => {
-    try {
-      const newDashboard = performanceMonitoring.getDashboard()
-      console.log('Dashboard data:', newDashboard) // Debug logging
-      setDashboard(newDashboard)
-    } catch (error) {
-      console.error('Error getting dashboard data:', error)
-      // Set fallback dashboard data
-      setDashboard({
-        current: {
-          frameRate: 60,
-          memoryUsage: 50,
-          activeConnections: 1,
-          domElements: 500
-        },
-        averages: {
-          apiResponseTime: 500,
-          successRate: 100,
-          errorRate: 0
-        },
-        trends: {
-          frameRate: [60, 60, 60, 60, 60],
-          memoryUsage: [50, 50, 50, 50, 50],
-          apiResponseTime: [500, 500, 500, 500, 500]
-        },
-        alerts: [],
-        lastUpdated: Date.now()
-      })
-    }
-  }
+  }, [isVisible, subscribeToDashboard, getPerformanceScore, getCoreWebVitals, getEngagementMetrics, getQualityMetrics, updateDashboard])
 
   const exportData = () => {
     const data = performanceMonitoring.exportMonitoringData()

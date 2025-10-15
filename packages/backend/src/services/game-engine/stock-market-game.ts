@@ -19,7 +19,7 @@
 import { BaseGame, GameBet, GameResult } from './types';
 import { SecureRandomGenerator } from './random-generator';
 import { PayoutCalculator } from './payout-calculator';
-import { CurrencyService } from '../currency-new';
+import { CurrencyService } from '../currency';
 import { AchievementService } from '../achievement-service';
 import { Client, Databases, ID, Query } from 'node-appwrite';
 import { appwriteClient } from '../../config/appwrite';

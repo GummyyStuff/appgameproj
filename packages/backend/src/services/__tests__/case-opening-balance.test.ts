@@ -8,6 +8,14 @@ import { Databases, Client, Query } from 'node-appwrite';
 import { DATABASE_ID, COLLECTION_IDS } from '../../config/collections';
 import { CaseOpeningService } from '../case-opening-appwrite';
 
+// Check if Appwrite is available for integration tests
+const isAppwriteAvailable = () => {
+  return process.env.APPWRITE_ENDPOINT && 
+         process.env.APPWRITE_PROJECT_ID && 
+         process.env.APPWRITE_API_KEY &&
+         process.env.APPWRITE_API_KEY !== 'test-key';
+};
+
 const setupClient = () => {
   const client = new Client()
     .setEndpoint(process.env.APPWRITE_ENDPOINT || 'http://localhost:80/v1')
@@ -17,7 +25,7 @@ const setupClient = () => {
   return new Databases(client);
 };
 
-describe('Case Opening - Balance Constraint Regression Tests', () => {
+describe.skipIf(!isAppwriteAvailable())('Case Opening - Balance Constraint Regression Tests - Integration', () => {
   let databases: Databases;
 
   beforeAll(() => {
@@ -184,7 +192,7 @@ describe('Case Opening - Balance Constraint Regression Tests', () => {
   });
 });
 
-describe('Case Opening - Validation Tests', () => {
+describe.skipIf(!isAppwriteAvailable())('Case Opening - Validation Tests - Integration', () => {
   let databases: Databases;
 
   beforeAll(() => {
@@ -251,7 +259,7 @@ describe('Case Opening - Validation Tests', () => {
   });
 });
 
-describe('Balance Attribute Regression Prevention', () => {
+describe.skipIf(!isAppwriteAvailable())('Balance Attribute Regression Prevention - Integration', () => {
   let databases: Databases;
 
   beforeAll(() => {

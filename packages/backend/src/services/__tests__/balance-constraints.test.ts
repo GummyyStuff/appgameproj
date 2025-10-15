@@ -7,6 +7,14 @@ import { describe, test, expect, beforeAll } from 'bun:test';
 import { Databases, Client, Query } from 'node-appwrite';
 import { DATABASE_ID, COLLECTION_IDS } from '../../config/collections';
 
+// Check if Appwrite is available for integration tests
+const isAppwriteAvailable = () => {
+  return process.env.APPWRITE_ENDPOINT && 
+         process.env.APPWRITE_PROJECT_ID && 
+         process.env.APPWRITE_API_KEY &&
+         process.env.APPWRITE_API_KEY !== 'test-key';
+};
+
 // Setup Appwrite client for tests
 const setupClient = () => {
   const client = new Client()
@@ -17,7 +25,7 @@ const setupClient = () => {
   return new Databases(client);
 };
 
-describe('Balance Attribute Constraints', () => {
+describe.skipIf(!isAppwriteAvailable())('Balance Attribute Constraints - Integration Tests', () => {
   let databases: Databases;
 
   beforeAll(() => {
@@ -165,7 +173,7 @@ describe('Balance Attribute Constraints', () => {
   });
 });
 
-describe('Collection Permissions', () => {
+describe.skipIf(!isAppwriteAvailable())('Collection Permissions - Integration Tests', () => {
   let databases: Databases;
 
   beforeAll(() => {
@@ -196,7 +204,7 @@ describe('Collection Permissions', () => {
   });
 });
 
-describe('User Document Permissions', () => {
+describe.skipIf(!isAppwriteAvailable())('User Document Permissions - Integration Tests', () => {
   let databases: Databases;
 
   beforeAll(() => {

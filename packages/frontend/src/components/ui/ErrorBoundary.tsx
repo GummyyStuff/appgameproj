@@ -1,4 +1,5 @@
 import { Component, ErrorInfo, ReactNode } from 'react'
+import { logError } from '../../lib/sentry'
 
 interface Props {
   children: ReactNode
@@ -7,6 +8,7 @@ interface Props {
 interface State {
   hasError: boolean
   error?: Error
+  errorInfo?: ErrorInfo
 }
 
 class ErrorBoundary extends Component<Props, State> {
@@ -22,13 +24,24 @@ class ErrorBoundary extends Component<Props, State> {
     console.error('Uncaught error:', error, errorInfo)
     
     // Log additional context for debugging
-    console.error('Environment:', {
+    const envContext = {
       mode: import.meta.env.MODE,
       prod: import.meta.env.PROD,
       dev: import.meta.env.DEV,
       appwriteEndpoint: import.meta.env.VITE_APPWRITE_ENDPOINT ? 'SET' : 'MISSING',
       apiUrl: import.meta.env.VITE_API_URL ? 'SET' : 'MISSING'
+    }
+    
+    console.error('Environment:', envContext)
+    
+    // Log error to Sentry with additional context
+    logError(error, {
+      componentStack: errorInfo.componentStack,
+      ...envContext
     })
+    
+    // Store errorInfo in state for display
+    this.setState({ errorInfo })
   }
 
   public render() {
