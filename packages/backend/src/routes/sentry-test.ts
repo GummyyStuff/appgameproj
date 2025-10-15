@@ -206,6 +206,58 @@ sentryTestRoutes.get('/test-all', async (c) => {
 });
 
 /**
+ * Test distributed tracing
+ */
+sentryTestRoutes.get('/test-tracing', async (c) => {
+  const traceId = await Sentry.startSpan(
+    {
+      op: 'http.server',
+      name: 'GET /api/sentry-test/test-tracing'
+    },
+    async (span) => {
+      span?.setAttribute('http.method', 'GET');
+      span?.setAttribute('http.url', '/api/sentry-test/test-tracing');
+      span?.setAttribute('test.type', 'distributed-tracing');
+      
+      // Simulate database operation
+      await Sentry.startSpan(
+        {
+          op: 'db.query',
+          name: 'SELECT users FROM database'
+        },
+        async (dbSpan) => {
+          dbSpan?.setAttribute('db.operation', 'SELECT');
+          dbSpan?.setAttribute('db.table', 'users');
+          await new Promise(resolve => setTimeout(resolve, 30));
+        }
+      );
+      
+      // Simulate external API call
+      await Sentry.startSpan(
+        {
+          op: 'http.client',
+          name: 'GET /external-api/data'
+        },
+        async (apiSpan) => {
+          apiSpan?.setAttribute('http.method', 'GET');
+          apiSpan?.setAttribute('http.url', '/external-api/data');
+          await new Promise(resolve => setTimeout(resolve, 50));
+        }
+      );
+      
+      return span?.spanContext().traceId || 'no-trace-id';
+    }
+  );
+  
+  return c.json({
+    success: true,
+    message: 'Distributed tracing test completed!',
+    traceId,
+    check: 'Visit Sentry Performance tab to see the trace with nested spans'
+  });
+});
+
+/**
  * Get Sentry configuration info
  */
 sentryTestRoutes.get('/config', (c) => {
@@ -216,6 +268,13 @@ sentryTestRoutes.get('/config', (c) => {
     runtime: 'Bun',
     bunVersion: '1.3.0',
     sentrySDK: '@sentry/bun',
+    tracingEnabled: true,
+    tracesSampleRate: 1.0,
+    tracePropagationTargets: [
+      'localhost',
+      'https://tarkov.juanis.cool/api',
+      '/api'
+    ],
     dashboards: {
       frontend: 'https://juan-moran-ramirez.sentry.io/projects/tarkov-frontend/',
       backend: 'https://juan-moran-ramirez.sentry.io/projects/tarkov-backend/'

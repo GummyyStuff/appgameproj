@@ -34,7 +34,8 @@
     "react-dom": "catalog:default",
     "react-router-dom": "^7.9.1",
     "recharts": "2.15.4",
-    "tailwind-merge": "3.3.1"
+    "tailwind-merge": "3.3.1",
+    "web-vitals": "5.1.0"
   },
   "devDependencies": {
     "@happy-dom/global-registrator": "catalog:default",

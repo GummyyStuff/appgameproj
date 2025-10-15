@@ -46,9 +46,65 @@ export function initSentry() {
       Sentry.consoleLoggingIntegration({ levels: ["log", "warn", "error"] }),
     ],
     
-    // Performance Monitoring sample rate (10% of transactions)
-    // This enables automatic instrumentation for HTTP requests, database queries, etc.
-    tracesSampleRate: 0.1,
+    // Intelligent sampling based on transaction context
+    tracesSampler: (samplingContext) => {
+      const transactionName = samplingContext.name || '';
+      const transactionData = samplingContext.data || {};
+      
+      // Always sample critical game operations
+      if (transactionName.includes('/api/game/') || 
+          transactionName.includes('/api/payment/') ||
+          transactionName.includes('/api/auth/')) {
+        return 1.0;
+      }
+      
+      // Sample API calls at higher rate
+      if (transactionName.startsWith('GET /api') || 
+          transactionName.startsWith('POST /api')) {
+        return 0.8;
+      }
+      
+      // Sample health checks and monitoring at lower rate
+      if (transactionName.includes('/health') || 
+          transactionName.includes('/metrics')) {
+        return 0.1;
+      }
+      
+      // Sample database operations based on complexity
+      if (transactionData.db_operation) {
+        if (transactionData.db_operation === 'SELECT' && transactionData.db_table === 'users') {
+          return 0.3; // User queries are frequent but important
+        }
+        if (transactionData.db_operation === 'INSERT' || transactionData.db_operation === 'UPDATE') {
+          return 0.9; // Writes are critical
+        }
+        return 0.5; // Default for other DB operations
+      }
+      
+      // Sample based on user context if available
+      if (transactionData.user_id) {
+        const userId = transactionData.user_id;
+        // Sample premium users at higher rate
+        if (transactionData.user_subscription_tier === 'premium' || 
+            transactionData.user_subscription_tier === 'vip') {
+          return 0.9;
+        }
+        // Sample high-value customers at higher rate
+        if (transactionData.user_total_spent > 1000) {
+          return 0.8;
+        }
+      }
+      
+      // Default sampling rate
+      return 0.2;
+    },
+    
+    // Set `tracePropagationTargets` to control for which URLs trace propagation should be enabled
+    tracePropagationTargets: [
+      "localhost", 
+      /^https:\/\/tarkov\.juanis\.cool\/api/,
+      /^\/api/, // Local API calls
+    ],
 
     // Filter out some common errors
     beforeSend(event) {

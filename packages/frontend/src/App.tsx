@@ -7,6 +7,7 @@ import ErrorBoundary from './components/ui/ErrorBoundary'
 import { AuthErrorBoundary } from './components/auth/AuthErrorBoundary'
 import { PerformanceToggle } from './components/ui/PerformanceMonitor'
 import { ChatDock } from './components/chat/ChatDock'
+import { WebVitalsMonitor } from './components/monitoring/WebVitalsMonitor'
 import { useAuth } from './hooks/useAuth'
 import './index.css'
 
@@ -15,6 +16,7 @@ function AppContent() {
   
   return (
     <PerformanceProvider userId={user?.id}>
+      <WebVitalsMonitor />
       <AppRouter />
       <PerformanceToggle />
       <ChatDock />

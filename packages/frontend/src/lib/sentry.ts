@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/react";
+import { useEffect, useLocation, useNavigationType, createRoutesFromChildren, matchRoutes } from "react-router-dom";
 
 export interface ErrorInfoType {
   [key: string | symbol]: string;
@@ -42,7 +43,14 @@ export function initSentry() {
     
     // Performance monitoring
     integrations: [
-      Sentry.browserTracingIntegration(),
+      // React Router v6 integration for automatic route tracking
+      Sentry.reactRouterV6BrowserTracingIntegration({
+        useEffect,
+        useLocation,
+        useNavigationType,
+        createRoutesFromChildren,
+        matchRoutes,
+      }),
       Sentry.replayIntegration({
         maskAllText: true,
         blockAllMedia: true,
@@ -51,11 +59,42 @@ export function initSentry() {
       Sentry.consoleLoggingIntegration({ levels: ["log", "warn", "error"] }),
     ],
     
-    // Tracing
-    // Capture 100% of the transactions in production, 0% in development
-    tracesSampleRate: import.meta.env.PROD ? 1.0 : 0,
+    // Tracing configuration
+    // This enables automatic instrumentation (highly recommended)
+    // If you only want to use custom instrumentation:
+    // * Remove the `BrowserTracing` integration
+    // * add `Sentry.addTracingExtensions()` above your Sentry.init() call
     
-    // Set 'tracePropagationTargets' to control for which URLs distributed tracing should be enabled
+    // Intelligent sampling based on transaction context
+    tracesSampler: (samplingContext) => {
+      // Always sample critical user interactions
+      if (samplingContext.name?.includes('login') || 
+          samplingContext.name?.includes('game') ||
+          samplingContext.name?.includes('payment')) {
+        return 1.0;
+      }
+      
+      // Sample API calls at higher rate
+      if (samplingContext.name?.startsWith('GET /api') || 
+          samplingContext.name?.startsWith('POST /api')) {
+        return 0.8;
+      }
+      
+      // Sample page loads at moderate rate
+      if (samplingContext.name?.startsWith('pageload')) {
+        return 0.5;
+      }
+      
+      // Sample navigation at lower rate
+      if (samplingContext.name?.startsWith('navigation')) {
+        return 0.3;
+      }
+      
+      // Default sampling rate
+      return 0.1;
+    },
+    
+    // Set `tracePropagationTargets` to control for which URLs trace propagation should be enabled
     tracePropagationTargets: [
       "localhost",
       /^https:\/\/tarkov\.juanis\.cool\/api/,
@@ -140,19 +179,45 @@ export function logMessage(
 }
 
 /**
- * Set user context for Sentry
+ * Set user context for Sentry with enhanced data
  * @param userId User ID
  * @param userData Additional user data
  */
 export function setUserContext(userId: string, userData?: Record<string, any>) {
   if (isLocal || isDevelopment) {
+    console.log('🔧 Sentry setUserContext (dev mode):', { userId, userData });
     return;
   }
 
   Sentry.setUser({
     id: userId,
+    username: userData?.username,
+    email: userData?.email,
+    subscription_tier: userData?.subscriptionTier,
+    total_spent: userData?.totalSpent,
+    games_played: userData?.gamesPlayed,
+    account_age: userData?.accountAge,
+    device_type: userData?.deviceType,
     ...userData
   });
+
+  // Set additional context
+  Sentry.setContext('user_profile', {
+    subscription_tier: userData?.subscriptionTier || 'free',
+    total_spent: userData?.totalSpent || 0,
+    games_played: userData?.gamesPlayed || 0,
+    account_age: userData?.accountAge || 0,
+    device_type: userData?.deviceType || 'desktop',
+    last_login: new Date().toISOString(),
+  });
+
+  // Set tags for filtering
+  Sentry.setTag('user.subscription_tier', userData?.subscriptionTier || 'free');
+  Sentry.setTag('user.device_type', userData?.deviceType || 'desktop');
+  Sentry.setTag('user.customer_segment', 
+    (userData?.totalSpent || 0) > 1000 ? 'high_value' : 
+    (userData?.totalSpent || 0) > 100 ? 'medium_value' : 'low_value'
+  );
 }
 
 /**
@@ -167,7 +232,7 @@ export function clearUserContext() {
 }
 
 /**
- * Add breadcrumb for debugging
+ * Add breadcrumb for debugging with enhanced data
  * @param message Breadcrumb message
  * @param category Breadcrumb category
  * @param level Severity level
@@ -180,6 +245,7 @@ export function addBreadcrumb(
   data?: Record<string, any>
 ) {
   if (isLocal || isDevelopment) {
+    console.log('🔧 Sentry breadcrumb (dev mode):', { message, category, level, data });
     return;
   }
 
@@ -187,9 +253,111 @@ export function addBreadcrumb(
     message,
     category,
     level,
-    data,
+    data: {
+      ...data,
+      url: window.location.href,
+      path: window.location.pathname,
+      timestamp: new Date().toISOString(),
+    },
     timestamp: Date.now() / 1000
   });
+}
+
+/**
+ * Add game-specific breadcrumb
+ * @param gameType Type of game
+ * @param action Action performed
+ * @param data Additional game data
+ */
+export function addGameBreadcrumb(
+  gameType: string,
+  action: string,
+  data?: Record<string, any>
+) {
+  addBreadcrumb(
+    `${gameType}: ${action}`,
+    'game',
+    'info',
+    {
+      game_type: gameType,
+      game_action: action,
+      ...data
+    }
+  );
+}
+
+/**
+ * Add navigation breadcrumb
+ * @param from Previous route
+ * @param to Current route
+ * @param method Navigation method
+ */
+export function addNavigationBreadcrumb(
+  from: string,
+  to: string,
+  method: 'link' | 'back' | 'forward' | 'programmatic' = 'programmatic'
+) {
+  addBreadcrumb(
+    `Navigation: ${from} → ${to}`,
+    'navigation',
+    'info',
+    {
+      from,
+      to,
+      method,
+      navigation_type: method
+    }
+  );
+}
+
+/**
+ * Add API call breadcrumb
+ * @param method HTTP method
+ * @param url API endpoint
+ * @param statusCode Response status
+ * @param duration Response time
+ */
+export function addApiBreadcrumb(
+  method: string,
+  url: string,
+  statusCode?: number,
+  duration?: number
+) {
+  addBreadcrumb(
+    `API ${method} ${url}${statusCode ? ` (${statusCode})` : ''}`,
+    'http',
+    statusCode && statusCode >= 400 ? 'error' : 'info',
+    {
+      method,
+      url,
+      status_code: statusCode,
+      duration_ms: duration,
+      api_endpoint: url
+    }
+  );
+}
+
+/**
+ * Add user action breadcrumb
+ * @param action Action performed
+ * @param component Component where action occurred
+ * @param data Additional action data
+ */
+export function addUserActionBreadcrumb(
+  action: string,
+  component: string,
+  data?: Record<string, any>
+) {
+  addBreadcrumb(
+    `User Action: ${action}`,
+    'user',
+    'info',
+    {
+      action,
+      component,
+      ...data
+    }
+  );
 }
 
 /**
