@@ -16,6 +16,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useBalance } from '../../hooks/useBalance';
 import { appwriteClient } from '../../lib/appwrite';
 import { TrendingUp, TrendingDown, DollarSign, Package, AlertCircle, CheckCircle2 } from 'lucide-react';
+import * as Sentry from '@sentry/react';
 
 interface StockMarketTradingProps {
   currentPrice: number
@@ -42,6 +43,18 @@ export function StockMarketTrading({ currentPrice }: StockMarketTradingProps) {
     if (!user) return
 
     console.log('🔔 Setting up real-time position subscription for user:', user.id)
+    
+    // Log subscription setup in Sentry
+    Sentry.addBreadcrumb({
+      message: 'Setting up real-time position subscription',
+      category: 'stock_market',
+      level: 'info',
+      data: {
+        userId: user.id,
+        databaseId: DATABASE_ID,
+        channel: `databases.${DATABASE_ID}.collections.stock_market_positions.documents`
+      }
+    })
 
     const channel = `databases.${DATABASE_ID}.collections.stock_market_positions.documents`
     const unsubscribe = appwriteClient.subscribe(
@@ -49,19 +62,120 @@ export function StockMarketTrading({ currentPrice }: StockMarketTradingProps) {
       (response: any) => {
         console.log('[STOCK_MARKET_POSITION] Received update:', response)
         
+        // Log all real-time events in Sentry
+        Sentry.addBreadcrumb({
+          message: 'Real-time position update received',
+          category: 'stock_market',
+          level: 'info',
+          data: {
+            userId: user.id,
+            events: response.events,
+            payload: response.payload,
+            timestamp: new Date().toISOString()
+          }
+        })
+        
         // Check for update events
         if (response.events && (
           response.events.includes('databases.*.collections.*.documents.*.update') ||
-          response.events.includes('databases.*.collections.*.documents.*.create')
+          response.events.includes('databases.*.collections.*.documents.*.create') ||
+          response.events.includes('databases.*.collections.*.documents.*.delete')
         )) {
           const updatedPosition = response.payload
-          // Only update if this position belongs to the current user
-          if (updatedPosition.user_id === user.id) {
+          const isDeleteEvent = response.events.includes('databases.*.collections.*.documents.*.delete')
+          
+          // Log position update attempt
+          Sentry.addBreadcrumb({
+            message: 'Processing position update from real-time',
+            category: 'stock_market',
+            level: 'info',
+            data: {
+              userId: user.id,
+              positionUserId: updatedPosition?.user_id,
+              isUserPosition: updatedPosition?.user_id === user.id,
+              isDeleteEvent,
+              events: response.events,
+              positionData: updatedPosition
+            }
+          })
+          
+          // Handle delete events (position completely sold)
+          if (isDeleteEvent) {
+            // For delete events, we need to check if the deleted document belonged to this user
+            // The payload might contain the document ID or user_id before deletion
+            const deletedDocumentId = response.payload?.$id || response.payload?.id
+            
+            // Log delete event processing
+            Sentry.addBreadcrumb({
+              message: 'Processing position delete event',
+              category: 'stock_market',
+              level: 'info',
+              data: {
+                userId: user.id,
+                deletedDocumentId,
+                events: response.events,
+                payload: response.payload
+              }
+            })
+            
+            // If we have a current position and this is a delete event, clear the position
+            // This is a safe assumption since delete events are rare and position-specific
+            if (position && position.shares > 0) {
+              console.log('🗑️ Position deleted via real-time (all shares sold)')
+              
+              // Log successful position deletion
+              Sentry.addBreadcrumb({
+                message: 'Position successfully deleted via real-time',
+                category: 'stock_market',
+                level: 'info',
+                data: {
+                  userId: user.id,
+                  oldPosition: position,
+                  deletedDocumentId,
+                  events: response.events
+                }
+              })
+              
+              setPosition(null)
+            }
+          }
+          // Handle create/update events (position exists)
+          else if (updatedPosition && updatedPosition.user_id === user.id) {
             console.log('📊 Position updated via real-time:', updatedPosition)
+            
+            // Log successful position update
+            Sentry.addBreadcrumb({
+              message: 'Position successfully updated via real-time',
+              category: 'stock_market',
+              level: 'info',
+              data: {
+                userId: user.id,
+                oldPosition: position,
+                newPosition: {
+                  shares: updatedPosition.shares,
+                  avg_price: updatedPosition.avg_price,
+                  unrealized_pnl: updatedPosition.unrealized_pnl
+                },
+                events: response.events
+              }
+            })
+            
             setPosition({
               shares: updatedPosition.shares,
               avg_price: updatedPosition.avg_price,
               unrealized_pnl: updatedPosition.unrealized_pnl
+            })
+          } else {
+            // Log ignored position update
+            Sentry.addBreadcrumb({
+              message: 'Position update ignored - not for current user',
+              category: 'stock_market',
+              level: 'debug',
+              data: {
+                currentUserId: user.id,
+                positionUserId: updatedPosition?.user_id,
+                events: response.events
+              }
             })
           }
         }
@@ -70,16 +184,65 @@ export function StockMarketTrading({ currentPrice }: StockMarketTradingProps) {
 
     return () => {
       console.log('🔕 Unsubscribing from real-time position updates')
+      
+      // Log subscription cleanup
+      Sentry.addBreadcrumb({
+        message: 'Unsubscribing from real-time position updates',
+        category: 'stock_market',
+        level: 'info',
+        data: {
+          userId: user.id,
+          databaseId: DATABASE_ID
+        }
+      })
+      
       unsubscribe()
     }
-  }, [user, DATABASE_ID])
+  }, [user, DATABASE_ID, position])
 
   const loadPosition = async () => {
     try {
+      // Log position loading attempt
+      Sentry.addBreadcrumb({
+        message: 'Loading user position',
+        category: 'stock_market',
+        level: 'info',
+        data: {
+          userId: user?.id,
+          timestamp: new Date().toISOString()
+        }
+      })
+      
       const pos = await getUserPosition()
+      
+      // Log position loaded successfully
+      Sentry.addBreadcrumb({
+        message: 'Position loaded successfully',
+        category: 'stock_market',
+        level: 'info',
+        data: {
+          userId: user?.id,
+          position: pos,
+          hasPosition: !!pos,
+          shares: pos?.shares || 0
+        }
+      })
+      
       setPosition(pos)
     } catch (err) {
       console.error('Failed to load position:', err)
+      
+      // Log position loading error
+      Sentry.captureException(err, {
+        tags: {
+          operation: 'load_position',
+          userId: user?.id
+        },
+        extra: {
+          timestamp: new Date().toISOString(),
+          error: err instanceof Error ? err.message : 'Unknown error'
+        }
+      })
     }
   }
 
@@ -138,21 +301,125 @@ export function StockMarketTrading({ currentPrice }: StockMarketTradingProps) {
     setError(null)
     setSuccess(null)
 
-    try {
-      await sellShares(sharesNum)
-      const proceeds = sharesNum * currentPrice
-      setSuccess(`Successfully sold ${sharesNum} shares for $${proceeds.toFixed(2)}`)
-      
-      // Refresh balance (position will be updated via real-time subscription)
-      await refreshBalance()
-      
-      // Clear success message after 3 seconds
-      setTimeout(() => setSuccess(null), 3000)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to execute sell order')
-    } finally {
-      setIsLoading(false)
-    }
+    // Start Sentry span for sell operation
+    const sellSpan = Sentry.startSpan({
+      op: 'stock_market.sell',
+      name: 'Execute Stock Sell Order',
+      data: {
+        userId: user.id,
+        shares: sharesNum,
+        currentPrice,
+        positionShares: position.shares,
+        positionAvgPrice: position.avg_price
+      }
+    }, async () => {
+      try {
+        // Log sell attempt
+        Sentry.addBreadcrumb({
+          message: 'Starting sell order',
+          category: 'stock_market',
+          level: 'info',
+          data: {
+            userId: user.id,
+            shares: sharesNum,
+            currentPrice,
+            positionShares: position.shares,
+            positionAvgPrice: position.avg_price,
+            timestamp: new Date().toISOString()
+          }
+        })
+
+        const sellResult = await sellShares(sharesNum)
+        
+        // Log successful sell API call
+        Sentry.addBreadcrumb({
+          message: 'Sell API call successful',
+          category: 'stock_market',
+          level: 'info',
+          data: {
+            userId: user.id,
+            sellResult,
+            shares: sharesNum,
+            currentPrice,
+            timestamp: new Date().toISOString()
+          }
+        })
+
+        const proceeds = sharesNum * currentPrice
+        setSuccess(`Successfully sold ${sharesNum} shares for $${proceeds.toFixed(2)}`)
+        
+        // Log success state update
+        Sentry.addBreadcrumb({
+          message: 'Sell success state updated',
+          category: 'stock_market',
+          level: 'info',
+          data: {
+            userId: user.id,
+            shares: sharesNum,
+            proceeds,
+            successMessage: `Successfully sold ${sharesNum} shares for $${proceeds.toFixed(2)}`
+          }
+        })
+        
+        // Refresh balance (position will be updated via real-time subscription)
+        await refreshBalance()
+        
+        // Log balance refresh
+        Sentry.addBreadcrumb({
+          message: 'Balance refreshed after sell',
+          category: 'stock_market',
+          level: 'info',
+          data: {
+            userId: user.id,
+            shares: sharesNum,
+            proceeds
+          }
+        })
+        
+        // Clear success message after 3 seconds
+        setTimeout(() => setSuccess(null), 3000)
+        
+        // Log successful sell completion
+        Sentry.addBreadcrumb({
+          message: 'Sell operation completed successfully',
+          category: 'stock_market',
+          level: 'info',
+          data: {
+            userId: user.id,
+            shares: sharesNum,
+            proceeds,
+            sellResult,
+            timestamp: new Date().toISOString()
+          }
+        })
+        
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to execute sell order'
+        
+        // Log sell error
+        Sentry.captureException(err, {
+          tags: {
+            operation: 'stock_market_sell',
+            userId: user.id
+          },
+          extra: {
+            shares: sharesNum,
+            currentPrice,
+            positionShares: position.shares,
+            positionAvgPrice: position.avg_price,
+            errorMessage,
+            timestamp: new Date().toISOString()
+          }
+        })
+        
+        setError(errorMessage)
+      } finally {
+        setIsLoading(false)
+      }
+    })
+
+    // Wait for span to complete
+    await sellSpan
   }
 
   const handleSellAll = () => {
