@@ -1,5 +1,6 @@
 import * as Sentry from "@sentry/react";
-import { useEffect, useLocation, useNavigationType, createRoutesFromChildren, matchRoutes } from "react-router-dom";
+import { useEffect } from "react";
+import { useLocation, useNavigationType, createRoutesFromChildren, matchRoutes } from "react-router-dom";
 
 export interface ErrorInfoType {
   [key: string | symbol]: string;
