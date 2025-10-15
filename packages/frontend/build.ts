@@ -30,6 +30,8 @@ const VITE_APPWRITE_ENDPOINT = process.env.VITE_APPWRITE_ENDPOINT;
 const VITE_APPWRITE_PROJECT_ID = process.env.VITE_APPWRITE_PROJECT_ID;
 const VITE_API_URL = process.env.VITE_API_URL || '/api';
 const VITE_APPWRITE_DATABASE_ID = process.env.VITE_APPWRITE_DATABASE_ID || '';
+const VITE_SENTRY_DSN = process.env.VITE_SENTRY_DSN || '';
+const VITE_APP_VERSION = process.env.VITE_APP_VERSION || '1.1.0';
 
 // Validate required variables
 if (!VITE_APPWRITE_ENDPOINT) {
@@ -49,6 +51,8 @@ console.log(`   Environment: ${isDev ? 'development' : 'production'}`);
 console.log(`   VITE_APPWRITE_ENDPOINT: ${VITE_APPWRITE_ENDPOINT}`);
 console.log(`   VITE_APPWRITE_PROJECT_ID: ${VITE_APPWRITE_PROJECT_ID}`);
 console.log(`   VITE_API_URL: ${VITE_API_URL}`);
+console.log(`   VITE_SENTRY_DSN: ${VITE_SENTRY_DSN ? '***configured***' : 'not set'}`);
+console.log(`   VITE_APP_VERSION: ${VITE_APP_VERSION}`);
 console.log(`   Code Splitting: ${!isDev ? 'enabled' : 'disabled (dev)'}`);
 console.log(`   Minification: ${!isDev ? 'full (whitespace + identifiers + syntax)' : 'disabled'}`);
 console.log(`   Drop Debug: ${!isDev ? 'console + debugger removed' : 'kept'}`);
@@ -85,6 +89,8 @@ const result = await Bun.build({
     'import.meta.env.VITE_APPWRITE_PROJECT_ID': JSON.stringify(VITE_APPWRITE_PROJECT_ID),
     'import.meta.env.VITE_API_URL': JSON.stringify(VITE_API_URL),
     'import.meta.env.VITE_APPWRITE_DATABASE_ID': JSON.stringify(VITE_APPWRITE_DATABASE_ID),
+    'import.meta.env.VITE_SENTRY_DSN': JSON.stringify(VITE_SENTRY_DSN),
+    'import.meta.env.VITE_APP_VERSION': JSON.stringify(VITE_APP_VERSION),
     'import.meta.env.PROD': isDev ? 'false' : 'true',
     'import.meta.env.DEV': isDev ? 'true' : 'false',
     'import.meta.env.MODE': JSON.stringify(isDev ? 'development' : 'production'),
