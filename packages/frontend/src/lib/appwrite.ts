@@ -45,11 +45,6 @@ export const appwriteClient = new Client()
   .setEndpoint(requiredEnvVars.VITE_APPWRITE_ENDPOINT)
   .setProject(requiredEnvVars.VITE_APPWRITE_PROJECT_ID);
 
-// Configure Realtime endpoint for WebSocket connections
-// Convert https:// to wss:// for WebSocket connections
-const realtimeEndpoint = requiredEnvVars.VITE_APPWRITE_ENDPOINT.replace('https://', 'wss://').replace('http://', 'ws://');
-appwriteClient.setEndpointRealtime(realtimeEndpoint);
-
 // Initialize Appwrite services
 export const account = new Account(appwriteClient);
 export const databases = new Databases(appwriteClient);

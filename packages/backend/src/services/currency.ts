@@ -12,6 +12,7 @@ import { COLLECTION_IDS, DailyBonus } from '../config/collections';
 import { ID, Databases } from 'node-appwrite';
 import { appwriteClient } from '../config/appwrite';
 import { env } from '../config/env';
+import { Sentry, logger, startSpan } from '../lib/sentry';
 
 export interface CurrencyTransaction {
   userId: string;
@@ -95,94 +96,185 @@ export class CurrencyService {
     gameResultData: any,
     gameDuration?: number
   ) {
-    // Validate bet amount - allow 0 for stock market sell operations
-    if (betAmount < 0) {
-      throw new Error('Bet amount must be positive');
-    }
+    return startSpan(
+      { op: "currency.transaction", name: "Process Game Transaction" },
+      async (span) => {
+        span?.setAttribute("userId", userId);
+        span?.setAttribute("gameType", gameType);
+        span?.setAttribute("betAmount", betAmount);
+        span?.setAttribute("winAmount", winAmount);
+        span?.setAttribute("netAmount", winAmount - betAmount);
 
-    // For stock market, betAmount can be 0 (sell operations don't cost money)
-    // For other games, betAmount must be positive
-    if (gameType !== 'stock_market' && betAmount <= 0) {
-      throw new Error('Bet amount must be positive');
-    }
-
-    if (winAmount < 0) {
-      throw new Error('Win amount cannot be negative');
-    }
-
-    // PERFORMANCE OPTIMIZATION: Use Appwrite transactions to batch operations
-    // This reduces multiple sequential database calls to a single transaction
-    const maxRetries = 3;
-    let attempt = 0;
-    let lastError: Error | null = null;
-
-    while (attempt < maxRetries) {
-      try {
-        // Get current balance and validate
-        const profile = await UserService.getUserProfile(userId);
-        if (!profile) {
-          throw new Error('User profile not found');
+        logger.info("Starting game transaction", {
+          userId,
+          gameType,
+          betAmount,
+          winAmount,
+          netAmount: winAmount - betAmount,
+          gameDuration
+        });
+        // Validate bet amount - allow 0 for stock market sell operations
+        if (betAmount < 0) {
+          logger.error("Invalid bet amount: negative", { userId, betAmount, gameType });
+          throw new Error('Bet amount must be positive');
         }
 
-        const currentBalance = profile.balance;
-
-        if (currentBalance < betAmount) {
-          throw new Error(
-            `Insufficient balance. Required: ${betAmount}, Available: ${currentBalance}`
-          );
+        // For stock market, betAmount can be 0 (sell operations don't cost money)
+        // For other games, betAmount must be positive
+        if (gameType !== 'stock_market' && betAmount <= 0) {
+          logger.error("Invalid bet amount: zero or negative for non-stock market", { userId, betAmount, gameType });
+          throw new Error('Bet amount must be positive');
         }
 
-        // Calculate new balance
-        const newBalance = currentBalance - betAmount + winAmount;
-        const netResult = winAmount - betAmount;
-        const previousBalance = currentBalance;
+        if (winAmount < 0) {
+          logger.error("Invalid win amount: negative", { userId, winAmount, gameType });
+          throw new Error('Win amount cannot be negative');
+        }
 
-        // Use standard Appwrite Databases API (transactions not supported with Databases API)
-        const databases = new Databases(appwriteClient);
-        const DATABASE_ID = process.env.APPWRITE_DATABASE_ID!;
+        // PERFORMANCE OPTIMIZATION: Use Appwrite transactions to batch operations
+        // This reduces multiple sequential database calls to a single transaction
+        const maxRetries = 3;
+        let attempt = 0;
+        let lastError: Error | null = null;
 
-        try {
-          // Step 1: Update user balance
-          await databases.updateDocument(
-            DATABASE_ID,
-            COLLECTION_IDS.USERS,
-            profile.$id!,
-            {
-              balance: newBalance,
-              totalWagered: profile.totalWagered + betAmount,
-              totalWon: profile.totalWon + winAmount,
-              gamesPlayed: profile.gamesPlayed + 1,
-              updatedAt: new Date().toISOString(),
-            }
-          );
-
-          // Step 2: Record game in history
-          const gameId = ID.unique();
-          await databases.createDocument(
-            DATABASE_ID,
-            COLLECTION_IDS.GAME_HISTORY,
-            gameId,
-            {
+        while (attempt < maxRetries) {
+          try {
+            span?.setAttribute("attempt", attempt + 1);
+            
+            logger.info(logger.fmt`Transaction attempt ${attempt + 1}/${maxRetries}`, {
               userId,
               gameType,
+              attempt: attempt + 1,
+              maxRetries
+            });
+
+            // Get current balance and validate
+            const profile = await UserService.getUserProfile(userId);
+            if (!profile) {
+              logger.error("User profile not found", { userId });
+              throw new Error('User profile not found');
+            }
+
+            const currentBalance = profile.balance;
+            
+            span?.setAttribute("currentBalance", currentBalance);
+            span?.setAttribute("sufficientBalance", currentBalance >= betAmount);
+
+            logger.info("Retrieved user profile", {
+              userId,
+              currentBalance,
+              requiredAmount: betAmount,
+              sufficientBalance: currentBalance >= betAmount
+            });
+
+            if (currentBalance < betAmount) {
+              logger.warn("Insufficient balance", {
+                userId,
+                currentBalance,
+                requiredAmount: betAmount,
+                shortfall: betAmount - currentBalance
+              });
+              
+              throw new Error(
+                `Insufficient balance. Required: ${betAmount}, Available: ${currentBalance}`
+              );
+            }
+
+            // Calculate new balance
+            const newBalance = currentBalance - betAmount + winAmount;
+            const netResult = winAmount - betAmount;
+            const previousBalance = currentBalance;
+
+            span?.setAttribute("newBalance", newBalance);
+            span?.setAttribute("netResult", netResult);
+
+            logger.info("Calculated new balance", {
+              userId,
+              previousBalance,
               betAmount,
               winAmount,
-              resultData: gameResultData,
-              gameDuration: gameDuration || 0,
-              createdAt: new Date().toISOString(),
-            }
-          );
+              newBalance,
+              netResult
+            });
 
-          // Invalidate caches after successful update
-          await Promise.all([
-            CacheService.invalidateUserProfile(userId),
-            CacheService.invalidateUserBalance(userId),
-            CacheService.invalidateUserStats(userId),
-          ]);
+            // Use standard Appwrite Databases API (transactions not supported with Databases API)
+            const databases = new Databases(appwriteClient);
+            const DATABASE_ID = process.env.APPWRITE_DATABASE_ID!;
 
-          console.log(`✅ Game transaction completed for user ${userId}`);
+            try {
+              // Step 1: Update user balance
+              logger.info("Updating user balance", {
+                userId,
+                profileId: profile.$id,
+                newBalance,
+                totalWagered: profile.totalWagered + betAmount,
+                totalWon: profile.totalWon + winAmount,
+                gamesPlayed: profile.gamesPlayed + 1
+              });
 
-          return {
+              await databases.updateDocument(
+                DATABASE_ID,
+                COLLECTION_IDS.USERS,
+                profile.$id!,
+                {
+                  balance: newBalance,
+                  totalWagered: profile.totalWagered + betAmount,
+                  totalWon: profile.totalWon + winAmount,
+                  gamesPlayed: profile.gamesPlayed + 1,
+                  updatedAt: new Date().toISOString(),
+                }
+              );
+
+              // Step 2: Record game in history
+              const gameId = ID.unique();
+              
+              logger.info("Recording game history", {
+                userId,
+                gameId,
+                gameType,
+                betAmount,
+                winAmount,
+                gameDuration: gameDuration || 0
+              });
+
+              await databases.createDocument(
+                DATABASE_ID,
+                COLLECTION_IDS.GAME_HISTORY,
+                gameId,
+                {
+                  userId,
+                  gameType,
+                  betAmount,
+                  winAmount,
+                  resultData: JSON.stringify(gameResultData), // Convert complex object to JSON string
+                  gameDuration: gameDuration || 0,
+                  createdAt: new Date().toISOString(),
+                }
+              );
+
+              // Invalidate caches after successful update
+              logger.info("Invalidating caches", { userId });
+              
+              await Promise.all([
+                CacheService.invalidateUserProfile(userId),
+                CacheService.invalidateUserBalance(userId),
+                CacheService.invalidateUserStats(userId),
+              ]);
+
+              span?.setAttribute("transactionSuccess", true);
+
+              logger.info("Game transaction completed successfully", {
+                userId,
+                gameType,
+                betAmount,
+                winAmount,
+                netResult,
+                previousBalance,
+                newBalance,
+                gameId
+              });
+
+              return {
             success: true,
             newBalance,
             previousBalance,
@@ -190,27 +282,100 @@ export class CurrencyService {
             gameId,
           };
 
-        } catch (error: any) {
-          console.error('❌ Game transaction failed:', error);
-          throw error;
+            } catch (error: any) {
+              logger.error("Database operation failed", {
+                userId,
+                gameType,
+                attempt: attempt + 1,
+                error: error instanceof Error ? error.message : 'Unknown error',
+                stack: error instanceof Error ? error.stack : undefined
+              });
+              
+              // Capture exception in Sentry
+              Sentry.captureException(error, {
+                tags: {
+                  operation: 'currency_transaction_database',
+                  userId,
+                  gameType,
+                  attempt: attempt + 1
+                },
+                extra: {
+                  betAmount,
+                  winAmount,
+                  gameDuration
+                }
+              });
+              
+              throw error;
+            }
+
+          } catch (error: any) {
+            lastError = error;
+            attempt++;
+            
+            span?.setAttribute("retryAttempt", attempt);
+            span?.setAttribute("lastError", error instanceof Error ? error.message : 'Unknown error');
+
+            logger.error("Transaction attempt failed", {
+              userId,
+              gameType,
+              attempt,
+              maxRetries,
+              error: error instanceof Error ? error.message : 'Unknown error',
+              willRetry: attempt < maxRetries
+            });
+
+            // If this was the last attempt, throw the error
+            if (attempt >= maxRetries) {
+              logger.error("All transaction attempts failed", {
+                userId,
+                gameType,
+                totalAttempts: attempt,
+                finalError: error instanceof Error ? error.message : 'Unknown error'
+              });
+              
+              // Capture final failure in Sentry
+              Sentry.captureException(error, {
+                tags: {
+                  operation: 'currency_transaction_final_failure',
+                  userId,
+                  gameType
+                },
+                extra: {
+                  totalAttempts: attempt,
+                  betAmount,
+                  winAmount,
+                  gameDuration
+                }
+              });
+              
+              throw error;
+            }
+
+            // Wait before retrying with exponential backoff
+            const delay = 100 * Math.pow(2, attempt);
+            logger.info("Waiting before retry", {
+              userId,
+              gameType,
+              attempt,
+              delayMs: delay
+            });
+            
+            await new Promise(resolve => setTimeout(resolve, delay));
+          }
         }
 
-      } catch (error: any) {
-        lastError = error;
-        attempt++;
-
-        // If this was the last attempt, throw the error
-        if (attempt >= maxRetries) {
-          throw error;
-        }
-
-        // Wait before retrying with exponential backoff
-        await new Promise(resolve => setTimeout(resolve, 100 * Math.pow(2, attempt)));
+        // If we get here, all retries failed
+        logger.error("Transaction failed after maximum retries", {
+          userId,
+          gameType,
+          maxRetries,
+          finalError: lastError instanceof Error ? lastError.message : 'Unknown error'
+        });
+        
+        throw lastError || new Error('Transaction failed after maximum retries');
       }
-    }
-
-    // If we get here, all retries failed
-    throw lastError || new Error('Transaction failed after maximum retries');
+    );
   }
 
   /**

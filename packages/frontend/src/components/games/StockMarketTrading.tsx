@@ -4,7 +4,7 @@
  * Buy/Sell interface with position management
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -14,6 +14,7 @@ import { Alert, AlertDescription } from '../ui/alert';
 import { buyShares, sellShares, getUserPosition, type Position } from '../../services/stock-market-api';
 import { useAuth } from '../../hooks/useAuth';
 import { useBalance } from '../../hooks/useBalance';
+import { appwriteClient } from '../../lib/appwrite';
 import { TrendingUp, TrendingDown, DollarSign, Package, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 interface StockMarketTradingProps {
@@ -29,10 +30,49 @@ export function StockMarketTrading({ currentPrice }: StockMarketTradingProps) {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
+  const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID!;
+
   // Load position on mount
   useEffect(() => {
     loadPosition()
   }, [])
+
+  // Set up real-time subscription for position updates
+  useEffect(() => {
+    if (!user) return
+
+    console.log('🔔 Setting up real-time position subscription for user:', user.id)
+
+    const channel = `databases.${DATABASE_ID}.collections.stock_market_positions.documents`
+    const unsubscribe = appwriteClient.subscribe(
+      channel,
+      (response: any) => {
+        console.log('[STOCK_MARKET_POSITION] Received update:', response)
+        
+        // Check for update events
+        if (response.events && (
+          response.events.includes('databases.*.collections.*.documents.*.update') ||
+          response.events.includes('databases.*.collections.*.documents.*.create')
+        )) {
+          const updatedPosition = response.payload
+          // Only update if this position belongs to the current user
+          if (updatedPosition.user_id === user.id) {
+            console.log('📊 Position updated via real-time:', updatedPosition)
+            setPosition({
+              shares: updatedPosition.shares,
+              avg_price: updatedPosition.avg_price,
+              unrealized_pnl: updatedPosition.unrealized_pnl
+            })
+          }
+        }
+      }
+    )
+
+    return () => {
+      console.log('🔕 Unsubscribing from real-time position updates')
+      unsubscribe()
+    }
+  }, [user, DATABASE_ID])
 
   const loadPosition = async () => {
     try {
@@ -68,8 +108,8 @@ export function StockMarketTrading({ currentPrice }: StockMarketTradingProps) {
       await buyShares(sharesNum)
       setSuccess(`Successfully bought ${sharesNum} shares at $${currentPrice.toFixed(2)}`)
       
-      // Refresh data without page reload
-      await Promise.all([loadPosition(), refreshBalance()])
+      // Refresh balance (position will be updated via real-time subscription)
+      await refreshBalance()
       
       // Clear success message after 3 seconds
       setTimeout(() => setSuccess(null), 3000)
@@ -103,8 +143,8 @@ export function StockMarketTrading({ currentPrice }: StockMarketTradingProps) {
       const proceeds = sharesNum * currentPrice
       setSuccess(`Successfully sold ${sharesNum} shares for $${proceeds.toFixed(2)}`)
       
-      // Refresh data without page reload
-      await Promise.all([loadPosition(), refreshBalance()])
+      // Refresh balance (position will be updated via real-time subscription)
+      await refreshBalance()
       
       // Clear success message after 3 seconds
       setTimeout(() => setSuccess(null), 3000)

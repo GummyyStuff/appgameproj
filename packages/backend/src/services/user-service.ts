@@ -116,7 +116,7 @@ export class UserService {
       const { data: createdProfile, error } = await appwriteDb.createDocument<UserProfile>(
         COLLECTION_IDS.USERS,
         profileData,
-        ID.unique(),
+        undefined, // Let the database service generate a unique ID
         [
           `read("user:${userId}")`,
           `update("user:${userId}")`,

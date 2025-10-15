@@ -21,14 +21,15 @@ export class AppwriteDatabaseService {
   async createDocument<T>(
     collectionId: CollectionId,
     data: Omit<T, '$id'>,
-    documentId: string = ID.unique(),
+    documentId?: string,
     permissions?: string[]
   ) {
     try {
+      const finalDocumentId = documentId || ID.unique();
       const response = await this.databases.createDocument(
         DATABASE_ID,
         collectionId,
-        documentId,
+        finalDocumentId,
         data,
         permissions
       );
