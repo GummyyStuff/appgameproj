@@ -1,5 +1,7 @@
 import * as Sentry from "@sentry/bun";
-import { nodeProfilingIntegration } from "@sentry/profiling-node";
+// Note: @sentry/profiling-node causes Bun to crash due to unsupported libuv functions
+// See: https://github.com/oven-sh/bun/issues/18546
+// Profiling is disabled for now - use Sentry's built-in performance monitoring instead
 
 const isProduction = process.env.NODE_ENV === 'production';
 const isDevelopment = process.env.NODE_ENV === 'development';
@@ -36,16 +38,17 @@ export function initSentry() {
     
     // Performance monitoring
     integrations: [
-      // Enable profiling
-      nodeProfilingIntegration(),
+      // NOTE: nodeProfilingIntegration() is disabled because it crashes Bun
+      // The profiling package uses libuv which Bun doesn't fully support yet
+      // We still get performance monitoring via tracesSampleRate
+      
       // Send console.log, console.warn, and console.error calls as logs to Sentry
       Sentry.consoleLoggingIntegration({ levels: ["log", "warn", "error"] }),
     ],
     
     // Performance Monitoring sample rate (10% of transactions)
+    // This enables automatic instrumentation for HTTP requests, database queries, etc.
     tracesSampleRate: 0.1,
-
-    // NOTE: profilesSampleRate is not a valid BunOptions property and should be set via nodeProfilingIntegration config if needed.
 
     // Filter out some common errors
     beforeSend(event, hint) {
