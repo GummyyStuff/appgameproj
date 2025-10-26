@@ -23,7 +23,7 @@ export const FontAwesomeSVG: React.FC<FontAwesomeSVGProps> = ({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
 
-  const iconPath = `/fa-v5-pro/svgs/${variant}/${icon}.svg`
+  const iconPath = `/assets/fa-v5-pro/svgs/${variant}/${icon}.svg`
 
   useEffect(() => {
     const fetchSVG = async () => {

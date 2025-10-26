@@ -16,7 +16,7 @@ We download FontAwesome Pro from a private bucket during the Docker build proces
 
 1. **Download**: FontAwesome Pro zip file is downloaded from our private Appwrite bucket
 2. **Extract**: The zip is extracted to a temporary location
-3. **Move**: The extracted folder is moved to `packages/frontend/public/fa-v5-pro/`
+3. **Move**: The extracted folder is moved to `packages/frontend/public/assets/fa-v5-pro/`
 4. **Cleanup**: Temporary files and unnecessary packages are removed
 
 ### Files Configuration
@@ -31,7 +31,7 @@ RUN apt-get update && apt-get install -y curl unzip && \
     curl -L -o /tmp/fontawesome.zip "https://db.juanis.cool/v1/storage/buckets/fa5/files/68e81874001eb53ee4e9/download?project=tarkovcas" && \
     echo "📂 Extracting FontAwesome Pro..." && \
     unzip -q /tmp/fontawesome.zip -d /tmp/ && \
-    mv /tmp/fontawesome-pro-5.15.4-web ./public/fa-v5-pro && \
+    mv /tmp/fontawesome-pro-5.15.4-web ./public/assets/fa-v5-pro && \
     echo "✅ FontAwesome Pro installed successfully" && \
     rm /tmp/fontawesome.zip && \
     apt-get remove -y unzip && \
@@ -43,7 +43,7 @@ USER bun
 #### .gitignore
 
 ```
-packages/frontend/public/fa-v5-pro/
+packages/frontend/public/assets/fa-v5-pro/
 ```
 
 Ensures FontAwesome Pro files are never committed to git.
@@ -51,18 +51,18 @@ Ensures FontAwesome Pro files are never committed to git.
 #### .dockerignore
 
 ```
-packages/frontend/public/fa-v5-pro
+packages/frontend/public/assets/fa-v5-pro
 ```
 
 Prevents local FontAwesome files from being copied during `COPY packages/frontend/` command, ensuring we always download fresh from bucket.
 
 ## Local Development
 
-For local development, you need to have FontAwesome Pro files in `packages/frontend/public/fa-v5-pro/`. You can:
+For local development, you need to have FontAwesome Pro files in `packages/frontend/public/assets/fa-v5-pro/`. You can:
 
 1. **Download manually** from the bucket:
    ```bash
-   cd packages/frontend/public
+   cd packages/frontend/public/assets
    curl -L -o fontawesome.zip "https://db.juanis.cool/v1/storage/buckets/fa5/files/68e81874001eb53ee4e9/download?project=tarkovcas"
    unzip fontawesome.zip
    mv fontawesome-pro-5.15.4-web fa-v5-pro
@@ -101,16 +101,16 @@ When deploying to Coolify or any Docker-based platform:
 ### FontAwesome icons not displaying
 
 **Solutions**:
-- Check browser console for 404 errors on `/fa-v5-pro/svgs/...`
+- Check browser console for 404 errors on `/assets/fa-v5-pro/svgs/...`
 - Verify the build completed the download step (check Docker build logs)
-- Ensure the folder structure is correct: `public/fa-v5-pro/svgs/solid/*.svg`
+- Ensure the folder structure is correct: `public/assets/fa-v5-pro/svgs/solid/*.svg`
 
 ## File Structure in Container
 
 After successful build, the structure should be:
 
 ```
-/app/packages/frontend/public/fa-v5-pro/
+/app/packages/frontend/public/assets/fa-v5-pro/
 ├── css/
 ├── js/
 ├── svgs/

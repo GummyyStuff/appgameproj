@@ -26,7 +26,7 @@ RUN apt-get update && apt-get install -y curl unzip && \
     curl -L -o /tmp/fontawesome.zip "https://db.juanis.cool/v1/storage/buckets/fa5/files/68e81874001eb53ee4e9/download?project=tarkovcas" && \
     echo "📂 Extracting FontAwesome Pro..." && \
     unzip -q /tmp/fontawesome.zip -d /tmp/ && \
-    mv /tmp/fontawesome-pro-5.15.4-web ./public/fa-v5-pro && \
+    mv /tmp/fontawesome-pro-5.15.4-web ./public/assets/fa-v5-pro && \
     echo "✅ FontAwesome Pro installed successfully" && \
     rm /tmp/fontawesome.zip && \
     apt-get remove -y unzip && \
