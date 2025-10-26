@@ -51,23 +51,23 @@ const ITEM_NAME_MAPPINGS: Record<string, string> = {
   'Bandage': 'Bandage',
   'Water Bottle': 'Water bottle',
   'Energy Drink': 'Energy drink',
-  'Cigarettes': 'Cigarettes Malboro',
-  'AI-2 Medikit': 'AI-2 medikit',
-  'Tushonka': 'Tushonka (beef stew)',
+  'Cigarettes': 'Cigarettes',
+  'AI-2 Medikit': 'AI-2',
+  'Tushonka': 'Tushonka',
   'CPU Fan': 'CPU fan',
   'Bolts': 'Bolts',
   'IFAK': 'IFAK',
   'GPU': 'Graphics card',
   'Bitcoin': 'Bitcoin',
-  'Roler Watch': 'Roler watch',
+  'Roler Watch': 'Roler',
   'Grizzly Med Kit': 'Grizzly medical kit',
   'LEDX': 'LEDX Skin Transilluminator',
   'Military Cable': 'Military cable',
   'Tetriz': 'Tetriz',
-  'Red Keycard': 'Lab. Key. Testing area key',
-  'Violet Keycard': 'Lab. Key. Arsenal storage',
-  'Blue Keycard': 'Lab. Key. Manager office',
-  'Green Keycard': 'Lab. Key. Security room',
+  'Red Keycard': 'TerraGroup Labs keycard (Red)',
+  'Violet Keycard': 'TerraGroup Labs keycard (Violet)',
+  'Blue Keycard': 'TerraGroup Labs keycard (Blue)',
+  'Green Keycard': 'TerraGroup Labs keycard (Green)',
 };
 
 interface TarkovAPIItem {
@@ -147,6 +147,20 @@ async function downloadImage(url: string, filePath: string): Promise<boolean> {
     console.error(`❌ Error downloading image from ${url}:`, error);
     return false;
   }
+}
+
+/**
+ * Get HD -8x.webp image URL using item ID
+ * This provides the highest quality images with transparent backgrounds
+ */
+function getHDImageUrl(item: TarkovAPIItem): { url: string; type: string } | null {
+  if (!item.id) {
+    return null;
+  }
+  
+  // Construct HD -8x.webp URL for best quality
+  const hdUrl = `https://assets.tarkov.dev/${item.id}-8x.webp`;
+  return { url: hdUrl, type: '8x' };
 }
 
 /**
@@ -234,24 +248,26 @@ async function main() {
 
     console.log(`  ✅ Found: ${itemData.name}`);
 
-    // Use gridImageLink if available, otherwise fallback to iconLink
-    const imageUrl = itemData.gridImageLink || itemData.iconLink || itemData.imageLink;
+    // Use HD -8x.webp URL for best quality
+    const imageInfo = getHDImageUrl(itemData);
 
-    if (!imageUrl) {
-      console.log(`  ❌ No image available\n`);
+    if (!imageInfo) {
+      console.log(`  ❌ No valid image URL available\n`);
       failCount++;
       continue;
     }
 
-    // Generate filename from item name
+    console.log(`  �� Using ${imageInfo.type} image from: ${imageInfo.url}`);
+
+    // Generate filename from item name (keep as .webp to preserve quality)
     const sanitizedName = itemName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
     const category = item.category || 'valuables';
-    const filename = `${sanitizedName}.png`;
+    const filename = `${sanitizedName}.webp`;
     const filePath = resolve(assetsDir, category, filename);
     
-    // Download image
-    console.log(`  📥 Downloading from: ${imageUrl}...`);
-    const downloaded = await downloadImage(imageUrl, filePath);
+    // Always download (overwrite existing files to get latest HD quality)
+    console.log(`  📥 Downloading HD image (overwriting if exists)...`);
+    const downloaded = await downloadImage(imageInfo.url, filePath);
 
     if (!downloaded) {
       console.log(`  ❌ Download failed\n`);

@@ -114,6 +114,8 @@ const ItemsByRarityModal: React.FC<ItemsByRarityModalProps> = ({
                             src={item.image_url}
                             alt={item.name}
                             className="w-full h-full object-cover"
+                            loading="lazy"
+                            decoding="async"
                           />
                         ) : (
                           <div className="text-4xl opacity-50">

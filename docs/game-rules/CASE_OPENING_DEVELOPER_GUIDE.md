@@ -387,6 +387,142 @@ bun run dev
 # Check that items drop according to rarity distribution
 ```
 
+## Fetching HD Item Images from Tarkov.dev
+
+The project includes an automated script to fetch high-quality WebP images directly from the Tarkov.dev API. This ensures all items have crisp, transparent-background images for the best visual experience.
+
+### Running the Image Fetching Script
+
+```bash
+# From project root
+bun run packages/backend/src/scripts/fetch-item-images.ts
+```
+
+### Features
+
+- **HD Quality**: Uses `-8x.webp` format for maximum resolution (8x larger than icons)
+- **Transparent Backgrounds**: All images include alpha transparency
+- **WebP Format**: Modern format with 30% smaller file sizes vs PNG
+- **Automatic Overwrite**: Always downloads latest images (no stale cache issues)
+- **Database Integration**: Automatically updates `imageUrl` field in Appwrite
+- **Smart Item Name Mapping**: Handles API name variations automatically
+
+### Image Quality Details
+
+**Format Comparison**:
+| Format | Quality | Size | Background | Best For |
+|--------|---------|------|------------|----------|
+| `-8x.webp` | HD | 60-900KB | Transparent ✅ | Production |
+| `icon.webp` | Low | 2-4KB | Transparent ✅ | Fallback only |
+| `grid.webp` | Medium | Variable | Varies | Not recommended |
+
+**Why -8x.webp**:
+- **8x Resolution**: Much sharper than icons (64x64 vs 512x512+)
+- **Transparent Backgrounds**: Seamlessly blends with game UI
+- **WebP Format**: Modern compression with better quality per byte
+- **Consistent**: Same quality across all items
+
+### Script Behavior
+
+The script will:
+1. ✅ Fetch all items from your Appwrite database
+2. ✅ Query Tarkov.dev API for each item's HD image
+3. ✅ Download `-8x.webp` images to `packages/frontend/public/assets/items/{category}/`
+4. ✅ Overwrite existing files to ensure latest quality
+5. ✅ Update database `imageUrl` fields with local paths
+6. ✅ Skip items that aren't found in the Tarkov.dev API
+
+### Example Output
+
+```
+🖼️  Fetching item images from tarkov.dev API...
+=========================================
+
+Found 17 items in database
+
+🔍 Searching for: Bandage (Bandage)...
+  ✅ Found: Aseptic bandage
+  📸 Using HD 8x image from: https://assets.tarkov.dev/544fb25a4bdc2dfb738b4567-8x.webp
+  📥 Downloading HD image (overwriting if exists)...
+  ✅ Updated database: /assets/items/medical/bandage.webp
+
+🔍 Searching for: LEDX (LEDX Skin Transilluminator)...
+  ✅ Found: LEDX Skin Transilluminator
+  📸 Using HD 8x image from: https://assets.tarkov.dev/5c0530ee86f774697952d952-8x.webp
+  📥 Downloading HD image (overwriting if exists)...
+  ✅ Updated database: /assets/items/medical/ledx.webp
+
+=========================================
+✅ Image fetching completed!
+
+📊 Summary:
+   - Total items: 17
+   - Success: 17
+   - Failed: 0
+```
+
+### File Structure
+
+Images are organized by category:
+
+```
+packages/frontend/public/assets/items/
+├── medical/
+│   ├── bandage.webp (88KB)
+│   ├── ifak.webp (168KB)
+│   ├── ledx.webp (62KB)
+│   └── grizzly-med-kit.webp (861KB)
+├── electronics/
+│   ├── cpu-fan.webp (141KB)
+│   ├── gpu.webp (289KB)
+│   └── tetriz.webp (244KB)
+├── consumables/
+│   ├── cigarettes.webp (104KB)
+│   └── water-bottle.webp (235KB)
+├── valuables/
+│   ├── bolts.webp (151KB)
+│   └── physical-bitcoin.webp (200KB)
+└── keycards/
+    └── terragroup-labs-keycard-violet.webp (107KB)
+```
+
+### Troubleshooting Image Fetching
+
+**Missing Items**:
+If an item isn't found, the script will show:
+```
+🔍 Searching for: Special Item (Special Item)...
+  ❌ Not found
+```
+
+**Solution**: Check the item name mapping in `packages/backend/src/scripts/fetch-item-images.ts`:
+```typescript
+const ITEM_NAME_MAPPINGS: Record<string, string> = {
+  'Special Item': 'Exact API Name',
+  // Add correct mapping here
+}
+```
+
+**Old PNG Images**:
+```bash
+# Remove old PNG files (keep only WebP)
+find packages/frontend/public/assets/items -name "*.png" -delete
+```
+
+### Updating Existing Images
+
+Run the script anytime to update all images to latest HD versions:
+```bash
+# This overwrites existing files
+bun run packages/backend/src/scripts/fetch-item-images.ts
+```
+
+**When to Run**:
+- After adding new items to database
+- To refresh all images with latest Tarkov.dev versions
+- If images appear low quality or blurry
+- Before major releases for asset refresh
+
 ### Quick Reference: Creating a Complete New Case
 
 **Summary Checklist**:

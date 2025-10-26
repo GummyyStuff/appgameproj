@@ -237,9 +237,74 @@ public/
 - **Background**: Transparent PNG preferred
 - **Naming**: Use kebab-case (lowercase with hyphens)
 
-### 3. Adding Images to Items
+### 3. Fetching HD Images from tarkov.dev API
 
-#### Method 1: Database Update
+The project includes an automated script to fetch high-quality item images from the tarkov.dev API.
+
+#### Running the Image Fetching Script
+
+```bash
+# From project root
+bun run packages/backend/src/scripts/fetch-item-images.ts
+
+# Or with Bun directly
+cd packages/backend
+bun src/scripts/fetch-item-images.ts
+```
+
+#### Features of the Image Fetching Script
+
+- **HD Image Priority**: Automatically prioritizes the highest quality `imageLink` over `gridImageLink` and `iconLink`
+- **Retry Logic**: Includes automatic retry with exponential backoff for failed downloads
+- **Smart Caching**: Skips already downloaded files to save time
+- **Automatic Updates**: Updates database with local image paths automatically
+- **Rate Limiting Protection**: Includes delays to avoid API rate limits
+
+#### Image Quality Hierarchy
+
+The script uses the following priority order for best quality:
+
+1. **imageLink** (HD quality) - Highest priority
+2. **gridImageLink** (Medium quality) - Fallback
+3. **iconLink** (Icon quality) - Last resort
+
+#### Example Output
+
+```
+🔍 Searching for: Bitcoin...
+  ✅ Found: Physical bitcoin
+  📸 Using HD image from: https://assets.tarkov.dev/...
+  📥 Attempt 1/3 - Downloading...
+  ✅ Downloaded successfully
+  ✅ Updated database: /assets/items/valuables/bitcoin.png
+```
+
+### 4. Live Image Fetching (Fallback)
+
+If local images aren't available, the frontend can fetch images directly from tarkov.dev:
+
+```typescript
+import { fetchTarkovDevImage } from '@/services/caseOpeningApi'
+
+// Fetch HD image as fallback
+const imageUrl = await fetchTarkovDevImage('Bitcoin')
+```
+
+This is useful for:
+- New items not yet in your database
+- Testing with different items
+- Fallback when local images fail to load
+
+### 5. Adding Images to Items
+
+#### Method 1: Using the Automated Script
+
+```bash
+# Run the script to fetch all missing images
+bun run packages/backend/src/scripts/fetch-item-images.ts
+```
+
+#### Method 2: Manual Database Update
 
 ```sql
 UPDATE tarkov_items 
@@ -247,14 +312,13 @@ SET image_url = '/images/items/medical/new-item.png'
 WHERE name = 'New Item Name';
 ```
 
-#### Method 2: During Item Creation
+#### Method 3: Manual Download and Upload
 
-```sql
-INSERT INTO tarkov_items (name, rarity, base_value, category, image_url) VALUES
-('New Item', 'rare', 500, 'medical', '/images/items/medical/new-item.png');
-```
+1. Download image from tarkov.dev
+2. Save to `public/assets/items/{category}/{item-name}.png`
+3. Update database with path
 
-### 4. Fallback Icons
+### 6. Fallback Icons
 
 If no image is provided, the system uses category-based emoji icons:
 

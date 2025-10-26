@@ -401,6 +401,8 @@ const CarouselItem: React.FC<CarouselItemProps> = React.memo(({
               src={item.image_url}
               alt={itemName}
               className="w-full h-full object-cover"
+              loading="lazy"
+              decoding="async"
             />
           ) : (
             <div className="text-6xl">

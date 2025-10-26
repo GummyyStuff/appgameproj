@@ -385,6 +385,8 @@ const ItemReveal: React.FC<ItemRevealProps> = ({
                             src={result.item_won.image_url}
                             alt={result.item_won.name}
                             className="w-full h-full object-cover"
+                            loading="eager"
+                            decoding="async"
                           />
                         ) : (
                           <div className={`

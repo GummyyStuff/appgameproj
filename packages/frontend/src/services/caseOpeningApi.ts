@@ -219,5 +219,49 @@ export class CaseOpeningApiServiceImpl implements CaseOpeningApiService {
   }
 }
 
+/**
+ * Fetch HD item image from tarkov.dev API
+ * This is a fallback for when local images aren't available
+ */
+export async function fetchTarkovDevImage(itemName: string): Promise<string | null> {
+  try {
+    const query = `
+      query {
+        items(name: "${itemName}") {
+          id
+          name
+          imageLink
+          gridImageLink
+          iconLink
+        }
+      }
+    `;
+
+    const response = await fetch('https://api.tarkov.dev/graphql', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query }),
+    });
+
+    if (!response.ok) {
+      console.error('Failed to fetch image from tarkov.dev API');
+      return null;
+    }
+
+    const data = await response.json();
+    
+    if (data.data?.items && data.data.items.length > 0) {
+      const item = data.data.items[0];
+      // Prioritize HD imageLink, fallback to gridImageLink, then iconLink
+      return item.imageLink || item.gridImageLink || item.iconLink || null;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error fetching image from tarkov.dev:', error);
+    return null;
+  }
+}
+
 // Export singleton instance
 export const caseOpeningApi = new CaseOpeningApiServiceImpl()

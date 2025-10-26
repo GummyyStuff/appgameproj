@@ -252,6 +252,8 @@ const VirtualizedCarouselItem: React.FC<VirtualizedCarouselItemProps> = ({
               src={item.image_url}
               alt={itemName}
               className="w-full h-full object-cover"
+              loading="lazy"
+              decoding="async"
             />
           ) : (
             <motion.div
