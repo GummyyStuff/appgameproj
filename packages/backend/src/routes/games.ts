@@ -205,8 +205,28 @@ gameRoutes.post('/roulette/bet',
             name: 'Play Roulette'
           },
           async (playSpan) => {
-            playSpan?.setAttribute('game_id', gameId);
-            return await rouletteGame.play(bet);
+            try {
+              playSpan?.setAttribute('game_id', gameId);
+              const gameResult = await rouletteGame.play(bet);
+              
+              // Set span status based on game result
+              if (!gameResult.success) {
+                playSpan?.setStatus({ code: 2 }); // 2 = error
+                playSpan?.setAttribute('error', gameResult.error || 'unknown');
+              } else {
+                playSpan?.setStatus({ code: 1 }); // 1 = ok
+              }
+              
+              return gameResult;
+            } catch (error) {
+              // Mark span as failed
+              playSpan?.setStatus({ code: 2 });
+              if (error instanceof Error) {
+                playSpan?.setAttribute('error.message', error.message);
+                playSpan?.setAttribute('error.name', error.name);
+              }
+              throw error;
+            }
           }
         );
 
@@ -226,15 +246,36 @@ gameRoutes.post('/roulette/bet',
             name: 'Process Game Transaction'
           },
           async (txSpan) => {
-            txSpan?.setAttribute('transaction.type', 'game');
-            txSpan?.setAttribute('game.type', 'roulette');
-            return await CurrencyService.processGameTransaction(
-              user.id,
-              'roulette',
-              amount,
-              result.winAmount,
-              result.resultData
-            );
+            try {
+              txSpan?.setAttribute('transaction.type', 'game');
+              txSpan?.setAttribute('game.type', 'roulette');
+              
+              const txResult = await CurrencyService.processGameTransaction(
+                user.id,
+                'roulette',
+                amount,
+                result.winAmount,
+                result.resultData
+              );
+              
+              // Set span status based on transaction result
+              if (!txResult.success) {
+                txSpan?.setStatus({ code: 2 }); // 2 = error
+                txSpan?.setAttribute('transaction.error', txResult.error || 'unknown');
+              } else {
+                txSpan?.setStatus({ code: 1 }); // 1 = ok
+              }
+              
+              return txResult;
+            } catch (error) {
+              // Mark span as failed
+              txSpan?.setStatus({ code: 2 });
+              if (error instanceof Error) {
+                txSpan?.setAttribute('error.message', error.message);
+                txSpan?.setAttribute('error.name', error.name);
+              }
+              throw error;
+            }
           }
         );
 
@@ -467,9 +508,30 @@ gameRoutes.post('/cases/open',
             name: 'Open Case'
           },
           async (openSpan) => {
-            openSpan?.setAttribute('case.type_id', caseTypeId);
-            openSpan?.setAttribute('case.price', caseType.price);
-            return await CaseOpeningService.openCase(user.id, caseTypeId);
+            try {
+              openSpan?.setAttribute('case.type_id', caseTypeId);
+              openSpan?.setAttribute('case.price', caseType.price);
+              
+              const result = await CaseOpeningService.openCase(user.id, caseTypeId);
+              
+              // Set span status based on result
+              if (!result.success) {
+                openSpan?.setStatus({ code: 2 }); // 2 = error
+                openSpan?.setAttribute('error', result.error || 'unknown');
+              } else {
+                openSpan?.setStatus({ code: 1 }); // 1 = ok
+              }
+              
+              return result;
+            } catch (error) {
+              // Mark span as failed
+              openSpan?.setStatus({ code: 2 });
+              if (error instanceof Error) {
+                openSpan?.setAttribute('error.message', error.message);
+                openSpan?.setAttribute('error.name', error.name);
+              }
+              throw error;
+            }
           }
         );
 

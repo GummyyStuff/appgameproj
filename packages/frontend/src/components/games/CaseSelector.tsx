@@ -36,6 +36,7 @@ interface CaseSelectorProps {
   selectedCase?: CaseType | null
   showConfirmation?: boolean
   onCancelConfirmation?: () => void
+  isProcessing?: boolean
 }
 
 // Rarity colors are now defined in caseOpening.css
@@ -48,7 +49,8 @@ const CaseSelector: React.FC<CaseSelectorProps> = ({
   isLoading = false,
   selectedCase = null,
   showConfirmation = false,
-  onCancelConfirmation
+  onCancelConfirmation,
+  isProcessing = false
 }) => {
   const [itemsModal, setItemsModal] = React.useState<{
     isOpen: boolean
@@ -336,6 +338,7 @@ const CaseSelector: React.FC<CaseSelectorProps> = ({
         onConfirm={onOpenCase}
         onCancel={onCancelConfirmation || (() => {})}
         isVisible={showConfirmation && !!selectedCase}
+        isProcessing={isProcessing}
       />
 
       {/* Items by Rarity Modal */}

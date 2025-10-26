@@ -27,6 +27,7 @@ interface CaseConfirmationProps {
   onConfirm: (caseType: CaseType) => void
   onCancel: () => void
   isVisible: boolean
+  isProcessing?: boolean
 }
 
 const CaseConfirmation: React.FC<CaseConfirmationProps> = ({
@@ -34,7 +35,8 @@ const CaseConfirmation: React.FC<CaseConfirmationProps> = ({
   balance,
   onConfirm,
   onCancel,
-  isVisible
+  isVisible,
+  isProcessing = false
 }) => {
   if (!isVisible) return null
 
@@ -149,10 +151,21 @@ const CaseConfirmation: React.FC<CaseConfirmationProps> = ({
           </TarkovButton>
           <TarkovButton
             onClick={() => onConfirm(caseType)}
-            disabled={!canAfford}
-            className="flex-1"
+            disabled={!canAfford || isProcessing}
+            className="flex-1 relative"
           >
-            🎲 Open Case
+            {isProcessing ? (
+              <span className="flex items-center justify-center gap-2">
+                <motion.span
+                  className="w-4 h-4 border-2 border-tarkov-accent border-t-transparent rounded-full"
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                />
+                Opening...
+              </span>
+            ) : (
+              <span>🎲 Open Case</span>
+            )}
           </TarkovButton>
         </motion.div>
 

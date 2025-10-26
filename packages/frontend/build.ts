@@ -146,3 +146,26 @@ await Bun.$`cp -r public/* dist/`;
 console.log('\n✅ Copied public assets');
 console.log('🎉 Build complete!\n');
 
+// After the build succeeds, upload source maps to Sentry
+if (process.env.NODE_ENV === 'production' && process.env.VITE_SENTRY_DSN && process.env.SENTRY_AUTH_TOKEN) {
+  console.log('📤 Uploading source maps to Sentry...');
+  try {
+    const { execSync } = await import('child_process');
+    const distPath = './dist'; // Assuming dist is the output directory
+    const release = process.env.VITE_APP_VERSION || '1.1.0';
+    
+    execSync(
+      `npx @sentry/cli@latest releases files "${release}" upload-sourcemaps "${distPath}" ` +
+      `--org=juan-moran-ramirez ` +
+      `--project=tarkov-frontend ` +
+      `--auth-token=${process.env.SENTRY_AUTH_TOKEN} ` +
+      `--wait`,
+      { stdio: 'inherit' }
+    );
+    console.log('✅ Source maps uploaded successfully');
+  } catch (error) {
+    console.error('❌ Failed to upload source maps:', error);
+    // Don't fail the build if source map upload fails
+  }
+}
+

@@ -1,5 +1,9 @@
 # Case Opening Game Rules
 
+> **Note**: This document has been superseded by unified documentation. See:
+> - [User Guide](./CASE_OPENING_USER_GUIDE.md) - For end users and players
+> - [Developer Guide](./CASE_OPENING_DEVELOPER_GUIDE.md) - For developers and Cursor IDE
+
 ## Overview
 
 Case opening is a thrilling game where players purchase cases containing random items of varying rarity and value. Our Tarkov-themed version features authentic Escape from Tarkov items, weapons, and equipment with immersive animations and sound effects.

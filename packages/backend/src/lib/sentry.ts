@@ -16,11 +16,12 @@ export function initSentry() {
     return;
   }
 
-  // Prioritize separate backend DSN, fall back to frontend DSN if not set
-  const sentryDsn = process.env.SENTRY_DSN || process.env.VITE_SENTRY_DSN;
+  // Use SENTRY_DSN for backend, don't fallback to VITE_SENTRY_DSN
+  // to avoid mixing frontend and backend configurations
+  const sentryDsn = process.env.SENTRY_DSN;
   
   if (!sentryDsn) {
-    console.warn('⚠️  Sentry DSN not configured. Set SENTRY_DSN or VITE_SENTRY_DSN environment variable.');
+    console.warn('⚠️  Sentry DSN not configured. Set SENTRY_DSN environment variable for backend.');
     return;
   }
 
@@ -30,8 +31,8 @@ export function initSentry() {
     // Set environment
     environment: process.env.NODE_ENV || 'production',
     
-    // Set release version
-    release: process.env.npm_package_version || '1.1.0',
+    // Set release version - can be set via SENTRY_RELEASE env var or defaults to package version
+    release: process.env.SENTRY_RELEASE || process.env.npm_package_version || 'tarkov-backend@1.1.0',
     
     // Enable logging
     enableLogs: true,
@@ -106,14 +107,82 @@ export function initSentry() {
       /^\/api/, // Local API calls
     ],
 
-    // Filter out some common errors
+    // Filter out some common errors and sanitize sensitive data
     beforeSend(event) {
       // Filter out expected errors
       if (event.exception?.values?.[0]?.value?.includes('ECONNREFUSED')) {
         return null;
       }
       
+      // Scrub sensitive data from stack traces
+      if (event.exception?.values) {
+        event.exception.values = event.exception.values.map(value => {
+          if (value.stacktrace?.frames) {
+            value.stacktrace.frames = value.stacktrace.frames.map(frame => {
+              // Remove variables from stack frames to prevent secret exposure
+              if (frame.vars && typeof frame.vars === 'object') {
+                // Only keep non-sensitive variables
+                frame.vars = Object.fromEntries(
+                  Object.entries(frame.vars).filter(([key]) => 
+                    !key.match(/password|secret|token|key|credential|session|auth|apikey/i)
+                  )
+                );
+              }
+              return frame;
+            });
+          }
+          return value;
+        });
+      }
+      
+      // Scrub sensitive data from breadcrumbs
+      if (event.breadcrumbs) {
+        event.breadcrumbs = event.breadcrumbs.map(breadcrumb => {
+          // Filter out session secrets from logs
+          if (breadcrumb.category === 'console' && breadcrumb.message) {
+            breadcrumb.message = breadcrumb.message
+              .replace(/session[^,]*secret[^,\s]*/gi, '[REDACTED]')
+              .replace(/cookie[^,]*value[^,\s]*/gi, '[REDACTED]')
+              .replace(/token=[^&\s]+/g, 'token=[REDACTED]')
+              .replace(/password=[^&\s]+/g, 'password=[REDACTED]')
+              .replace(/apikey=[^&\s]+/g, 'apikey=[REDACTED]');
+          }
+          
+          // Scrub any data that might contain secrets
+          if (breadcrumb.data) {
+            Object.keys(breadcrumb.data).forEach(key => {
+              if (key.match(/password|secret|token|key|credential|session|auth/i)) {
+                const data = breadcrumb.data;
+                if (data) {
+                  data[key] = '[REDACTED]';
+                }
+              }
+            });
+          }
+          
+          return breadcrumb;
+        });
+      }
+      
       return event;
+    },
+    
+    // Filter breadcrumbs before capture
+    beforeBreadcrumb(breadcrumb) {
+      // Don't capture breadcrumbs with sensitive data
+      if (breadcrumb.category === 'console') {
+        const message = breadcrumb.message || '';
+        if (message.match(/session.*secret|password|token|apikey|credential/i)) {
+          // Redact sensitive info
+          breadcrumb.message = message
+            .replace(/session[^,]*secret[^,\s]*/gi, '[REDACTED]')
+            .replace(/password[=:][^,\s]+/gi, 'password=[REDACTED]')
+            .replace(/token[=:][^,\s]+/gi, 'token=[REDACTED]')
+            .replace(/apikey[=:][^,\s]+/gi, 'apikey=[REDACTED]');
+        }
+      }
+      
+      return breadcrumb;
     },
     
     // Add server context
@@ -183,9 +252,15 @@ export function setUserContext(userId: string, userData?: Record<string, any>) {
     return;
   }
 
+  // Don't send email or other PII to Sentry
+  const { email, password, ...safeUserData } = userData || {};
+  
   Sentry.setUser({
     id: userId,
-    ...userData
+    username: userData?.username,
+    // Don't send email for privacy
+    // email: userData?.email,
+    ...safeUserData
   });
 }
 
@@ -295,7 +370,7 @@ export function startSpan<T>(
 
 /**
  * Sentry logger for structured logging
- * Use logger.fmt for template literals
+ * This provides a wrapper around Sentry.logger for consistency with development logging
  * 
  * @example
  * logger.trace("Starting database connection", { database: "users" });
@@ -305,13 +380,22 @@ export function startSpan<T>(
  * logger.error("Failed to process payment", { orderId: "order_123", amount: 99.99 });
  * logger.fatal("Database connection pool exhausted", { database: "users", activeConnections: 100 });
  */
-export const logger = {
+export const logger: {
+  trace: (message: string, extra?: Record<string, any>) => void;
+  debug: (message: string, extra?: Record<string, any>) => void;
+  info: (message: string, extra?: Record<string, any>) => void;
+  warn: (message: string, extra?: Record<string, any>) => void;
+  error: (message: string, extra?: Record<string, any>) => void;
+  fatal: (message: string, extra?: Record<string, any>) => void;
+  fmt: (strings: TemplateStringsArray, ...values: any[]) => string;
+} = {
   trace: (message: string, extra?: Record<string, any>) => {
     if (isDevelopment) {
       console.trace(message, extra);
       return;
     }
-    Sentry.captureMessage(message, { level: 'debug', extra });
+    // Use Sentry's built-in logger API for proper structured logging
+    Sentry.logger.trace(message, extra);
   },
   
   debug: (message: string, extra?: Record<string, any>) => {
@@ -319,7 +403,7 @@ export const logger = {
       console.debug(message, extra);
       return;
     }
-    Sentry.captureMessage(message, { level: 'debug', extra });
+    Sentry.logger.debug(message, extra);
   },
   
   info: (message: string, extra?: Record<string, any>) => {
@@ -327,7 +411,7 @@ export const logger = {
       console.info(message, extra);
       return;
     }
-    Sentry.captureMessage(message, { level: 'info', extra });
+    Sentry.logger.info(message, extra);
   },
   
   warn: (message: string, extra?: Record<string, any>) => {
@@ -335,7 +419,7 @@ export const logger = {
       console.warn(message, extra);
       return;
     }
-    Sentry.captureMessage(message, { level: 'warning', extra });
+    Sentry.logger.warn(message, extra);
   },
   
   error: (message: string, extra?: Record<string, any>) => {
@@ -343,7 +427,7 @@ export const logger = {
       console.error(message, extra);
       return;
     }
-    Sentry.captureMessage(message, { level: 'error', extra });
+    Sentry.logger.error(message, extra);
   },
   
   fatal: (message: string, extra?: Record<string, any>) => {
@@ -351,14 +435,12 @@ export const logger = {
       console.error('[FATAL]', message, extra);
       return;
     }
-    Sentry.captureMessage(message, { level: 'fatal', extra });
+    Sentry.logger.fatal(message, extra);
   },
   
-  // Template literal function for formatting
+  // Template literal function for formatting - uses Sentry's fmt
   fmt: (strings: TemplateStringsArray, ...values: any[]) => {
-    return strings.reduce((acc, str, i) => {
-      return acc + str + (values[i] !== undefined ? String(values[i]) : '');
-    }, '');
+    return Sentry.logger.fmt(strings, ...values);
   }
 };
 

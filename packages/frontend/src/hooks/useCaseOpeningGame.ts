@@ -28,6 +28,7 @@ export interface UseCaseOpeningGameReturn {
   resetGame: () => void
   completeAnimation: (result: CaseOpeningResult) => void
   loadCaseTypes: () => Promise<void>
+  isProcessing: boolean
 }
 
 /**
@@ -66,6 +67,10 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
   // Performance monitoring hooks
   const { monitorAPICall, monitorGameAction, startTiming } = usePerformanceMonitoring()
   const { recordCaseOpening, recordErrorRecovery, startUserFlow, recordFlowStep, completeUserFlow } = useUserExperienceMonitoring()
+
+  // Debouncing state for preventing rapid clicks
+  const [isProcessing, setIsProcessing] = useState(false)
+  const lastOpenTimeRef = useRef<number>(0)
 
   // Use smaller hooks
   const caseData = useCaseData()
@@ -223,8 +228,27 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
     if (gameState.phase !== 'idle' && gameState.phase !== 'complete') {
       console.warn('Cannot open case: another case opening is in progress', gameState.phase)
       recordFlowStep(flowId, 'validation_failed', false, 'Case opening already in progress')
+      toast.warning('Please wait', 'Another case is already opening')
       return
     }
+
+    // Debouncing: Prevent rapid clicks (minimum 500ms between case openings)
+    const now = Date.now()
+    const timeSinceLastOpen = now - lastOpenTimeRef.current
+    if (timeSinceLastOpen < 500) {
+      console.warn('Debouncing: Click too fast', timeSinceLastOpen)
+      recordFlowStep(flowId, 'validation_failed', false, `Click debounced (${timeSinceLastOpen}ms since last)`)
+      toast.warning('Too fast!', 'Please wait before opening another case')
+      return
+    }
+
+    // Set processing flag to prevent concurrent opens
+    if (isProcessing) {
+      console.warn('Already processing another case opening')
+      return
+    }
+    setIsProcessing(true)
+    lastOpenTimeRef.current = now
 
     recordFlowStep(flowId, 'balance_check', true)
 
@@ -333,8 +357,11 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
       } else {
         recordFlowStep(flowId, 'error_recovered', true)
       }
+    } finally {
+      // Clear processing flag after operation completes
+      setIsProcessing(false)
     }
-  }, [user, balance, gameState.phase, caseData, caseOpening, errorHandling, toast, playCaseOpen, transitionToPhase, startUserFlow, recordFlowStep, recordErrorRecovery, completeUserFlow, monitorAPICall, monitorGameAction, startTiming, currentDuration, quickOpen])
+  }, [user, balance, gameState.phase, caseData, caseOpening, errorHandling, toast, playCaseOpen, transitionToPhase, startUserFlow, recordFlowStep, recordErrorRecovery, completeUserFlow, monitorAPICall, monitorGameAction, startTiming, currentDuration, quickOpen, isProcessing])
 
   // Consolidated function using TypeScript function overloading for flexible parameter handling
   const setupCaseOpeningAnimation: {
@@ -658,6 +685,8 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
     caseAnimation.resetAnimation()
     caseOpening.resetOpening()
     errorHandling.clearError()
+    setIsProcessing(false)
+    lastOpenTimeRef.current = 0
   }, [transitionToPhase, caseAnimation, caseOpening, errorHandling])
 
   // Combine errors from all hooks
@@ -675,7 +704,8 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
     openCase,
     resetGame,
     completeAnimation,
-    loadCaseTypes: caseData.loadCaseTypes
+    loadCaseTypes: caseData.loadCaseTypes,
+    isProcessing
   }
 }
 

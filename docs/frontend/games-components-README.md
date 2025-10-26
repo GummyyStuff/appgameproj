@@ -1,5 +1,7 @@
 # Case Opening Game Components Documentation
 
+> **Note**: For the most up-to-date developer documentation, see [Developer Guide](../game-rules/CASE_OPENING_DEVELOPER_GUIDE.md)
+
 ## Overview
 
 This directory contains the refactored case opening game components that provide a clean, performant, and maintainable user experience. The components follow a simplified architecture with clear separation of concerns and unified state management.

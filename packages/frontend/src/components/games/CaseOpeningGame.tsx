@@ -145,7 +145,8 @@ const CaseOpeningGame: React.FC = () => {
     isLoadingCases,
     displayBalance,
     openCase,
-    completeAnimation
+    completeAnimation,
+    isProcessing
   } = useCaseOpeningGame()
 
   // Handle case selection (move to case_selected phase)
@@ -311,6 +312,7 @@ Case Opening Carousel
               selectedCase={selectedCase}
               showConfirmation={showConfirmation}
               onCancelConfirmation={handleCancelConfirmation}
+              isProcessing={isProcessing}
             />
           </motion.div>
 

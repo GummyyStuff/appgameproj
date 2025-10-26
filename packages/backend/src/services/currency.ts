@@ -99,37 +99,44 @@ export class CurrencyService {
     return startSpan(
       { op: "currency.transaction", name: "Process Game Transaction" },
       async (span) => {
-        span?.setAttribute("userId", userId);
-        span?.setAttribute("gameType", gameType);
-        span?.setAttribute("betAmount", betAmount);
-        span?.setAttribute("winAmount", winAmount);
-        span?.setAttribute("netAmount", winAmount - betAmount);
+        try {
+          span?.setAttribute("userId", userId);
+          span?.setAttribute("gameType", gameType);
+          span?.setAttribute("betAmount", betAmount);
+          span?.setAttribute("winAmount", winAmount);
+          span?.setAttribute("netAmount", winAmount - betAmount);
 
-        logger.info("Starting game transaction", {
-          userId,
-          gameType,
-          betAmount,
-          winAmount,
-          netAmount: winAmount - betAmount,
-          gameDuration
-        });
-        // Validate bet amount - allow 0 for stock market sell operations
-        if (betAmount < 0) {
-          logger.error("Invalid bet amount: negative", { userId, betAmount, gameType });
-          throw new Error('Bet amount must be positive');
-        }
+          logger.info("Starting game transaction", {
+            userId,
+            gameType,
+            betAmount,
+            winAmount,
+            netAmount: winAmount - betAmount,
+            gameDuration
+          });
+          // Validate bet amount - allow 0 for stock market sell operations
+          if (betAmount < 0) {
+            span?.setStatus({ code: 2 });
+            span?.setAttribute("error", "invalid_bet_amount_negative");
+            logger.error("Invalid bet amount: negative", { userId, betAmount, gameType });
+            throw new Error('Bet amount must be positive');
+          }
 
-        // For stock market, betAmount can be 0 (sell operations don't cost money)
-        // For other games, betAmount must be positive
-        if (gameType !== 'stock_market' && betAmount <= 0) {
-          logger.error("Invalid bet amount: zero or negative for non-stock market", { userId, betAmount, gameType });
-          throw new Error('Bet amount must be positive');
-        }
+          // For stock market, betAmount can be 0 (sell operations don't cost money)
+          // For other games, betAmount must be positive
+          if (gameType !== 'stock_market' && betAmount <= 0) {
+            span?.setStatus({ code: 2 });
+            span?.setAttribute("error", "invalid_bet_amount_zero");
+            logger.error("Invalid bet amount: zero or negative for non-stock market", { userId, betAmount, gameType });
+            throw new Error('Bet amount must be positive');
+          }
 
-        if (winAmount < 0) {
-          logger.error("Invalid win amount: negative", { userId, winAmount, gameType });
-          throw new Error('Win amount cannot be negative');
-        }
+          if (winAmount < 0) {
+            span?.setStatus({ code: 2 });
+            span?.setAttribute("error", "invalid_win_amount");
+            logger.error("Invalid win amount: negative", { userId, winAmount, gameType });
+            throw new Error('Win amount cannot be negative');
+          }
 
         // PERFORMANCE OPTIMIZATION: Use Appwrite transactions to batch operations
         // This reduces multiple sequential database calls to a single transaction
@@ -262,6 +269,7 @@ export class CurrencyService {
               ]);
 
               span?.setAttribute("transactionSuccess", true);
+              span?.setStatus({ code: 1 }); // Mark as successful
 
               logger.info("Game transaction completed successfully", {
                 userId,
@@ -373,7 +381,19 @@ export class CurrencyService {
           finalError: lastError instanceof Error ? lastError.message : 'Unknown error'
         });
         
+        span?.setStatus({ code: 2 }); // Mark as failed
+        span?.setAttribute("transactionSuccess", false);
+        span?.setAttribute("finalError", lastError instanceof Error ? lastError.message : 'Unknown error');
+        
         throw lastError || new Error('Transaction failed after maximum retries');
+      } catch (error) {
+        // Handle any unexpected errors
+        span?.setStatus({ code: 2 });
+        if (error instanceof Error) {
+          span?.setAttribute('error.message', error.message);
+          span?.setAttribute('error.name', error.name);
+        }
+        throw error;
       }
     );
   }
