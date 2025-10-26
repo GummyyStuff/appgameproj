@@ -395,6 +395,7 @@ export class CurrencyService {
         }
         throw error;
       }
+    }  // Close async callback
     );
   }
 
