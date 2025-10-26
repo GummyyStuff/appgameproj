@@ -25,15 +25,13 @@ gameRoutes.use('*', optionalAuthMiddleware)
 
 // Apply critical auth with session validation to game betting endpoints (money operations)
 gameRoutes.use('/roulette/bet', criticalAuthMiddleware)
-gameRoutes.use('/case-opening/open', criticalAuthMiddleware)
-gameRoutes.use('/case-opening/purchase', criticalAuthMiddleware)
+gameRoutes.use('/cases/open', criticalAuthMiddleware)  // Fixed: was '/case-opening/open'
 gameRoutes.use('/stock-market/buy', criticalAuthMiddleware)
 gameRoutes.use('/stock-market/sell', criticalAuthMiddleware)
 
 // Apply stricter rate limiting to betting routes
 gameRoutes.use('/roulette/bet', gameBetRateLimit)
-gameRoutes.use('/case-opening/open', gameBetRateLimit)
-gameRoutes.use('/case-opening/purchase', gameBetRateLimit)
+gameRoutes.use('/cases/open', gameBetRateLimit)  // Fixed: was '/case-opening/open'
 gameRoutes.use('/stock-market/buy', gameBetRateLimit)
 gameRoutes.use('/stock-market/sell', gameBetRateLimit)
 

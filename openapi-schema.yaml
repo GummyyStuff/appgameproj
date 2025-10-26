@@ -1,0 +1,504 @@
+openapi: 3.0.0
+info:
+  title: Tarkov Casino API
+  version: 1.0.0
+  description: |
+    API for Tarkov Casino gaming platform
+    
+    Note: This schema is used by Cloudflare API Shield for request validation.
+    The production server is protected by Cloudflare with schema validation,
+    rate limiting, and security headers.
+
+servers:
+  - url: https://tarkov.juanis.cool/api
+    description: Production server (protected by Cloudflare API Shield)
+
+tags:
+  - name: auth
+    description: Authentication endpoints
+  - name: games
+    description: Game operations
+  - name: user
+    description: User management
+  - name: statistics
+    description: Statistics and analytics
+
+components:
+  securitySchemes:
+    AppwriteSession:
+      type: apiKey
+      in: header
+      name: X-Appwrite-Session
+      description: Appwrite session secret
+    AppwriteUser:
+      type: apiKey
+      in: header
+      name: X-Appwrite-User-Id
+      description: Appwrite user ID
+  schemas:
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+
+paths:
+  # Authentication endpoints
+  /auth/me:
+    get:
+      tags:
+        - auth
+      summary: Get current user session
+      security:
+        - AppwriteSession: []
+        - AppwriteUser: []
+      responses:
+        '200':
+          description: User session info
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  email:
+                    type: string
+                  name:
+                    type: string
+                  username:
+                    type: string
+                  balance:
+                    type: number
+                  avatar:
+                    type: string
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/logout:
+    post:
+      tags:
+        - auth
+      summary: Logout user
+      security:
+        - AppwriteSession: []
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  # Game endpoints - Roulette
+  /games:
+    get:
+      tags:
+        - games
+      summary: Get games overview
+      responses:
+        '200':
+          description: Games overview
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  available_games:
+                    type: object
+
+  /games/roulette:
+    get:
+      tags:
+        - games
+      summary: Get roulette game info
+      responses:
+        '200':
+          description: Roulette game information
+
+  /games/roulette/bet:
+    post:
+      tags:
+        - games
+      summary: Place roulette bet
+      security:
+        - AppwriteSession: []
+        - AppwriteUser: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - amount
+                - betType
+                - betValue
+              properties:
+                amount:
+                  type: number
+                  minimum: 1
+                  maximum: 10000
+                  description: Bet amount
+                betType:
+                  type: string
+                  minLength: 1
+                  maxLength: 20
+                  description: Bet type
+                betValue:
+                  oneOf:
+                    - type: number
+                    - type: string
+                  description: Bet value
+      responses:
+        '200':
+          description: Bet placed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  game_result:
+                    type: object
+                  bet_amount:
+                    type: number
+                  win_amount:
+                    type: number
+                  net_result:
+                    type: number
+                  new_balance:
+                    type: number
+                  game_id:
+                    type: string
+        '400':
+          description: Invalid bet or insufficient balance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Case opening game
+  /games/cases:
+    get:
+      tags:
+        - games
+      summary: Get available case types
+      responses:
+        '200':
+          description: List of case types
+
+  /games/cases/{caseTypeId}:
+    get:
+      tags:
+        - games
+      summary: Get case type details
+      parameters:
+        - name: caseTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Case type details
+        '404':
+          description: Case type not found
+
+  /games/cases/open:
+    post:
+      tags:
+        - games
+      summary: Open a case
+      security:
+        - AppwriteSession: []
+        - AppwriteUser: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - caseTypeId
+              properties:
+                caseTypeId:
+                  type: string
+                  minLength: 1
+                  description: Case type ID
+                previewOnly:
+                  type: boolean
+                  default: false
+                  description: Preview only without opening
+                requestId:
+                  type: string
+                  description: Request deduplication ID
+      responses:
+        '200':
+          description: Case opened successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  opening_result:
+                    type: object
+                  case_price:
+                    type: number
+                  currency_awarded:
+                    type: number
+                  net_result:
+                    type: number
+                  new_balance:
+                    type: number
+        '400':
+          description: Invalid case or insufficient balance
+        '401':
+          description: Authentication required
+
+  # Stock market game
+  /games/stock-market:
+    get:
+      tags:
+        - games
+      summary: Get stock market game info
+      responses:
+        '200':
+          description: Stock market game information
+
+  /games/stock-market/state:
+    get:
+      tags:
+        - games
+      summary: Get current market state
+      responses:
+        '200':
+          description: Current market state
+
+  /games/stock-market/buy:
+    post:
+      tags:
+        - games
+      summary: Buy shares
+      security:
+        - AppwriteSession: []
+        - AppwriteUser: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - shares
+              properties:
+                shares:
+                  type: number
+                  minimum: 0.01
+                  maximum: 1000000
+                  description: Number of shares to buy
+      responses:
+        '200':
+          description: Buy order executed
+        '400':
+          description: Invalid order
+        '401':
+          description: Authentication required
+
+  /games/stock-market/sell:
+    post:
+      tags:
+        - games
+      summary: Sell shares
+      security:
+        - AppwriteSession: []
+        - AppwriteUser: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - shares
+              properties:
+                shares:
+                  type: number
+                  minimum: 0.01
+                  maximum: 1000000
+                  description: Number of shares to sell
+      responses:
+        '200':
+          description: Sell order executed
+        '400':
+          description: Invalid order
+        '401':
+          description: Authentication required
+
+  # User endpoints
+  /user/profile:
+    get:
+      tags:
+        - user
+      summary: Get user profile
+      security:
+        - AppwriteSession: []
+        - AppwriteUser: []
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    type: object
+        '401':
+          description: Authentication required
+
+  /user/balance:
+    get:
+      tags:
+        - user
+      summary: Get user balance
+      security:
+        - AppwriteSession: []
+        - AppwriteUser: []
+      responses:
+        '200':
+          description: Balance information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  balance:
+                    type: number
+                  formatted_balance:
+                    type: string
+        '401':
+          description: Authentication required
+
+  /user/history:
+    get:
+      tags:
+        - user
+      summary: Get game history
+      security:
+        - AppwriteSession: []
+        - AppwriteUser: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: game_type
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Game history
+        '401':
+          description: Authentication required
+
+  /user/daily-bonus:
+    post:
+      tags:
+        - user
+      summary: Claim daily bonus
+      security:
+        - AppwriteSession: []
+        - AppwriteUser: []
+      responses:
+        '200':
+          description: Daily bonus claimed
+        '400':
+          description: Bonus not available
+        '401':
+          description: Authentication required
+
+  # Statistics endpoints
+  /statistics/basic:
+    get:
+      tags:
+        - statistics
+      summary: Get basic statistics
+      security:
+        - AppwriteSession: []
+        - AppwriteUser: []
+      responses:
+        '200':
+          description: Basic statistics
+        '401':
+          description: Authentication required
+
+  /statistics/advanced:
+    get:
+      tags:
+        - statistics
+      summary: Get advanced statistics
+      security:
+        - AppwriteSession: []
+        - AppwriteUser: []
+      parameters:
+        - name: gameType
+          in: query
+          schema:
+            type: string
+        - name: dateFrom
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: dateTo
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Advanced statistics
+        '401':
+          description: Authentication required

@@ -462,33 +462,11 @@ const ItemReveal: React.FC<ItemRevealProps> = ({
                           animate={{ opacity: [0.7, 1, 0.7] }}
                           transition={{ duration: 2, repeat: Infinity }}
                         >
-                          Currency Awarded
+                          Item Value
                         </motion.div>
-                        <div className="text-4xl font-tarkov font-bold text-tarkov-accent mb-2">
+                        <div className="text-4xl font-tarkov font-bold text-tarkov-accent">
                           {formatCurrency(result.currency_awarded, 'roubles')}
                         </div>
-                        
-                        {/* Profit/Loss indicator */}
-                        <motion.div
-                          initial={{ opacity: 0, scale: 0.8 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          transition={{ delay: 1.1 }}
-                          className={`text-sm font-semibold ${
-                            result.currency_awarded > result.case_type.price 
-                              ? 'text-green-400' 
-                              : result.currency_awarded === result.case_type.price
-                                ? 'text-yellow-400'
-                                : 'text-red-400'
-                          }`}
-                        >
-                          {result.currency_awarded > result.case_type.price && '🎉 '}
-                          {result.currency_awarded > result.case_type.price 
-                            ? `+${formatCurrency(result.currency_awarded - result.case_type.price, 'roubles')} Profit!`
-                            : result.currency_awarded === result.case_type.price
-                              ? 'Break Even'
-                              : `${formatCurrency(result.case_type.price - result.currency_awarded, 'roubles')} Loss`
-                          }
-                        </motion.div>
                       </div>
                       
                       {/* Animated border glow */}
