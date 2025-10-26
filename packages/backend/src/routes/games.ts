@@ -10,7 +10,7 @@ import { RouletteGame } from '../services/game-engine/roulette-game'
 import { CaseOpeningService } from '../services/case-opening-appwrite'
 import { StockMarketGame } from '../services/game-engine/stock-market-game'
 import { stockMarketStateService } from '../services/stock-market-state'
-
+import { Sentry, logger, startSpan } from '../lib/sentry'
 import { CurrencyService } from '../services/currency'
 import { realtimeGameService } from '../services/realtime-game'
 import { appwriteClient } from '../config/appwrite'
@@ -104,85 +104,199 @@ gameRoutes.post('/roulette/bet',
   asyncHandler(async (c: Context) => {
   const user = c.get('user')
   if (!user) {
+    Sentry.addBreadcrumb({
+      category: 'auth',
+      message: 'Roulette bet attempted without authentication',
+      level: 'warning'
+    });
     return c.json({ error: 'Authentication required' }, 401)
   }
 
   const { amount, betType, betValue } = c.get('validatedData')
 
-  // Check user balance
-  const balance = await CurrencyService.getBalance(user.id)
+  // Add breadcrumb for bet attempt
+  Sentry.addBreadcrumb({
+    category: 'game',
+    message: 'Roulette bet initiated',
+    level: 'info',
+    data: {
+      user_id: user.id,
+      bet_type: betType,
+      bet_amount: amount
+    }
+  });
+
+  // Check user balance with span
+  const balance = await startSpan(
+    {
+      op: 'db.query',
+      name: 'Get User Balance'
+    },
+    async (span) => {
+      span?.setAttribute('db.operation', 'GET_BALANCE');
+      span?.setAttribute('db.user_id', user.id);
+      return await CurrencyService.getBalance(user.id);
+    }
+  );
+  
   if (balance < amount) {
+    Sentry.captureMessage('Insufficient balance for roulette bet', {
+      level: 'warning',
+      tags: {
+        game: 'roulette',
+        action: 'insufficient_balance'
+      },
+      extra: {
+        user_id: user.id,
+        balance,
+        required_amount: amount,
+        shortfall: amount - balance
+      }
+    });
     return c.json({ error: 'Insufficient balance' }, 400)
   }
 
   try {
     // Log game start
     const ip = c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP')
-    await auditLog.gamePlayStarted(user.id, 'roulette', amount, ip)
     
-    // Broadcast game start
-    await realtimeGameService.handleRouletteGameStart(user.id, amount, betType, betValue)
+    await startSpan(
+      {
+        op: 'game.roulette',
+        name: 'Roulette Bet Placement'
+      },
+      async (gameSpan) => {
+        gameSpan?.setAttribute('game.type', 'roulette');
+        gameSpan?.setAttribute('game.bet_type', betType);
+        gameSpan?.setAttribute('game.bet_amount', amount);
+        gameSpan?.setAttribute('game.user_id', user.id);
+        
+        await auditLog.gamePlayStarted(user.id, 'roulette', amount, ip)
+        
+        // Broadcast game start
+        await startSpan(
+          { op: 'realtime.broadcast', name: 'Broadcast Game Start' },
+          async (broadcastSpan) => {
+            broadcastSpan?.setAttribute('event.type', 'game_start');
+            return await realtimeGameService.handleRouletteGameStart(user.id, amount, betType, betValue);
+          }
+        );
 
-    // Create roulette game instance
-    const rouletteGame = new RouletteGame()
+        // Create roulette game instance
+        const rouletteGame = new RouletteGame()
 
-    // Create bet object
-    const bet = {
-      userId: user.id,
-      amount,
-      gameType: 'roulette' as const,
-      betType,
-      betValue
-    }
+        // Create bet object
+        const bet = {
+          userId: user.id,
+          amount,
+          gameType: 'roulette' as const,
+          betType,
+          betValue
+        }
 
-    // Broadcast spin start
-    const gameId = `roulette-${Date.now()}-${user.id}`
-    await realtimeGameService.handleRouletteSpinStart(user.id, gameId)
+        // Broadcast spin start
+        const gameId = `roulette-${Date.now()}-${user.id}`
+        await realtimeGameService.handleRouletteSpinStart(user.id, gameId)
 
-    // Play the game
-    const result = await rouletteGame.play(bet)
+        // Play the game with span
+        const result = await startSpan(
+          {
+            op: 'game.play',
+            name: 'Play Roulette'
+          },
+          async (playSpan) => {
+            playSpan?.setAttribute('game_id', gameId);
+            return await rouletteGame.play(bet);
+          }
+        );
 
-    if (!result.success) {
-      return c.json({ error: result.error || 'Game failed' }, 400)
-    }
+        if (!result.success) {
+          logger.error('Roulette game failed', { 
+            user_id: user.id, 
+            bet_type: betType, 
+            error: result.error 
+          });
+          return c.json({ error: result.error || 'Game failed' }, 400)
+        }
 
-    // Process currency transaction
-    const transactionResult = await CurrencyService.processGameTransaction(
-      user.id,
-      'roulette',
-      amount,
-      result.winAmount,
-      result.resultData
-    )
+        // Process currency transaction with span
+        const transactionResult = await startSpan(
+          {
+            op: 'currency.transaction',
+            name: 'Process Game Transaction'
+          },
+          async (txSpan) => {
+            txSpan?.setAttribute('transaction.type', 'game');
+            txSpan?.setAttribute('game.type', 'roulette');
+            return await CurrencyService.processGameTransaction(
+              user.id,
+              'roulette',
+              amount,
+              result.winAmount,
+              result.resultData
+            );
+          }
+        );
 
-    if (!transactionResult.success) {
-      return c.json({ error: 'Transaction failed' }, 500)
-    }
+        if (!transactionResult.success) {
+          Sentry.captureMessage('Currency transaction failed for roulette', {
+            level: 'error',
+            tags: { game: 'roulette', action: 'transaction_failed' },
+            extra: { user_id: user.id, bet_amount: amount }
+          });
+          return c.json({ error: 'Transaction failed' }, 500)
+        }
 
-    // Broadcast game completion
-    await realtimeGameService.handleRouletteGameComplete(user.id, gameId, result)
+        // Add success breadcrumb
+        Sentry.addBreadcrumb({
+          category: 'game',
+          message: 'Roulette bet completed successfully',
+          level: 'info',
+          data: {
+            user_id: user.id,
+            win_amount: result.winAmount,
+            net_result: result.winAmount - amount
+          }
+        });
 
-    // Log game completion
-    await auditLog.gameCompleted(user.id, 'roulette', amount, result.winAmount, ip)
+        // Broadcast game completion
+        await realtimeGameService.handleRouletteGameComplete(user.id, gameId, result)
+
+        // Log game completion
+        await auditLog.gameCompleted(user.id, 'roulette', amount, result.winAmount, ip)
+        
+        // Broadcast balance update
+        await realtimeGameService.handleBalanceUpdate(
+          user.id,
+          transactionResult.newBalance,
+          transactionResult.previousBalance
+        )
+
+        return c.json({
+          success: true,
+          game_result: result.resultData,
+          bet_amount: amount,
+          win_amount: result.winAmount,
+          net_result: result.winAmount - amount,
+          new_balance: transactionResult.newBalance,
+          game_id: gameId
+        })
+      }
+    );
     
-    // Broadcast balance update
-    await realtimeGameService.handleBalanceUpdate(
-      user.id,
-      transactionResult.newBalance,
-      transactionResult.previousBalance
-    )
-
-    return c.json({
-      success: true,
-      game_result: result.resultData,
-      bet_amount: amount,
-      win_amount: result.winAmount,
-      net_result: result.winAmount - amount,
-      new_balance: transactionResult.newBalance,
-      game_id: gameId
-    })
   } catch (error) {
-    console.error('Roulette bet error:', error)
+    Sentry.captureException(error, {
+      tags: {
+        game: 'roulette',
+        action: 'bet_placement'
+      },
+      extra: {
+        user_id: user.id,
+        bet_amount: amount,
+        bet_type: betType
+      }
+    });
+    logger.error('Roulette bet error', { error, user_id: user.id });
     return c.json({ error: 'Internal server error' }, 500)
   }
 }))
@@ -244,10 +358,28 @@ gameRoutes.post('/cases/open',
   asyncHandler(async (c: Context) => {
   const user = c.get('user')
   if (!user) {
+    Sentry.addBreadcrumb({
+      category: 'auth',
+      message: 'Case opening attempted without authentication',
+      level: 'warning'
+    });
     return c.json({ error: 'Authentication required' }, 401)
   }
 
   const { caseTypeId, previewOnly, requestId } = c.get('validatedData')
+
+  // Add breadcrumb for case opening attempt
+  Sentry.addBreadcrumb({
+    category: 'game',
+    message: 'Case opening initiated',
+    level: 'info',
+    data: {
+      user_id: user.id,
+      case_type_id: caseTypeId,
+      preview_only: previewOnly,
+      request_id: requestId
+    }
+  });
 
     // Request deduplication using promise-based approach (prevents race conditions)
     const dedupKey = requestId ? `case_open_${user.id}_${requestId}` : null
@@ -262,65 +394,139 @@ gameRoutes.post('/cases/open',
       }
     }
 
-  // Wrap the entire request processing in a function
+  // Wrap the entire request processing with span
   const processRequest = async () => {
-  try {
-    // Validate case opening request
-    const validation = await CaseOpeningService.validateCaseOpening(user.id, caseTypeId)
-    if (!validation.isValid) {
-      return c.json({ error: validation.error }, 400)
-    }
+  return await startSpan(
+    {
+      op: 'game.case_opening',
+      name: 'Case Opening Request'
+    },
+    async (mainSpan) => {
+      try {
+        mainSpan?.setAttribute('user.id', user.id);
+        mainSpan?.setAttribute('case.type_id', caseTypeId);
+        mainSpan?.setAttribute('preview.only', previewOnly);
+        
+        // Validate case opening request with span
+        const validation = await startSpan(
+          {
+            op: 'game.validation',
+            name: 'Validate Case Opening'
+          },
+          async (validSpan) => {
+            validSpan?.setAttribute('validation.type', 'case_opening');
+            return await CaseOpeningService.validateCaseOpening(user.id, caseTypeId);
+          }
+        );
+        
+        if (!validation.isValid) {
+          Sentry.captureMessage('Case opening validation failed', {
+            level: 'warning',
+            tags: { game: 'case_opening', action: 'validation_failed' },
+            extra: { user_id: user.id, case_type_id: caseTypeId, error: validation.error }
+          });
+          return c.json({ error: validation.error }, 400)
+        }
 
-    const caseType = validation.caseType!
+        const caseType = validation.caseType!
 
-    // For preview mode, just determine the result without processing transaction
-    if (previewOnly) {
-      const previewResult = await CaseOpeningService.previewCase(user.id, caseTypeId)
+        // For preview mode, just determine the result without processing transaction
+        if (previewOnly) {
+          const previewResult = await startSpan(
+            {
+              op: 'game.preview',
+              name: 'Preview Case Opening'
+            },
+            async (previewSpan) => {
+              previewSpan?.setAttribute('case.type_id', caseTypeId);
+              return await CaseOpeningService.previewCase(user.id, caseTypeId);
+            }
+          );
 
-      return c.json({
-        success: true,
-        preview: true,
-        opening_result: {
-          case_type: caseType,
-          item_won: previewResult.item_won,
-          currency_awarded: previewResult.currency_awarded,
-          opening_id: previewResult.opening_id,
-          timestamp: previewResult.timestamp
-        },
-        case_price: caseType.price,
-        estimated_net_result: previewResult.currency_awarded - caseType.price
-      })
-    }
+          return c.json({
+            success: true,
+            preview: true,
+            opening_result: {
+              case_type: caseType,
+              item_won: previewResult.item_won,
+              currency_awarded: previewResult.currency_awarded,
+              opening_id: previewResult.opening_id,
+              timestamp: previewResult.timestamp
+            },
+            case_price: caseType.price,
+            estimated_net_result: previewResult.currency_awarded - caseType.price
+          })
+        }
 
-    const ip = c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP')
+        const ip = c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP')
 
-    // Open the case and process transaction in parallel where possible
-    const openingResult = await CaseOpeningService.openCase(user.id, caseTypeId)
+        // Open the case with span
+        const openingResult = await startSpan(
+          {
+            op: 'game.open_case',
+            name: 'Open Case'
+          },
+          async (openSpan) => {
+            openSpan?.setAttribute('case.type_id', caseTypeId);
+            openSpan?.setAttribute('case.price', caseType.price);
+            return await CaseOpeningService.openCase(user.id, caseTypeId);
+          }
+        );
 
-    // Process case opening as a single atomic transaction
-    const transactionResult = await CurrencyService.processCaseOpening(
-      user.id,
-      caseType.price,
-      openingResult.currency_awarded,
-      {
-        case_type_id: openingResult.case_type.id,
-        case_name: openingResult.case_type.name,
-        case_price: openingResult.case_type.price,
-        item_id: openingResult.item_won.id,
-        item_name: openingResult.item_won.name,
-        item_rarity: openingResult.item_won.rarity,
-        item_category: openingResult.item_won.category,
-        item_value: openingResult.item_won.base_value,
-        currency_awarded: openingResult.currency_awarded,
-        opening_id: openingResult.opening_id,
-        request_id: requestId,
-        transaction_type: 'case_opening_complete'
-      }
-    )
+        // Add breadcrumb for opened case
+        Sentry.addBreadcrumb({
+          category: 'game',
+          message: 'Case opened successfully',
+          level: 'info',
+          data: {
+            item_won: openingResult.item_won.name,
+            currency_awarded: openingResult.currency_awarded,
+            item_rarity: openingResult.item_won.rarity
+          }
+        });
 
-    if (!transactionResult.success) {
-      return c.json({ error: 'Transaction failed' }, 500)
-    }
+        // Process case opening as a single atomic transaction with span
+        const transactionResult = await startSpan(
+          {
+            op: 'currency.transaction',
+            name: 'Process Case Opening Transaction'
+          },
+          async (txSpan) => {
+            txSpan?.setAttribute('transaction.type', 'case_opening');
+            txSpan?.setAttribute('case.type_id', caseTypeId);
+            txSpan?.setAttribute('case.price', caseType.price);
+            txSpan?.setAttribute('currency.awarded', openingResult.currency_awarded);
+            
+            return await CurrencyService.processCaseOpening(
+              user.id,
+              caseType.price,
+              openingResult.currency_awarded,
+              {
+                case_type_id: openingResult.case_type.id,
+                case_name: openingResult.case_type.name,
+                case_price: openingResult.case_type.price,
+                item_id: openingResult.item_won.id,
+                item_name: openingResult.item_won.name,
+                item_rarity: openingResult.item_won.rarity,
+                item_category: openingResult.item_won.category,
+                item_value: openingResult.item_won.base_value,
+                currency_awarded: openingResult.currency_awarded,
+                opening_id: openingResult.opening_id,
+                request_id: requestId,
+                transaction_type: 'case_opening_complete'
+              }
+            );
+          }
+        );
+
+        if (!transactionResult.success) {
+          Sentry.captureMessage('Case opening transaction failed', {
+            level: 'error',
+            tags: { game: 'case_opening', action: 'transaction_failed' },
+            extra: { user_id: user.id, case_type_id: caseTypeId }
+          });
+          return c.json({ error: 'Transaction failed' }, 500)
+        }
 
     // Run non-critical operations in parallel (fire and forget)
     Promise.all([
@@ -340,27 +546,43 @@ gameRoutes.post('/cases/open',
       )
     ]).catch(err => console.error('Non-critical operation failed:', err))
 
-    return c.json({
-      success: true,
-      opening_result: {
-        case_type: openingResult.case_type,
-        item_won: openingResult.item_won,
-        currency_awarded: openingResult.currency_awarded,
-        opening_id: openingResult.opening_id,
-        timestamp: openingResult.timestamp
-      },
-      case_price: caseType.price,
-      currency_awarded: openingResult.currency_awarded,
-      net_result: transactionResult.netResult,
-      new_balance: transactionResult.newBalance,
-      transaction_id: transactionResult.gameId
-    })
-  } catch (error: any) {
-    console.error('❌ Case opening error:', error)
-    console.error('Error message:', error?.message)
-    console.error('Error stack:', error?.stack)
-    return c.json({ error: error?.message || 'Internal server error' }, 500)
-  }
+        return c.json({
+          success: true,
+          opening_result: {
+            case_type: openingResult.case_type,
+            item_won: openingResult.item_won,
+            currency_awarded: openingResult.currency_awarded,
+            opening_id: openingResult.opening_id,
+            timestamp: openingResult.timestamp
+          },
+          case_price: caseType.price,
+          currency_awarded: openingResult.currency_awarded,
+          net_result: transactionResult.netResult,
+          new_balance: transactionResult.newBalance,
+          transaction_id: transactionResult.gameId
+        })
+      } catch (error: any) {
+        Sentry.captureException(error, {
+          tags: {
+            game: 'case_opening',
+            action: 'case_opening'
+          },
+          extra: {
+            user_id: user.id,
+            case_type_id: caseTypeId,
+            preview_only: previewOnly,
+            request_id: requestId
+          }
+        });
+        logger.error('Case opening error', { 
+          error: error?.message, 
+          user_id: user.id,
+          case_type_id: caseTypeId 
+        });
+        return c.json({ error: error?.message || 'Internal server error' }, 500)
+      }
+    }
+  );
   }
 
   // Store promise for deduplication and execute
@@ -527,10 +749,26 @@ gameRoutes.post('/stock-market/buy',
   asyncHandler(async (c: Context) => {
     const user = c.get('user')
     if (!user) {
+      Sentry.addBreadcrumb({
+        category: 'auth',
+        message: 'Stock market buy attempted without authentication',
+        level: 'warning'
+      });
       return c.json({ error: 'Authentication required' }, 401)
     }
 
     const { shares } = c.get('validatedData')
+
+    // Add breadcrumb for buy attempt
+    Sentry.addBreadcrumb({
+      category: 'game',
+      message: 'Stock market buy initiated',
+      level: 'info',
+      data: {
+        user_id: user.id,
+        shares: shares
+      }
+    });
 
     try {
       // BUG FIX #12: Request deduplication to prevent duplicate buy orders
@@ -562,18 +800,49 @@ gameRoutes.post('/stock-market/buy',
             }, 400)
           }
         }
-
-        // Execute buy order
+        
+        // Execute buy order with span
         const game = StockMarketGame.getInstance()
-        const result = await game.executeBuy(user.id, user.username || user.email, shares, currentPrice)
+        const result = await startSpan(
+              {
+                op: 'game.execute_buy',
+                name: 'Execute Buy Order'
+              },
+          async (buySpan) => {
+            buySpan?.setAttribute('shares', shares);
+            buySpan?.setAttribute('price', currentPrice);
+            return await game.executeBuy(user.id, user.username || user.email, shares, currentPrice);
+          }
+        );
 
         if (!result.success) {
+          Sentry.captureMessage('Stock market buy failed', {
+            level: 'warning',
+            tags: { game: 'stock_market', action: 'buy_failed' },
+            extra: { user_id: user.id, shares, error: result.error }
+          });
           return c.json({ error: result.error || 'Failed to execute buy order' }, 400)
         }
 
         // Log game activity
         const ip = c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP')
-        await auditLog.gamePlayStarted(user.id, 'stock_market', shares * currentPrice, ip)
+        
+        await startSpan(
+          { op: 'audit.log', name: 'Log Stock Market Buy' },
+          async () => await auditLog.gamePlayStarted(user.id, 'stock_market', shares * currentPrice, ip)
+        );
+
+        // Add success breadcrumb
+        Sentry.addBreadcrumb({
+          category: 'game',
+          message: 'Stock market buy completed',
+          level: 'info',
+          data: {
+            shares: shares,
+            price: currentPrice,
+            total_cost: shares * currentPrice
+          }
+        });
 
         return c.json({
           success: true,
@@ -598,7 +867,17 @@ gameRoutes.post('/stock-market/buy',
       promiseCache.set(dedupKey, requestPromise)
       return await requestPromise
     } catch (error) {
-      console.error('Buy order error:', error)
+      Sentry.captureException(error, {
+        tags: {
+          game: 'stock_market',
+          action: 'buy_order'
+        },
+        extra: {
+          user_id: user.id,
+          shares: shares
+        }
+      });
+      logger.error('Buy order error', { error, user_id: user.id, shares });
       return c.json({ error: 'Failed to execute buy order' }, 500)
     }
   })

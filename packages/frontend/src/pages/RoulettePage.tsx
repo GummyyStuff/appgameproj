@@ -1,4 +1,5 @@
 import React, { useState, useEffect, Suspense } from 'react'
+import * as Sentry from '@sentry/react'
 import { useAuth } from '../hooks/useAuth'
 import { useBalance, useBalanceUpdates } from '../hooks/useBalance'
 import { useRouletteRealtime } from '../hooks/useRouletteRealtime'
@@ -117,7 +118,41 @@ const RoulettePage: React.FC = () => {
 
   const placeBet = async () => {
     if (!user) {
+      // Add breadcrumb for failed bet placement
+      if (typeof window !== 'undefined' && (window as any).sentry) {
+        (window as any).sentry.addBreadcrumb({
+          category: 'user',
+          message: 'Bet placement attempted without authentication',
+          level: 'warning'
+        });
+      }
+      return
+    }
+
+    // Add Sentry span for bet placement
+    return Sentry.startSpan(
+      {
+        op: 'ui.action',
+        name: 'Roulette Bet Placement'
+      },
+      async (span) => {
+        span?.setAttribute('bet_type', currentBet.betType);
+        span?.setAttribute('bet_value', currentBet.betValue);
+        span?.setAttribute('bet_amount', betAmount);
+        
+        return await placeBetWithTracking();
+      }
+    );
+  };
+
+  const placeBetWithTracking = async () => {
+    if (!user) {
       setError('Please log in to place bets')
+      Sentry.addBreadcrumb({
+        category: 'user',
+        message: 'Bet placement attempted without authentication',
+        level: 'warning'
+      });
       return
     }
 
@@ -148,20 +183,44 @@ const RoulettePage: React.FC = () => {
       // Broadcast game start for real-time updates
       await broadcastGameStart(betAmount, currentBet.betType, currentBet.betValue)
 
+      // Add breadcrumb before API call
+      Sentry.addBreadcrumb({
+        category: 'http',
+        message: 'POST /api/games/roulette/bet',
+        level: 'info',
+        data: {
+          bet_type: currentBet.betType,
+          bet_amount: betAmount
+        }
+      });
+
       // Make API call with credentials (cookies handle auth)
-      const response = await fetch('/api/games/roulette/bet', {
-        method: 'POST',
-        credentials: 'include', // Send cookies for auth
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Appwrite-User-Id': user.id, // Required for auth
+      const response = await Sentry.startSpan(
+        {
+          op: 'http.client',
+          name: 'POST /api/games/roulette/bet'
         },
-        body: JSON.stringify({
-          amount: betAmount,
-          betType: currentBet.betType,
-          betValue: currentBet.betValue
-        })
-      })
+        async (span) => {
+          span?.setAttribute('http.method', 'POST');
+          span?.setAttribute('http.url', '/api/games/roulette/bet');
+          span?.setAttribute('bet_amount', betAmount);
+          span?.setAttribute('bet_type', currentBet.betType);
+          
+          return await fetch('/api/games/roulette/bet', {
+            method: 'POST',
+            credentials: 'include', // Send cookies for auth
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Appwrite-User-Id': user.id, // Required for auth
+            },
+            body: JSON.stringify({
+              amount: betAmount,
+              betType: currentBet.betType,
+              betValue: currentBet.betValue
+            })
+          });
+        }
+      )
 
       if (!response.ok) {
         let errorMessage = 'Failed to place bet'
@@ -177,6 +236,18 @@ const RoulettePage: React.FC = () => {
       }
 
       const result: RouletteResult = await response.json()
+
+      // Add breadcrumb for successful bet
+      Sentry.addBreadcrumb({
+        category: 'user',
+        message: 'Roulette bet placed successfully',
+        level: 'info',
+        data: {
+          winning_number: result.game_result.winning_number,
+          win_amount: result.win_amount,
+          new_balance: result.new_balance
+        }
+      });
 
       // Play spin sound
       playSpinSound()
@@ -226,6 +297,20 @@ const RoulettePage: React.FC = () => {
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to place bet'
+      
+      // Capture error in Sentry with context
+      Sentry.captureException(err, {
+        tags: {
+          game: 'roulette',
+          action: 'bet_placement'
+        },
+        extra: {
+          bet_type: currentBet.betType,
+          bet_amount: betAmount,
+          user_balance: balance
+        }
+      });
+      
       setError(errorMessage)
       toast.error('Bet failed', errorMessage)
       setGameState(prev => ({ ...prev, isSpinning: false }))

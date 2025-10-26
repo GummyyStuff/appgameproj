@@ -56,7 +56,9 @@
   },
   "devDependencies": {
     "@happy-dom/global-registrator": "catalog:default",
+    "@playwright/test": "1.56.1",
     "@types/bun": "catalog:default",
+    "playwright": "1.56.1",
     "shadcn": "3.4.0",
     "typescript": "catalog:default"
   },

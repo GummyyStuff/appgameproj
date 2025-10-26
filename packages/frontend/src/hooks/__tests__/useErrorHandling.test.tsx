@@ -1,241 +1,120 @@
-import React from 'react'
-import { render, screen } from '@testing-library/react'
+import { renderHook, act } from '@testing-library/react'
 import { test, expect, describe, beforeEach, mock } from 'bun:test'
 import * as matchers from '@testing-library/jest-dom/matchers'
 
 // Extend expect with Testing Library matchers
 expect.extend(matchers)
 
-// Mock toast
-const mockToast = mock()
+// Create mock functions
+const mockError = mock(() => {})
+const mockSuccess = mock(() => {})
+const mockInfo = mock(() => {})
+const mockWarning = mock(() => {})
 
 // Mock the toast provider module
 mock.module('../../components/providers/ToastProvider', () => ({
   useToastContext: () => ({
-    success: mockToast,
-    error: mockToast,
-    info: mockToast,
-    warning: mockToast
-  })
-}))
-
-// Mock the error handling utilities
-mock.module('../../utils/errorHandling', () => ({
-  identifyErrorType: mock((error: Error) => {
-    if (error.message.includes('Network')) return 'network'
-    if (error.message.includes('Authentication')) return 'auth'
-    if (error.message.includes('Animation')) return 'animation'
-    if (error.message.includes('balance')) return 'validation'
-    return 'unknown'
-  }),
-  getUserFriendlyMessage: mock((error: Error, type: string) => {
-    switch (type) {
-      case 'network': return 'Network request failed - possible connectivity issue'
-      case 'auth': return 'Please log in to continue'
-      case 'animation': return 'Animation failed, using simple reveal'
-      case 'validation': return error.message
-      default: return 'An unexpected error occurred'
-    }
-  }),
-  executeFallback: mock((type: string) => {
-    switch (type) {
-      case 'animation': return 'reveal'
-      case 'network': return 'simple'
-      case 'auth': return 'refresh'
-      default: return null
-    }
-  }),
-  handleErrorWithRecovery: mock(async (error: Error, context: string) => {
-    const type = error.message.includes('Network') ? 'network' : 
-                 error.message.includes('Animation') ? 'animation' : 'validation'
-    
-    if (type === 'network') {
-      // Simulate retry success
-      return true
-    } else if (type === 'animation') {
-      // Simulate fallback success
-      return true
-    } else {
-      // No recovery possible
-      return false
-    }
+    success: mockSuccess,
+    error: mockError,
+    info: mockInfo,
+    warning: mockWarning
   })
 }))
 
 // Import the hook after mocking
 import { useErrorHandling } from '../useErrorHandling'
 
-// Test component wrapper for hooks
-const TestComponent: React.FC<{ testCallback: (hook: ReturnType<typeof useErrorHandling>) => void }> = ({ testCallback }) => {
-  const hook = useErrorHandling()
-  React.useEffect(() => {
-    testCallback(hook)
-  }, [hook, testCallback])
-  return <div>Test Component</div>
-}
-
-// NOTE: Many of these tests call hooks directly which violates Rules of Hooks
-// Tests need to be rewritten to use renderHook() properly for ALL test cases
-// Skipping problematic tests until proper rewrite
-
-describe.skip('useErrorHandling - SKIPPED: All tests need rewrite with renderHook()', () => {
+describe('useErrorHandling', () => {
   beforeEach(() => {
-    mockToast.mockClear?.()
+    // Reset all mocks before each test
+    mockError.mockClear()
+    mockSuccess.mockClear()
+    mockInfo.mockClear()
+    mockWarning.mockClear()
   })
 
-  test('should initialize with no error', async () => {
-    let hookData: ReturnType<typeof useErrorHandling> | null = null
+  test('should initialize with no error', () => {
+    const { result } = renderHook(() => useErrorHandling())
 
-    render(<TestComponent testCallback={(hook) => { hookData = hook }} />)
-
-    // Wait for the hook to be called
-    await new Promise(resolve => setTimeout(resolve, 0))
-
-    expect(hookData?.error).toBeNull()
-    expect(hookData?.isRetrying).toBe(false)
-    expect(hookData?.retryCount).toBe(0)
+    expect(result.current.currentError).toBeNull()
+    expect(result.current.isRetrying).toBe(false)
   })
 
-  test.skip('should handle network errors with retry - NEEDS REWRITE', async () => {
-    let hookData: ReturnType<typeof useErrorHandling> | null = null
-
-    render(<TestComponent testCallback={(hook) => { hookData = hook }} />)
-
-    // Wait for the hook to be called
-    await new Promise(resolve => setTimeout(resolve, 0))
-
-    const networkError = new Error('Network request failed')
-    const recovered = await hookData?.handleError(networkError, 'case opening')
-
-    expect(recovered).toBe(true) // Recovered via retry
-    expect(mockToast).toHaveBeenCalled?.()
-  })
-
-  test.skip('should handle authentication errors without retry - NEEDS REWRITE', async () => {
-    // This test calls hook directly, violating Rules of Hooks
-    // Need to wrap in renderHook() or component
-    const hook = useErrorHandling()
+  test('should handle authentication errors without retry', async () => {
+    const { result } = renderHook(() => useErrorHandling())
     const authError = new Error('Authentication failed')
 
-    const recovered = await hook.handleError(authError, 'case opening')
+    let recovered = false
+    await act(async () => {
+      recovered = await result.current.handleError(authError, 'case opening')
+    })
 
     expect(recovered).toBe(false)
-    expect(hook.error).toBe('Please log in to continue')
-    expect(mockToast).toHaveBeenCalled?.()
+    expect(result.current.currentError).toBe('Please log in to continue')
   })
 
-  test.skip('should handle animation errors with fallback - NEEDS REWRITE', async () => {
-    const hook = useErrorHandling()
-    const animationError = new Error('Animation failed')
-
-    const recovered = await hook.handleError(animationError, 'carousel animation')
-
-    expect(recovered).toBe(true) // Recovered via fallback
-    expect(mockToast).toHaveBeenCalled?.()
-  })
-
-  test.skip('should handle validation errors - NEEDS REWRITE', async () => {
-    const hook = useErrorHandling()
+  test('should handle validation errors', async () => {
+    const { result } = renderHook(() => useErrorHandling())
     const validationError = new Error('Insufficient balance')
 
-    const recovered = await hook.handleError(validationError, 'case opening')
+    let recovered = false
+    await act(async () => {
+      recovered = await result.current.handleError(validationError, 'case opening')
+    })
 
     expect(recovered).toBe(false)
-    expect(hook.error).toBe('Insufficient balance')
-    expect(mockToast).toHaveBeenCalled?.()
+    expect(result.current.currentError).toBe('Insufficient balance')
   })
 
-  test.skip('should retry operations successfully - NEEDS REWRITE', async () => {
-    const hook = useErrorHandling()
-
-    let callCount = 0
-    const mockOperation = mock(async () => {
-      callCount++
-      if (callCount === 1) {
-        throw new Error('Network error')
-      }
-      return 'success'
+  test('should clear error', async () => {
+    const { result } = renderHook(() => useErrorHandling())
+    
+    // First set an error
+    await act(async () => {
+      const error = new Error('Test error')
+      await result.current.handleError(error, 'test context')
     })
 
-    const finalResult = await hook.retryOperation(mockOperation, 'test retry')
+    expect(result.current.currentError).not.toBeNull()
 
-    expect(callCount).toBe(2)
-    expect(finalResult).toBe('success')
-    expect(hook.isRetrying).toBe(false)
-  })
-
-  test.skip('should stop retrying after max attempts - NEEDS REWRITE', async () => {
-    const hook = useErrorHandling()
-
-    const mockOperation = mock(async () => {
-      throw new Error('Persistent network error')
+    // Now clear it
+    act(() => {
+      result.current.clearError()
     })
 
-    const finalResult = await hook.retryOperation(mockOperation, 'test retry')
-
-    expect(finalResult).toBeNull()
-    expect(mockOperation).toHaveBeenCalled?.()
-    expect(hook.isRetrying).toBe(false)
+    expect(result.current.currentError).toBeNull()
   })
 
-  test.skip('should clear error - NEEDS REWRITE', () => {
-    const hook = useErrorHandling()
-
-    hook.clearError()
-
-    expect(hook.error).toBeNull()
-    expect(hook.isRetrying).toBe(false)
-    expect(hook.retryCount).toBe(0)
-  })
-
-  test.skip('should get user-friendly error messages - NEEDS REWRITE', () => {
-    const hook = useErrorHandling()
+  test('should get user-friendly error messages', () => {
+    const { result } = renderHook(() => useErrorHandling())
     const networkError = new Error('Network request failed')
-    const message = hook.getUserFriendlyMessage(networkError)
-
-    expect(message).toBe('Network request failed - possible connectivity issue')
+    
+    const message = result.current.getErrorMessage(networkError)
+    expect(message).toBe('Connection problem. Retrying...')
   })
 
-  test.skip('should handle unknown errors - NEEDS REWRITE', async () => {
-    const hook = useErrorHandling()
-    const unknownError = new Error('Unknown error')
+  test('should handle animation errors', async () => {
+    const { result } = renderHook(() => useErrorHandling())
+    const animationError = new Error('Animation failed')
 
-    const recovered = await hook.handleError(unknownError, 'unknown operation')
-
-    expect(recovered).toBe(false)
-    expect(hook.error).toBe('An unexpected error occurred')
-  })
-
-  test.skip('should handle animation context errors - NEEDS REWRITE', async () => {
-    const hook = useErrorHandling()
-    const animationError = new Error('Animation context failed')
-
-    const recovered = await hook.handleError(animationError, 'animation context')
+    let recovered = false
+    await act(async () => {
+      recovered = await result.current.handleError(animationError, 'animation context')
+    })
 
     expect(recovered).toBe(true) // Should recover via fallback
   })
 
-  test.skip('should handle balance validation errors - NEEDS REWRITE', async () => {
-    const hook = useErrorHandling()
+  test('should handle balance validation errors', async () => {
+    const { result } = renderHook(() => useErrorHandling())
     const balanceError = new Error('Insufficient balance')
 
-    const recovered = await hook.handleError(balanceError, 'balance validation')
-
-    expect(recovered).toBe(false)
-    expect(hook.error).toBe('Insufficient balance')
-  })
-
-  test.skip('should manage retry state correctly - NEEDS REWRITE', async () => {
-    const hook = useErrorHandling()
-
-    const mockOperation = mock(async () => {
-      throw new Error('Network error')
+    let recovered = false
+    await act(async () => {
+      recovered = await result.current.handleError(balanceError, 'balance validation')
     })
 
-    // Start retry operation
-    hook.retryOperation(mockOperation, 'test retry')
-
-    expect(hook.isRetrying).toBe(true)
-    expect(hook.retryCount).toBeGreaterThan(0)
+    expect(recovered).toBe(false)
+    expect(result.current.currentError).toBe('Insufficient balance')
   })
 })
