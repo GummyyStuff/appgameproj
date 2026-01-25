@@ -8,13 +8,16 @@ FROM base AS deps
 COPY package.json bun.lock ./
 COPY packages/backend/package.json ./packages/backend/
 COPY packages/frontend/package.json ./packages/frontend/
+# Copy workspace structure to ensure Bun workspaces work correctly
+COPY tsconfig.json ./
 RUN bun install --frozen-lockfile
 
 # Build frontend stage
 FROM base AS frontend-build
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/packages/frontend/node_modules ./packages/frontend/node_modules
+# Bun workspaces hoist dependencies to root node_modules
+# Package-level node_modules may not exist - that's fine, root has everything
 # Cache buster - change this to force rebuild: v1.6-bun1.3-optimized
 COPY packages/frontend/ ./packages/frontend/
 WORKDIR /app/packages/frontend
@@ -58,7 +61,8 @@ RUN bun run build.ts
 FROM base AS backend-build
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/packages/backend/node_modules ./packages/backend/node_modules
+# Bun workspaces hoist dependencies to root node_modules
+# Package-level node_modules may not exist - that's fine, root has everything
 COPY packages/backend/ ./packages/backend/
 COPY package.json tsconfig.json ./
 WORKDIR /app/packages/backend
@@ -73,8 +77,9 @@ USER root
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
 # Copy all node_modules to maintain workspace structure
+# Bun workspaces hoist dependencies to root node_modules
+# Package-level node_modules may not exist - that's fine, root has everything
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/packages/backend/node_modules ./packages/backend/node_modules
 
 # Copy built backend in its package location
 COPY --from=backend-build /app/packages/backend/dist ./packages/backend/dist
