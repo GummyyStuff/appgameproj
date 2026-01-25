@@ -1,7 +1,7 @@
 /**
- * Setup Game History Collection with Stock Market Support
+ * Setup Game History Collection
  * 
- * This script creates/updates the game_history collection to include 'stock_market' as a valid game type.
+ * This script creates/updates the game_history collection with valid game types.
  * 
  * Run with: bun run packages/backend/scripts/setup-game-history-collection.ts
  */
@@ -73,13 +73,13 @@ async function setupGameHistoryCollection() {
     );
     await new Promise(resolve => setTimeout(resolve, 1000));
 
-    // game_type (enum) - INCLUDES STOCK_MARKET
+    // game_type (enum)
     console.log('  Adding attribute: game_type (enum)...');
     await databases.createEnumAttribute(
       DATABASE_ID,
       COLLECTION_ID,
       'game_type',
-      ['roulette', 'blackjack', 'case_opening', 'stock_market'],
+      ['roulette', 'blackjack', 'case_opening'],
       true,
       undefined,
       false
@@ -185,8 +185,7 @@ async function setupGameHistoryCollection() {
     console.log('   - roulette');
     console.log('   - blackjack');
     console.log('   - case_opening');
-    console.log('   - stock_market ⬅️ NEW!');
-    console.log('\n🎉 You can now record stock market trades in game_history!');
+    console.log('\n🎉 Game history collection is ready!');
 
   } catch (error: any) {
     if (error.code === 409) {

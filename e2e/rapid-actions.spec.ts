@@ -5,7 +5,6 @@
 
 import { test, expect } from '@playwright/test';
 import { CaseOpeningPage } from './pages/CaseOpeningPage';
-import { StockMarketPage } from './pages/StockMarketPage';
 import { LoginPage } from './pages/LoginPage';
 
 test.describe('Rapid Actions - Debouncing and Concurrency Prevention', () => {
@@ -66,51 +65,6 @@ test.describe('Rapid Actions - Debouncing and Concurrency Prevention', () => {
     });
   });
 
-  test.describe('Stock Market - Rapid Trading', () => {
-    test('should prevent rapid buy orders', async ({ page }) => {
-      const stockPage = new StockMarketPage(page);
-      await stockPage.goto();
-
-      // Wait for market to load
-      await expect(page.locator('[data-testid="current-price"]')).toBeVisible({ timeout: 10000 });
-
-      const buyButton = page.locator('button:has-text("Buy")').first();
-      
-      // Try to click rapidly 3 times
-      for (let i = 0; i < 3; i++) {
-        await buyButton.click({ timeout: 100 });
-        await page.waitForTimeout(50);
-      }
-
-      // Only one buy should go through (request deduplication)
-      await page.waitForTimeout(1000);
-      
-      // Verify no crashes and state is consistent
-      const currentPrice = await page.locator('[data-testid="current-price"]').textContent();
-      expect(currentPrice).toBeDefined();
-    });
-
-    test('should handle rapid buy/sell toggle correctly', async ({ page }) => {
-      const stockPage = new StockMarketPage(page);
-      await stockPage.goto();
-
-      const buyButton = page.locator('button:has-text("Buy")').first();
-      const sellButton = page.locator('button:has-text("Sell")').first();
-
-      // Rapidly toggle between buy and sell
-      await buyButton.click();
-      await page.waitForTimeout(50);
-      await sellButton.click();
-      await page.waitForTimeout(50);
-      await buyButton.click();
-
-      // Should not crash or create inconsistent state
-      await page.waitForTimeout(1000);
-      
-      // Verify UI is still responsive
-      await expect(page.locator('[data-testid="current-price"]')).toBeVisible();
-    });
-  });
 
   test.describe('Concurrent Operations', () => {
     test('should handle case opening while navigating away', async ({ page }) => {

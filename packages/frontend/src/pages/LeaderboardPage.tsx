@@ -18,7 +18,7 @@ interface LeaderboardEntry {
 
 type MetricType = 'balance' | 'totalWon' | 'gamesPlayed' | 'totalWagered'
 type TimePeriod = 'all' | 'monthly' | 'weekly' | 'daily'
-type GameType = 'all' | 'roulette' | 'stock_market' | 'case_opening'
+type GameType = 'all' | 'roulette' | 'case_opening'
 
 const LeaderboardPage: React.FC = () => {
   const { user } = useAuth()
@@ -148,7 +148,6 @@ const LeaderboardPage: React.FC = () => {
   const gameTypes = [
     { id: 'all' as GameType, label: 'All Games', icon: FontAwesomeSVGIcons.Gamepad },
     { id: 'roulette' as GameType, label: 'Roulette', icon: FontAwesomeSVGIcons.Circle },
-    { id: 'stock_market' as GameType, label: 'Stock Market', icon: FontAwesomeSVGIcons.ChartLine },
     { id: 'case_opening' as GameType, label: 'Cases', icon: FontAwesomeSVGIcons.Box }
   ]
 

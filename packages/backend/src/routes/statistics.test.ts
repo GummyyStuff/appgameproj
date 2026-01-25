@@ -50,7 +50,6 @@ describe('Statistics API Routes', () => {
       // Test game type validation
       expect(isValidGameType('roulette')).toBe(true)
       expect(isValidGameType('case_opening')).toBe(true)
-      expect(isValidGameType('stock_market')).toBe(true)
       expect(isValidGameType('invalid')).toBe(false)
       
       // Test that zod is available for validation
@@ -131,7 +130,7 @@ describe('Statistics API Routes', () => {
       expect(overview.winRate).toBe(50) // 1 win out of 2 games
 
       const breakdown = StatisticsService.calculateGameTypeBreakdown(sampleGames)
-      expect(breakdown).toHaveLength(3) // All game types should be included: roulette, stock_market, case_opening
+      expect(breakdown).toHaveLength(2) // All game types should be included: roulette, case_opening
       
       const rouletteBreakdown = breakdown.find(b => b.gameType === 'roulette')
       expect(rouletteBreakdown).toBeDefined()
@@ -214,7 +213,7 @@ describe('Statistics API Routes', () => {
       expect(GAME_CONFIG).toBeDefined()
       expect(GAME_CONFIG.STARTING_BALANCE).toBe(10000)
       expect(GAME_CONFIG.DAILY_BONUS_AMOUNT).toBe(1000)
-      expect(GAME_CONFIG.GAME_TYPES).toEqual(['roulette', 'case_opening', 'stock_market'])
+      expect(GAME_CONFIG.GAME_TYPES).toEqual(['roulette', 'case_opening'])
     })
   })
 

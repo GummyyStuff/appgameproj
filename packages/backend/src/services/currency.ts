@@ -90,7 +90,7 @@ export class CurrencyService {
    */
   static async processGameTransaction(
     userId: string,
-    gameType: 'roulette' | 'blackjack' | 'case_opening' | 'stock_market',
+    gameType: 'roulette' | 'blackjack' | 'case_opening',
     betAmount: number,
     winAmount: number,
     gameResultData: any,
@@ -114,7 +114,7 @@ export class CurrencyService {
             netAmount: winAmount - betAmount,
             gameDuration
           });
-          // Validate bet amount - allow 0 for stock market sell operations
+          // Validate bet amount
           if (betAmount < 0) {
             span?.setStatus({ code: 2 });
             span?.setAttribute("error", "invalid_bet_amount_negative");
@@ -122,12 +122,11 @@ export class CurrencyService {
             throw new Error('Bet amount must be positive');
           }
 
-          // For stock market, betAmount can be 0 (sell operations don't cost money)
-          // For other games, betAmount must be positive
-          if (gameType !== 'stock_market' && betAmount <= 0) {
+          // Bet amount must be positive
+          if (betAmount <= 0) {
             span?.setStatus({ code: 2 });
             span?.setAttribute("error", "invalid_bet_amount_zero");
-            logger.error("Invalid bet amount: zero or negative for non-stock market", { userId, betAmount, gameType });
+            logger.error("Invalid bet amount: zero or negative", { userId, betAmount, gameType });
             throw new Error('Bet amount must be positive');
           }
 

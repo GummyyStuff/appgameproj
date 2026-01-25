@@ -285,17 +285,11 @@ app.onError(errorHandler)
 // Graceful shutdown handling
 process.on('SIGTERM', async () => {
   console.log('🛑 SIGTERM received, shutting down gracefully...')
-  // Shutdown stock market state service
-  const { stockMarketStateService } = await import('./services/stock-market-state')
-  stockMarketStateService.shutdown()
   process.exit(0)
 })
 
 process.on('SIGINT', async () => {
   console.log('🛑 SIGINT received, shutting down gracefully...')
-  // Shutdown stock market state service
-  const { stockMarketStateService } = await import('./services/stock-market-state')
-  stockMarketStateService.shutdown()
   process.exit(0)
 })
 
@@ -319,11 +313,6 @@ const port = config.port
 // Initialize services (Appwrite version)
 async function initializeServices() {
   try {
-    // Initialize Stock Market State Service
-    const { stockMarketStateService } = await import('./services/stock-market-state')
-    await stockMarketStateService.initialize()
-    console.log('✅ Stock Market State Service initialized')
-    
     // Appwrite doesn't require server-side initialization
     // Realtime is handled client-side
     console.log('✅ Appwrite services ready')

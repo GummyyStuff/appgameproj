@@ -10,7 +10,7 @@ import { StatisticsServiceAppwrite as StatisticsService } from './statistics-app
 interface GameHistory {
   $id: string;
   userId: string;
-  gameType: 'roulette' | 'stock_market' | 'case_opening';
+  gameType: 'roulette' | 'case_opening';
   betAmount: number;
   winAmount: number;
   resultData: string; // JSON string in Appwrite
@@ -36,14 +36,20 @@ describe('StatisticsService', () => {
       {
         $id: '2',
         userId: 'test-user',
-        gameType: 'stock_market',
+        gameType: 'case_opening',
         betAmount: 50,
         winAmount: 0,
         resultData: JSON.stringify({ 
-          action: 'sell',
-          shares: 10,
-          price: 5,
-          result: 'loss'
+          case_type_id: 'test-case',
+          case_name: 'Test Case',
+          case_price: 50,
+          item_id: 'test-item',
+          item_name: 'Test Item',
+          item_rarity: 'common',
+          item_category: 'valuables',
+          item_value: 0,
+          currency_awarded: 0,
+          opening_id: 'test-opening'
         }),
         createdAt: '2024-01-15T11:00:00Z'
       },
@@ -122,8 +128,8 @@ describe('StatisticsService', () => {
     test('should calculate breakdown for all game types', () => {
       const breakdown = StatisticsService.calculateGameTypeBreakdown(mockGameHistory)
 
-      expect(breakdown).toHaveLength(3) // roulette, stock_market, case_opening
-      expect(breakdown.map(b => b.gameType)).toEqual(expect.arrayContaining(['roulette', 'stock_market']))
+      expect(breakdown).toHaveLength(2) // roulette, case_opening
+      expect(breakdown.map(b => b.gameType)).toEqual(expect.arrayContaining(['roulette', 'case_opening']))
 
       // Find roulette breakdown
       const rouletteBreakdown = breakdown.find(b => b.gameType === 'roulette')
@@ -133,13 +139,13 @@ describe('StatisticsService', () => {
       expect(rouletteBreakdown!.statistics.totalWon).toBe(275) // 200 + 75 + 0
       expect(rouletteBreakdown!.statistics.winRate).toBeCloseTo(66.67, 1) // 2 wins out of 3 games
 
-      // Find stock_market breakdown
-      const stockMarketBreakdown = breakdown.find(b => b.gameType === 'stock_market')
-      expect(stockMarketBreakdown).toBeDefined()
-      expect(stockMarketBreakdown!.statistics.totalGames).toBe(1)
-      expect(stockMarketBreakdown!.statistics.totalWagered).toBe(50)
-      expect(stockMarketBreakdown!.statistics.totalWon).toBe(0)
-      expect(stockMarketBreakdown!.statistics.winRate).toBe(0)
+      // Find case_opening breakdown
+      const caseOpeningBreakdown = breakdown.find(b => b.gameType === 'case_opening')
+      expect(caseOpeningBreakdown).toBeDefined()
+      expect(caseOpeningBreakdown!.statistics.totalGames).toBe(1)
+      expect(caseOpeningBreakdown!.statistics.totalWagered).toBe(50)
+      expect(caseOpeningBreakdown!.statistics.totalWon).toBe(0)
+      expect(caseOpeningBreakdown!.statistics.winRate).toBe(0)
 
 
     })
@@ -147,13 +153,13 @@ describe('StatisticsService', () => {
     test('should assign popularity ranks correctly', () => {
       const breakdown = StatisticsService.calculateGameTypeBreakdown(mockGameHistory)
 
-      // Roulette should be most popular (2 games)
+      // Roulette should be most popular (3 games)
       const rouletteBreakdown = breakdown.find(b => b.gameType === 'roulette')
       expect(rouletteBreakdown!.popularityRank).toBe(1)
 
-      // Stock market should be second (1 game)
-      const stockMarketBreakdown = breakdown.find(b => b.gameType === 'stock_market')
-      expect(stockMarketBreakdown!.popularityRank).toBe(2)
+      // Case opening should be second (1 game)
+      const caseOpeningBreakdown = breakdown.find(b => b.gameType === 'case_opening')
+      expect(caseOpeningBreakdown!.popularityRank).toBe(2)
     })
 
     test('should handle empty game history', () => {

@@ -8,7 +8,7 @@ import { startSpan } from '../../lib/sentry';
  */
 
 export interface GameMetrics {
-  gameType: 'roulette' | 'stock-market' | 'case-opening';
+  gameType: 'roulette' | 'case-opening';
   betAmount: number;
   currency: string;
   playerLevel: 'beginner' | 'intermediate' | 'expert';

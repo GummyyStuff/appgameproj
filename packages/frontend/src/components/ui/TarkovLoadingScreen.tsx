@@ -159,7 +159,7 @@ export const TarkovLoadingScreen: React.FC<LoadingScreenProps> = ({
 
 // Game-specific loading screens
 export const GameLoadingScreen: React.FC<{
-  gameType: 'roulette' | 'stock_market' | 'case_opening'
+  gameType: 'roulette' | 'case_opening'
   message?: string
 }> = ({ gameType, message }) => {
   const gameConfig = {
@@ -172,17 +172,6 @@ export const GameLoadingScreen: React.FC<{
         "Straight up bets on single numbers pay 35:1",
         "Outside bets have better odds but lower payouts",
         "The wheel has 37 numbers in European roulette (0-36)"
-      ]
-    },
-    stock_market: {
-      icon: FontAwesomeSVGIcons.ChartLine,
-      title: 'Stock Market',
-      defaultMessage: 'Loading market data...',
-      tips: [
-        "Buy low, sell high - watch for price trends",
-        "Diversify your portfolio to manage risk",
-        "Use stop-loss orders to limit losses",
-        "Market prices update every 1-2 seconds"
       ]
     },
 
