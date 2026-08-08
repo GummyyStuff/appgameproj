@@ -1,6 +1,19 @@
+---
+title: "Tarkov Casino Documentation v0.1"
+audience: developer
+layer: technical
+status: stable
+tags: [documentation, overview, project]
+last_updated: 08/07/2026
+---
+
 # Tarkov Casino Documentation
 
+**Version:** 0.1
+
 Welcome to the comprehensive documentation for the Tarkov Casino project - a Tarkov-themed casino gaming website with virtual currency.
+
+This is the new documentation structure following the v0.1 release. All previous documentation has been archived in `/docs/archive/v0.1/`.
 
 ---
 
@@ -8,7 +21,14 @@ Welcome to the comprehensive documentation for the Tarkov Casino project - a Tar
 
 ### Getting Started
 - [Main README](../README.md) - Project overview and quick start
-- [Migration Summary](./MIGRATION-SUMMARY.md) - Supabase to Appwrite migration details
+- [Migration Summary](./technical/MIGRATION-SUMMARY.md) - Supabase to Appwrite migration details
+
+### Technical Documentation
+- [Bug Fixes & Improvements](./technical/bug-fixes-and-improvements.md) - Comprehensive bug fixes and improvements
+- [Sentry Implementation](./technical/sentry-comprehensive.md) - Complete Sentry integration documentation
+- [Testing Strategy](./testing/testing.md) - Testing approach and implementation
+- [Build Environment Variables](./technical/BUN_BUILD_ENV_VARS.md) - Build environment configuration
+- [Vite to Bun Migration](./technical/VITE_TO_BUN_MIGRATION.md) - Migration from Vite to Bun
 
 ### Backend Documentation
 
@@ -25,7 +45,7 @@ Welcome to the comprehensive documentation for the Tarkov Casino project - a Tar
 ### Frontend Documentation
 - [Frontend Architecture](./frontend/README.md) - React app structure and Appwrite client SDK
 - [Performance Optimization](./frontend/performance-optimization.md) - Frontend performance guide
-- [Roulette Performance Fixes](./frontend/roulette-performance-fixes.md) - Game-specific optimizations
+- [Roulette Performance Fixes](./maintenance/roulette-performance-fixes.md) - Game-specific optimizations
 - [Component Hooks](./frontend/hooks-README.md) - Custom React hooks documentation
 - [Game Components](./frontend/games-components-README.md) - Game component architecture
 - [Styles Guide](./frontend/styles-README.md) - Design system and styling
@@ -42,23 +62,23 @@ Welcome to the comprehensive documentation for the Tarkov Casino project - a Tar
 
 ### Deployment & Operations
 - [Deployment Guide](./deployment/deployment.md) - **Production deployment** with Coolify + Appwrite
-- [Deployment README](./deployment/README.md) - Detailed deployment procedures
-- [Backup & Recovery](./database/backup-recovery.md) - Appwrite backup strategies
+- [Deployment README](./guides/README.md) - Detailed deployment procedures
+- [Backup & Recovery](./guides/backup-recovery.md) - Appwrite backup strategies
 
 ### Maintenance
 - [Maintenance Guide](./maintenance/README.md) - Routine maintenance procedures
-- [Frontend Maintenance](./maintenance/frontend-maintenance.md) - Frontend-specific maintenance
+- [Frontend Maintenance](./guides/frontend-maintenance.md) - Frontend-specific maintenance
 
 ### Testing
 - [Testing Guide](./testing/testing.md) - Comprehensive testing with Bun Test
 
 ### Additional Guides
-- [Chat System](./chat-system.md) - Appwrite Realtime chat implementation
-- [Carousel Management](./carousel-management-guide.md) - Case opening carousel system
-- [FontAwesome Setup](./fontawesome-docker-setup.md) - FontAwesome Pro in Docker
+- [Chat System](../architecture/chat-system.md) - Appwrite Realtime chat implementation
+- [Carousel Management](./guides/carousel-management-guide.md) - Case opening carousel system
+- [FontAwesome Setup](./guides/fontawesome-docker-setup.md) - FontAwesome Pro in Docker
 
 ### User Documentation
-- [User Guide](./user-guide/README.md) - End-user documentation
+- [User Guide](./user-guides/README.md) - End-user documentation
 
 ### Architecture
 - [Frontend Architecture](./architecture/frontend-architecture.md) - Detailed frontend architecture
@@ -82,7 +102,7 @@ Welcome to the comprehensive documentation for the Tarkov Casino project - a Tar
 
 **Deployment:**
 - [Deployment Guide](./deployment/deployment.md) for production setup
-- [Backup & Recovery](./database/backup-recovery.md) for data protection
+- [Backup & Recovery](./guides/backup-recovery.md) for data protection
 
 ### For Operations
 
@@ -221,7 +241,6 @@ This project has migrated from Supabase to Appwrite. See [Migration Summary](./M
 
 ---
 
-**Last Updated:** 2025-10-12  
-**Documentation Version:** 2.0 (Post-Migration)  
+**Last Updated:** 08/07/2026  
+**Documentation Version:** 0.1  
 **Status:** ✅ Current
-

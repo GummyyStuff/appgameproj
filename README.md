@@ -26,6 +26,7 @@ This is a monorepo containing:
 - **Security**: Provably fair algorithms with secure random generation
 - **Monitoring**: Performance metrics, health checks, and fairness validation
 - **Deployment**: Docker + Coolify
+- **AI Configuration**: Unified AI tools configuration in `docs/ai/`
 
 ## 📁 Project Structure
 
@@ -46,6 +47,7 @@ tarkov-casino/
 │       ├── package.json
 │       └── tsconfig.json
 ├── docs/                  # Comprehensive documentation
+│   ├── ai/                # Unified AI configuration and steering rules
 │   ├── backend/           # Backend guides (Redis, database, etc.)
 │   ├── frontend/          # Frontend architecture
 │   ├── api/               # API documentation
@@ -285,7 +287,7 @@ VITE_API_URL=http://localhost:3000
 
 ## 📚 Documentation
 
-Comprehensive documentation is available in the `/docs` directory:
+Comprehensive documentation is now available in the `/docs` directory:
 
 ### Backend
 - [Appwrite Integration](./docs/backend/appwrite-README.md) - Complete Appwrite setup and usage guide
@@ -308,6 +310,8 @@ Comprehensive documentation is available in the `/docs` directory:
 - [Roulette](./docs/game-rules/roulette.md) - Roulette game mechanics
 - [Blackjack](./docs/game-rules/blackjack.md) - Blackjack rules and strategy
 - [Case Opening](./docs/game-rules/case-opening.md) - Provably fair case opening
+
+> **Note**: All previous documentation has been archived in `/docs/archive/v0.1/`. The new documentation structure follows v0.1 standards with improved templates and AI agent optimization.
 
 ## 🧪 Testing
 
