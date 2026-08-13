@@ -1,110 +1,209 @@
-/**
- * Currency Utility Tests
- * Simple utility function tests for frontend
- */
-
-import { describe, test, expect } from 'bun:test'
-
-// Simple currency formatting function
-export function formatCurrency(amount: number, currency: 'roubles' | 'dollars' | 'euros' = 'roubles'): string {
-  const symbols = {
-    roubles: '₽',
-    dollars: '$',
-    euros: '€'
-  }
-  
-  return `${symbols[currency]}${amount.toLocaleString()}`
-}
-
-// Validation functions
-export function isValidBetAmount(amount: number): boolean {
-  return typeof amount === 'number' && amount > 0 && amount <= 10000 && isFinite(amount)
-}
-
-export function isValidEmail(email: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-}
-
-export function isValidUsername(username: string): boolean {
-  return /^[a-zA-Z0-9_-]{3,20}$/.test(username)
-}
+import { describe, test, expect } from 'vitest'
+import {
+  formatCurrency,
+  formatCurrencyWithColor,
+  parseCurrency,
+  validateCurrencyAmount,
+  getCurrencySymbol,
+  getCurrencyColor,
+  formatBalanceChange,
+  formatCompactCurrency,
+  formatWinRate,
+  formatROI,
+  CURRENCY_CONFIGS,
+} from './currency'
 
 describe('Currency Utils', () => {
   describe('formatCurrency', () => {
-    test('should format roubles correctly', () => {
-      expect(formatCurrency(1000)).toBe('₽1,000')
-      expect(formatCurrency(1000, 'roubles')).toBe('₽1,000')
+    test('should format roubles with default options', () => {
+      const result = formatCurrency(1000)
+      expect(result).toContain('₽')
+      expect(result).toContain('1,000')
     })
 
-    test('should format dollars correctly', () => {
-      expect(formatCurrency(1000, 'dollars')).toBe('$1,000')
+    test('should format dollars', () => {
+      const result = formatCurrency(1000, 'dollars')
+      expect(result).toContain('$')
+      expect(result).toContain('1,000')
     })
 
-    test('should format euros correctly', () => {
-      expect(formatCurrency(1000, 'euros')).toBe('€1,000')
-    })
-
-    test('should handle decimal amounts', () => {
-      expect(formatCurrency(1000.5)).toBe('₽1,000.5')
-      expect(formatCurrency(1000.0)).toBe('₽1,000')
-    })
-
-    test('should handle large amounts', () => {
-      expect(formatCurrency(1000000)).toBe('₽1,000,000')
+    test('should format euros', () => {
+      const result = formatCurrency(1000, 'euros')
+      expect(result).toContain('€')
+      expect(result).toContain('1,000')
     })
 
     test('should handle zero amounts', () => {
-      expect(formatCurrency(0)).toBe('₽0')
+      const result = formatCurrency(0)
+      expect(result).toContain('0')
+    })
+
+    test('should handle large amounts', () => {
+      const result = formatCurrency(1000000)
+      expect(result).toContain('1,000,000')
+    })
+
+    test('should support compact notation', () => {
+      const result = formatCurrency(1500, 'roubles', { compact: true })
+      expect(result).toContain('₽')
+    })
+
+    test('should show sign for non-zero amounts', () => {
+      const positive = formatCurrency(100, 'roubles', { showSign: true })
+      expect(positive).toContain('+')
+
+      const negative = formatCurrency(-100, 'roubles', { showSign: true })
+      expect(negative).toContain('-')
+    })
+
+    test('should show currency name when requested', () => {
+      const result = formatCurrency(100, 'roubles', { showName: true })
+      expect(result).toContain('Roubles')
+    })
+
+    test('should hide symbol when showSymbol is false', () => {
+      const result = formatCurrency(100, 'roubles', { showSymbol: false })
+      expect(result).not.toContain('₽')
     })
   })
 
-  describe('isValidBetAmount', () => {
-    test('should validate positive amounts', () => {
-      expect(isValidBetAmount(100)).toBe(true)
-      expect(isValidBetAmount(1)).toBe(true)
-      expect(isValidBetAmount(10000)).toBe(true)
+  describe('formatCurrencyWithColor', () => {
+    test('should return text and colorClass', () => {
+      const result = formatCurrencyWithColor(100)
+      expect(result).toHaveProperty('text')
+      expect(result).toHaveProperty('colorClass')
+      expect(result.colorClass).toBe('text-tarkov-accent')
     })
 
-    test('should reject invalid amounts', () => {
-      expect(isValidBetAmount(0)).toBe(false)
-      expect(isValidBetAmount(-100)).toBe(false)
-      expect(isValidBetAmount(10001)).toBe(false)
-      expect(isValidBetAmount(NaN)).toBe(false)
-      expect(isValidBetAmount(Infinity)).toBe(false)
-    })
-  })
+    test('should use value-based coloring when enabled', () => {
+      const positive = formatCurrencyWithColor(100, 'roubles', { colorByValue: true })
+      expect(positive.colorClass).toBe('text-tarkov-success')
 
-  describe('isValidEmail', () => {
-    test('should validate correct emails', () => {
-      expect(isValidEmail('test@example.com')).toBe(true)
-      expect(isValidEmail('user@domain.co.uk')).toBe(true)
-      expect(isValidEmail('name.surname@company.org')).toBe(true)
-    })
-
-    test('should reject invalid emails', () => {
-      expect(isValidEmail('invalid-email')).toBe(false)
-      expect(isValidEmail('test@')).toBe(false)
-      expect(isValidEmail('@example.com')).toBe(false)
-      expect(isValidEmail('test@.com')).toBe(false)
-      expect(isValidEmail('')).toBe(false)
+      const negative = formatCurrencyWithColor(-100, 'roubles', { colorByValue: true })
+      expect(negative.colorClass).toBe('text-tarkov-danger')
     })
   })
 
-  describe('isValidUsername', () => {
-    test('should validate correct usernames', () => {
-      expect(isValidUsername('testuser')).toBe(true)
-      expect(isValidUsername('user123')).toBe(true)
-      expect(isValidUsername('my_username')).toBe(true)
-      expect(isValidUsername('player-one')).toBe(true)
+  describe('parseCurrency', () => {
+    test('should extract numeric value from currency string', () => {
+      expect(parseCurrency('₽1,000')).toBe(1000)
+      expect(parseCurrency('$500')).toBe(500)
     })
 
-    test('should reject invalid usernames', () => {
-      expect(isValidUsername('')).toBe(false)
-      expect(isValidUsername('ab')).toBe(false) // Too short
-      expect(isValidUsername('a'.repeat(25))).toBe(false) // Too long
-      expect(isValidUsername('user@name')).toBe(false) // Invalid characters
-      expect(isValidUsername('user name')).toBe(false) // Spaces
-      expect(isValidUsername('user!')).toBe(false) // Special characters
+    test('should handle decimal values', () => {
+      expect(parseCurrency('100.50')).toBe(100.5)
+    })
+
+    test('should return 0 for non-numeric strings', () => {
+      expect(parseCurrency('abc')).toBe(0)
+    })
+
+    test('should handle negative values', () => {
+      expect(parseCurrency('-50')).toBe(-50)
+    })
+  })
+
+  describe('validateCurrencyAmount', () => {
+    test('should validate amounts within range', () => {
+      expect(validateCurrencyAmount(100, { min: 0, max: 1000 }).isValid).toBe(true)
+    })
+
+    test('should reject NaN', () => {
+      const result = validateCurrencyAmount(NaN)
+      expect(result.isValid).toBe(false)
+      expect(result.error).toBe('Invalid amount')
+    })
+
+    test('should reject negative amounts by default', () => {
+      const result = validateCurrencyAmount(-10)
+      expect(result.isValid).toBe(false)
+    })
+
+    test('should reject amounts below minimum', () => {
+      const result = validateCurrencyAmount(5, { min: 10 })
+      expect(result.isValid).toBe(false)
+    })
+
+    test('should reject amounts above maximum', () => {
+      const result = validateCurrencyAmount(100, { max: 50 })
+      expect(result.isValid).toBe(false)
+    })
+  })
+
+  describe('getCurrencySymbol', () => {
+    test('should return correct symbols', () => {
+      expect(getCurrencySymbol('roubles')).toBe('₽')
+      expect(getCurrencySymbol('dollars')).toBe('$')
+      expect(getCurrencySymbol('euros')).toBe('€')
+    })
+  })
+
+  describe('getCurrencyColor', () => {
+    test('should return correct color classes', () => {
+      expect(getCurrencyColor('roubles')).toBe('text-tarkov-accent')
+      expect(getCurrencyColor('dollars')).toBe('text-green-400')
+      expect(getCurrencyColor('euros')).toBe('text-blue-400')
+    })
+  })
+
+  describe('formatBalanceChange', () => {
+    test('should detect increase', () => {
+      const result = formatBalanceChange(1000, 1500)
+      expect(result.isIncrease).toBe(true)
+      expect(result.colorClass).toBe('text-tarkov-success')
+    })
+
+    test('should detect decrease', () => {
+      const result = formatBalanceChange(1500, 1000)
+      expect(result.isIncrease).toBe(false)
+      expect(result.colorClass).toBe('text-tarkov-danger')
+    })
+  })
+
+  describe('formatWinRate', () => {
+    test('should calculate win rate percentage', () => {
+      expect(formatWinRate(50, 100)).toBe('50.0%')
+    })
+
+    test('should return 0.0% for zero wagers', () => {
+      expect(formatWinRate(0, 0)).toBe('0.0%')
+    })
+  })
+
+  describe('formatROI', () => {
+    test('should calculate positive ROI', () => {
+      const result = formatROI(150, 100)
+      expect(result.percentage).toBe(50)
+      expect(result.colorClass).toBe('text-tarkov-success')
+    })
+
+    test('should calculate negative ROI', () => {
+      const result = formatROI(50, 100)
+      expect(result.percentage).toBe(-50)
+      expect(result.colorClass).toBe('text-tarkov-danger')
+    })
+
+    test('should return 0% for zero wagers', () => {
+      const result = formatROI(0, 0)
+      expect(result.percentage).toBe(0)
+      expect(result.text).toBe('0.0%')
+    })
+  })
+
+  describe('CURRENCY_CONFIGS', () => {
+    test('should have all currency types configured', () => {
+      expect(CURRENCY_CONFIGS.roubles).toBeDefined()
+      expect(CURRENCY_CONFIGS.dollars).toBeDefined()
+      expect(CURRENCY_CONFIGS.euros).toBeDefined()
+    })
+
+    test('should have required fields for each currency', () => {
+      for (const config of Object.values(CURRENCY_CONFIGS)) {
+        expect(config).toHaveProperty('symbol')
+        expect(config).toHaveProperty('name')
+        expect(config).toHaveProperty('shortName')
+        expect(config).toHaveProperty('color')
+      }
     })
   })
 })

@@ -52,8 +52,7 @@ Key implementation aspects:
 - Document any custom AI integrations
 
 ## Related Components
-- [VS Code Settings](../.vscode/settings.json)
-- [Development Environment](../README.md#development)
+- [Developer Guide](../README.md)
 
 ## Version History
 - v0.1: Initial AI configuration documentation

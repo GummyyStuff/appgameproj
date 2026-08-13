@@ -30,25 +30,29 @@ Key implementation aspects:
 
 ## Requirements and Dependencies
 - Dragonfly 1.0+ (Redis-compatible)
-- Bun runtime with Redis client support
+- Bun runtime (latest)
 - TypeScript 5.9+
-- Node.js 18+
 
 ## Implementation Code Examples
 ```typescript
-import { createClient } from 'redis';
+import { connect, RedisClientType } from 'redis';
 
-const client = createClient({
-  url: process.env.REDIS_URL || 'redis://localhost:6379'
-});
+let client: RedisClientType | null = null;
+
+async function getRedisClient(): Promise<RedisClientType> {
+  if (client) return client;
+  client = await connect({
+    url: process.env.REDIS_URL || 'redis://localhost:6379'
+  });
+  return client;
+}
 
 // Set cache
-await client.set('user:profile:123', JSON.stringify(profile), {
-  EX: 300 // 5 minutes TTL
-});
+const redis = await getRedisClient();
+await redis.set('user:profile:123', JSON.stringify(profile), { EX: 300 });
 
 // Get from cache
-const cachedData = await client.get('user:profile:123');
+const cachedData = await redis.get('user:profile:123');
 ```
 
 ## Best Practices and Guidelines
@@ -60,7 +64,7 @@ const cachedData = await client.get('user:profile:123');
 
 ## Related Components
 - [Database Operations](./database-README.md)
-- [Performance Optimization](../frontend/performance-optimization.md)
+- [Frontend Architecture](../frontend/README.md)
 - [Appwrite Integration Guide](./appwrite-README.md)
 
 ## Version History

@@ -1,9 +1,4 @@
-/**
- * Tests for GameValidator
- * Validates game result validation and payout verification
- */
-
-import { describe, test, expect, beforeEach } from 'bun:test'
+import { describe, test, expect, beforeEach } from 'vitest'
 import { GameValidator } from './game-validator'
 import { GameBet } from './types'
 import { RouletteResult, BlackjackResult } from '../../types/database'
@@ -24,7 +19,7 @@ describe('GameValidator', () => {
           winning_number: 7,
           multiplier: 35
         }
-        
+
         expect(validator.validateGameResult('roulette', result)).toBe(true)
       })
 
@@ -32,10 +27,10 @@ describe('GameValidator', () => {
         const result: RouletteResult = {
           bet_type: 'number',
           bet_value: 7,
-          winning_number: 37, // Invalid (max is 36)
+          winning_number: 37,
           multiplier: 35
         }
-        
+
         expect(validator.validateGameResult('roulette', result)).toBe(false)
       })
 
@@ -46,7 +41,7 @@ describe('GameValidator', () => {
           winning_number: 7,
           multiplier: 35
         }
-        
+
         expect(validator.validateGameResult('roulette', result)).toBe(false)
       })
 
@@ -55,9 +50,9 @@ describe('GameValidator', () => {
           bet_type: 'number',
           bet_value: 7,
           winning_number: 7,
-          multiplier: 100 // Too high
+          multiplier: 100
         }
-        
+
         expect(validator.validateGameResult('roulette', result)).toBe(false)
       })
 
@@ -68,14 +63,14 @@ describe('GameValidator', () => {
           winning_number: 15,
           multiplier: 2
         }
-        
+
         const invalidResult: RouletteResult = {
           bet_type: 'dozen',
-          bet_value: 4, // Invalid dozen
+          bet_value: 4,
           winning_number: 15,
           multiplier: 2
         }
-        
+
         expect(validator.validateGameResult('roulette', validResult)).toBe(true)
         expect(validator.validateGameResult('roulette', invalidResult)).toBe(false)
       })
@@ -96,7 +91,7 @@ describe('GameValidator', () => {
           dealer_value: 17,
           result: 'blackjack'
         }
-        
+
         expect(validator.validateGameResult('blackjack', result)).toBe(true)
       })
 
@@ -109,7 +104,7 @@ describe('GameValidator', () => {
           ],
           result: 'player_win'
         }
-        
+
         expect(validator.validateGameResult('blackjack', result)).toBe(false)
       })
 
@@ -125,7 +120,7 @@ describe('GameValidator', () => {
           ],
           result: 'player_win'
         }
-        
+
         expect(validator.validateGameResult('blackjack', result)).toBe(false)
       })
 
@@ -141,7 +136,7 @@ describe('GameValidator', () => {
           ],
           result: 'invalid' as any
         }
-        
+
         expect(validator.validateGameResult('blackjack', result)).toBe(false)
       })
 
@@ -159,7 +154,7 @@ describe('GameValidator', () => {
           dealer_value: 16,
           result: 'player_win'
         }
-        
+
         const incorrectResult: BlackjackResult = {
           player_hand: [
             { suit: 'hearts', value: '10' },
@@ -169,16 +164,15 @@ describe('GameValidator', () => {
             { suit: 'diamonds', value: '10' },
             { suit: 'clubs', value: '6' }
           ],
-          player_value: 20, // Incorrect calculation
+          player_value: 20,
           dealer_value: 16,
           result: 'player_win'
         }
-        
+
         expect(validator.validateGameResult('blackjack', correctResult)).toBe(true)
         expect(validator.validateGameResult('blackjack', incorrectResult)).toBe(false)
       })
     })
-
 
     test('should reject invalid game types', () => {
       const result = {} as any
@@ -193,15 +187,15 @@ describe('GameValidator', () => {
         amount: 100,
         gameType: 'roulette'
       }
-      
+
       const result: RouletteResult = {
         bet_type: 'number',
         bet_value: 7,
         winning_number: 7,
         multiplier: 35
       }
-      
-      const payout = 3500 // 100 * 35
+
+      const payout = 3500
       expect(validator.validatePayout(bet, result, payout)).toBe(true)
     })
 
@@ -211,7 +205,7 @@ describe('GameValidator', () => {
         amount: 100,
         gameType: 'blackjack'
       }
-      
+
       const result: BlackjackResult = {
         player_hand: [
           { suit: 'hearts', value: 'A' },
@@ -223,11 +217,10 @@ describe('GameValidator', () => {
         ],
         result: 'blackjack'
       }
-      
-      const payout = 150 // 100 * 1.5
+
+      const payout = 150
       expect(validator.validatePayout(bet, result, payout)).toBe(true)
     })
-
 
     test('should reject incorrect payouts', () => {
       const bet: GameBet = {
@@ -235,18 +228,17 @@ describe('GameValidator', () => {
         amount: 100,
         gameType: 'roulette'
       }
-      
+
       const result: RouletteResult = {
         bet_type: 'number',
         bet_value: 7,
         winning_number: 7,
         multiplier: 35
       }
-      
-      const incorrectPayout = 1000 // Should be 3500
+
+      const incorrectPayout = 1000
       expect(validator.validatePayout(bet, result, incorrectPayout)).toBe(false)
     })
-
   })
 
   describe('validateBetAmount', () => {
@@ -257,11 +249,11 @@ describe('GameValidator', () => {
     })
 
     test('should reject invalid bet amounts', () => {
-      expect(validator.validateBetAmount(0, 1000)).toBe(false) // Zero bet
-      expect(validator.validateBetAmount(-10, 1000)).toBe(false) // Negative bet
-      expect(validator.validateBetAmount(1001, 1000)).toBe(false) // Exceeds balance
-      expect(validator.validateBetAmount(10001, 20000)).toBe(false) // Exceeds max bet
-      expect(validator.validateBetAmount(0.5, 1000)).toBe(false) // Non-integer
+      expect(validator.validateBetAmount(0, 1000)).toBe(false)
+      expect(validator.validateBetAmount(-10, 1000)).toBe(false)
+      expect(validator.validateBetAmount(1001, 1000)).toBe(false)
+      expect(validator.validateBetAmount(10001, 20000)).toBe(false)
+      expect(validator.validateBetAmount(0.5, 1000)).toBe(false)
     })
   })
 
@@ -270,10 +262,10 @@ describe('GameValidator', () => {
       const result: RouletteResult = {
         bet_type: 'red',
         bet_value: 'red',
-        winning_number: 1, // Red number
+        winning_number: 1,
         multiplier: 1
       }
-      
+
       const isValid = validator.validateGameStateConsistency('roulette', 100, result, 100)
       expect(isValid).toBe(true)
     })
@@ -282,10 +274,10 @@ describe('GameValidator', () => {
       const result: RouletteResult = {
         bet_type: 'red',
         bet_value: 'red',
-        winning_number: 2, // Black number
+        winning_number: 2,
         multiplier: 1
       }
-      
+
       const isValid = validator.validateGameStateConsistency('roulette', 100, result, 100)
       expect(isValid).toBe(false)
     })

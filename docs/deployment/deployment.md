@@ -84,6 +84,6 @@ After deployment, verify:
 - Cache is functioning properly
 
 ## Related Processes
-- [Appwrite Integration Guide](./backend/appwrite-README.md)
-- [Dragonfly Setup](./backend/redis-README.md)
-- [Health Check Documentation](../frontend/README.md#health-checks)
+- [Appwrite Integration Guide](../backend/appwrite-README.md)
+- [Dragonfly Setup](../backend/redis-README.md)
+- [Developer Guide](../README.md#health-checks)

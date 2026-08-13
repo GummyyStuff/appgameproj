@@ -54,16 +54,28 @@ export class CaseOpeningApiServiceImpl implements CaseOpeningApiService {
     const requestId = generateRequestId()
 
     try {
-      // Get current user for authentication header
-      const user = await account.get();
-      
+      // Get current user for authentication header (fallback to cookie-only auth)
+      let userId: string | undefined;
+      try {
+        const user = await account.get();
+        userId = user.$id;
+      } catch {
+        // Appwrite SDK session check failed - rely on backend session cookie
+        console.warn('Appwrite session check failed, using backend session cookie');
+      }
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+      };
+      if (userId) {
+        headers['X-Appwrite-User-Id'] = userId;
+      }
+
       const response = await fetch('/api/games/cases/open', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Appwrite-User-Id': user.$id, // Required for auth
-        },
-        credentials: 'include', // Include cookies for authentication
+        headers,
+        credentials: 'include',
         body: JSON.stringify({
           caseTypeId: caseType.id,
           delayCredit,
@@ -103,16 +115,28 @@ export class CaseOpeningApiServiceImpl implements CaseOpeningApiService {
     const requestId = generateRequestId()
 
     try {
-      // Get current user for authentication header
-      const user = await account.get();
-      
+      // Get current user for authentication header (fallback to cookie-only auth)
+      let userId: string | undefined;
+      try {
+        const user = await account.get();
+        userId = user.$id;
+      } catch {
+        // Appwrite SDK session check failed - rely on backend session cookie
+        console.warn('Appwrite session check failed, using backend session cookie');
+      }
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+      };
+      if (userId) {
+        headers['X-Appwrite-User-Id'] = userId;
+      }
+
       const response = await fetch('/api/games/cases/open', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Appwrite-User-Id': user.$id, // Required for auth
-        },
-        credentials: 'include', // Include cookies for authentication
+        headers,
+        credentials: 'include',
         body: JSON.stringify({
           caseTypeId: caseType.id,
           previewOnly: true,

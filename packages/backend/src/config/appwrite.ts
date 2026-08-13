@@ -123,6 +123,10 @@ export const validateSession = async (sessionSecret: string) => {
       // Get the current user's account info
       const user = await account.get();
       
+      // Get session info to check auth provider - use listSessions and find current one
+      const sessions = await account.listSessions();
+      const currentSession = sessions.sessions.find((s: any) => s.current === true);
+      
       return {
         id: user.$id,
         email: user.email,
@@ -131,7 +135,8 @@ export const validateSession = async (sessionSecret: string) => {
         sessionId: sessionSecret,
         emailVerified: user.emailVerification,
         createdAt: user.$createdAt,
-        updatedAt: user.$updatedAt
+        updatedAt: user.$updatedAt,
+        provider: currentSession?.provider || 'unknown'
       };
     }, { maxRetries: 3, delayMs: 500 });
   } catch (error) {
@@ -141,14 +146,18 @@ export const validateSession = async (sessionSecret: string) => {
 };
 
 /**
- * Logs out the current session
+ * Logs out by deleting ALL sessions for a user
+ * Uses the Users API (server-side) to delete sessions by user ID
  */
-export const logout = async (sessionId: string) => {
+export const logout = async (userId: string) => {
   try {
-    await appwriteAccount.deleteSession(sessionId);
+    const { Users } = await import('node-appwrite');
+    const users = new Users(appwriteClient);
+    await users.deleteSessions(userId);
+    console.log('✅ All sessions deleted for user:', userId);
     return true;
   } catch (error) {
-    console.error('Failed to log out:', error);
+    console.error('⚠️ Backend session deletion failed:', error?.message || error);
     return false;
   }
 };

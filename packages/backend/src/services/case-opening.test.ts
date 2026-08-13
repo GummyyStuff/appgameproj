@@ -1,25 +1,7 @@
-/**
- * Comprehensive tests for Case Opening Service (Appwrite)
- * Tests core logic, rarity distribution, and provably fair algorithms
- */
-
-import { describe, test, expect } from 'bun:test'
-
-// Set up environment variables before any imports
-process.env.NODE_ENV = 'test'
-process.env.APPWRITE_ENDPOINT = 'https://db.juanis.cool/v1'
-process.env.APPWRITE_PROJECT_ID = 'tarkovcas'
-process.env.APPWRITE_API_KEY = 'test-key'
-process.env.APPWRITE_DATABASE_ID = 'main_db'
-process.env.FRONTEND_URL = 'http://localhost:3000'
-process.env.JWT_SECRET = 'test-jwt-secret-that-is-at-least-32-characters-long-for-validation'
-process.env.STARTING_BALANCE = '10000'
-process.env.DAILY_BONUS = '1000'
-
+import { describe, test, expect } from 'vitest'
 import { CaseOpeningService, type CaseType, type TarkovItem, type WeightedItem, type ItemRarity } from './case-opening-appwrite'
 
 describe('Case Opening Service', () => {
-
   describe('Item Value Calculation', () => {
     test('should calculate correct item value with multiplier', () => {
       const mockItem: TarkovItem = {
@@ -32,7 +14,6 @@ describe('Case Opening Service', () => {
         created_at: '2024-01-01T00:00:00Z',
         updated_at: '2024-01-01T00:00:00Z'
       }
-      
       const result = CaseOpeningService.calculateItemValue(mockItem, 1.5)
       expect(result).toBe(150)
     })
@@ -48,9 +29,8 @@ describe('Case Opening Service', () => {
         created_at: '2024-01-01T00:00:00Z',
         updated_at: '2024-01-01T00:00:00Z'
       }
-      
       const result = CaseOpeningService.calculateItemValue(mockItem, 1.33)
-      expect(result).toBe(133) // Math.floor(133.33)
+      expect(result).toBe(133)
     })
 
     test('should handle zero multiplier', () => {
@@ -64,7 +44,6 @@ describe('Case Opening Service', () => {
         created_at: '2024-01-01T00:00:00Z',
         updated_at: '2024-01-01T00:00:00Z'
       }
-      
       const result = CaseOpeningService.calculateItemValue(mockItem, 0)
       expect(result).toBe(0)
     })
@@ -80,7 +59,6 @@ describe('Case Opening Service', () => {
         created_at: '2024-01-01T00:00:00Z',
         updated_at: '2024-01-01T00:00:00Z'
       }
-      
       const result = CaseOpeningService.calculateItemValue(mockItem, 2.5)
       expect(result).toBe(25000)
     })
@@ -105,16 +83,13 @@ describe('Case Opening Service', () => {
         updated_at: '2024-01-01T00:00:00Z'
       }
 
-      // Test that the rarity distribution logic works correctly
       const distribution = mockCaseType.rarity_distribution
-      const total = distribution.common + distribution.uncommon + distribution.rare + 
+      const total = distribution.common + distribution.uncommon + distribution.rare +
                    distribution.epic + distribution.legendary
 
-      expect(total).toBe(100) // Should add up to 100%
-      expect(distribution.legendary).toBe(1) // 1% chance for legendary
-      expect(distribution.common).toBe(60) // 60% chance for common
-      
-      // Test that each rarity has a valid percentage
+      expect(total).toBe(100)
+      expect(distribution.legendary).toBe(1)
+      expect(distribution.common).toBe(60)
       expect(distribution.common).toBeGreaterThan(0)
       expect(distribution.uncommon).toBeGreaterThan(0)
       expect(distribution.rare).toBeGreaterThan(0)
@@ -131,7 +106,7 @@ describe('Case Opening Service', () => {
         legendary: 100
       }
 
-      const total = edgeDistribution.common + edgeDistribution.uncommon + 
+      const total = edgeDistribution.common + edgeDistribution.uncommon +
                    edgeDistribution.rare + edgeDistribution.epic + edgeDistribution.legendary
 
       expect(total).toBe(100)
@@ -159,7 +134,7 @@ describe('Case Opening Service', () => {
       const invalidTotal = Object.values(invalidDistribution).reduce((sum, val) => sum + val, 0)
 
       expect(validTotal).toBe(100)
-      expect(invalidTotal).toBe(90) // Should not equal 100
+      expect(invalidTotal).toBe(90)
     })
   })
 
@@ -216,7 +191,7 @@ describe('Case Opening Service', () => {
       const selectWeightedItem = (randomValue: number, items: WeightedItem[]) => {
         const totalWeight = items.reduce((sum, item) => sum + item.weight, 0)
         const targetWeight = randomValue * totalWeight
-        
+
         let currentWeight = 0
         for (const item of items) {
           currentWeight += item.weight
@@ -224,18 +199,13 @@ describe('Case Opening Service', () => {
             return item
           }
         }
-        
-        return items[items.length - 1] // fallback
+
+        return items[items.length - 1]
       }
 
-      // Total weight is 4.0
-      // Item A: 0-1 (25%)
-      // Item B: 1-3 (50%) 
-      // Item C: 3-4 (25%)
-
-      expect(selectWeightedItem(0.2, mockItems).item.name).toBe('Item A') // 20% of 4 = 0.8, should select Item A
-      expect(selectWeightedItem(0.5, mockItems).item.name).toBe('Item B') // 50% of 4 = 2.0, should select Item B
-      expect(selectWeightedItem(0.9, mockItems).item.name).toBe('Item C') // 90% of 4 = 3.6, should select Item C
+      expect(selectWeightedItem(0.2, mockItems).item.name).toBe('Item A')
+      expect(selectWeightedItem(0.5, mockItems).item.name).toBe('Item B')
+      expect(selectWeightedItem(0.9, mockItems).item.name).toBe('Item C')
     })
 
     test('should handle single item selection', () => {
@@ -260,7 +230,7 @@ describe('Case Opening Service', () => {
       const selectWeightedItem = (randomValue: number, items: WeightedItem[]) => {
         const totalWeight = items.reduce((sum, item) => sum + item.weight, 0)
         const targetWeight = randomValue * totalWeight
-        
+
         let currentWeight = 0
         for (const item of items) {
           currentWeight += item.weight
@@ -268,7 +238,7 @@ describe('Case Opening Service', () => {
             return item
           }
         }
-        
+
         return items[items.length - 1]
       }
 
@@ -311,7 +281,7 @@ describe('Case Opening Service', () => {
       ]
 
       const totalWeight = mockItems.reduce((sum, item) => sum + item.weight, 0)
-      expect(totalWeight).toBe(1.0) // Only the normal item should contribute to weight
+      expect(totalWeight).toBe(1.0)
     })
   })
 
@@ -323,14 +293,13 @@ describe('Case Opening Service', () => {
 
       const userId = 'test-user-12345678'
       const id1 = generateOpeningId(userId)
-      
-      // Wait a bit to ensure different timestamp
+
       await new Promise(resolve => setTimeout(resolve, 1))
       const id2 = generateOpeningId(userId)
-      
+
       expect(id1).toMatch(/^case_\d+_12345678$/)
       expect(id2).toMatch(/^case_\d+_12345678$/)
-      expect(id1).not.toBe(id2) // Should be different due to timestamp
+      expect(id1).not.toBe(id2)
     })
 
     test('should handle short user IDs', () => {
@@ -340,25 +309,24 @@ describe('Case Opening Service', () => {
 
       const shortUserId = 'user123'
       const id = generateOpeningId(shortUserId)
-      
+
       expect(id).toMatch(/^case_\d+_user123$/)
     })
 
     test('should include timestamp for uniqueness', () => {
       const userId = 'test-user-12345678'
       const beforeTime = Date.now()
-      
+
       const generateOpeningId = (userId: string) => {
         return `case_${Date.now()}_${userId.slice(-8)}`
       }
-      
+
       const id = generateOpeningId(userId)
       const afterTime = Date.now()
-      
-      // Extract timestamp from ID
+
       const timestampMatch = id.match(/^case_(\d+)_/)
       expect(timestampMatch).toBeTruthy()
-      
+
       const extractedTimestamp = parseInt(timestampMatch![1])
       expect(extractedTimestamp).toBeGreaterThanOrEqual(beforeTime)
       expect(extractedTimestamp).toBeLessThanOrEqual(afterTime)
@@ -383,7 +351,7 @@ describe('Case Opening Service', () => {
       const validateCaseType = (caseType: any) => {
         return {
           isValid: caseType !== null && caseType !== undefined && caseType.is_active === true,
-          error: !caseType ? 'Case type not found' : 
+          error: !caseType ? 'Case type not found' :
                  !caseType.is_active ? 'Case type is inactive' : null
         }
       }
@@ -422,37 +390,36 @@ describe('Case Opening Service', () => {
       }
 
       const selectRarityByDistribution = (randomValue: number) => {
-        const total = distribution.common + distribution.uncommon + distribution.rare + 
+        const total = distribution.common + distribution.uncommon + distribution.rare +
                      distribution.epic + distribution.legendary
-        
+
         if (total <= 0) {
           throw new Error('Invalid rarity distribution')
         }
 
         const targetValue = randomValue * total
         let cumulative = 0
-        
+
         cumulative += distribution.legendary
         if (targetValue <= cumulative) return 'legendary'
-        
+
         cumulative += distribution.epic
         if (targetValue <= cumulative) return 'epic'
-        
+
         cumulative += distribution.rare
         if (targetValue <= cumulative) return 'rare'
-        
+
         cumulative += distribution.uncommon
         if (targetValue <= cumulative) return 'uncommon'
-        
+
         return 'common'
       }
 
-      // Test specific probability ranges
-      expect(selectRarityByDistribution(0.005)).toBe('legendary') // 0.5% should be legendary
-      expect(selectRarityByDistribution(0.02)).toBe('epic')       // 2% should be epic
-      expect(selectRarityByDistribution(0.08)).toBe('rare')       // 8% should be rare
-      expect(selectRarityByDistribution(0.3)).toBe('uncommon')    // 30% should be uncommon
-      expect(selectRarityByDistribution(0.9)).toBe('common')      // 90% should be common
+      expect(selectRarityByDistribution(0.005)).toBe('legendary')
+      expect(selectRarityByDistribution(0.02)).toBe('epic')
+      expect(selectRarityByDistribution(0.08)).toBe('rare')
+      expect(selectRarityByDistribution(0.3)).toBe('uncommon')
+      expect(selectRarityByDistribution(0.9)).toBe('common')
     })
 
     test('should demonstrate weighted item selection algorithm', () => {
@@ -465,7 +432,7 @@ describe('Case Opening Service', () => {
       const selectWeightedItem = (randomValue: number) => {
         const totalWeight = items.reduce((sum, item) => sum + item.weight, 0)
         const targetWeight = randomValue * totalWeight
-        
+
         let currentWeight = 0
         for (const item of items) {
           currentWeight += item.weight
@@ -473,18 +440,13 @@ describe('Case Opening Service', () => {
             return item
           }
         }
-        
-        return items[items.length - 1] // fallback
+
+        return items[items.length - 1]
       }
 
-      // Total weight is 4.0
-      // Item A: 0-1 (25%)
-      // Item B: 1-3 (50%) 
-      // Item C: 3-4 (25%)
-
-      expect(selectWeightedItem(0.2).name).toBe('Item A') // 20% of 4 = 0.8, should select Item A
-      expect(selectWeightedItem(0.5).name).toBe('Item B') // 50% of 4 = 2.0, should select Item B
-      expect(selectWeightedItem(0.9).name).toBe('Item C') // 90% of 4 = 3.6, should select Item C
+      expect(selectWeightedItem(0.2).name).toBe('Item A')
+      expect(selectWeightedItem(0.5).name).toBe('Item B')
+      expect(selectWeightedItem(0.9).name).toBe('Item C')
     })
   })
 
@@ -542,7 +504,7 @@ describe('Case Opening Service', () => {
       }
 
       const stats = calculateStats(mockGameHistory)
-      
+
       expect(stats.total_cases_opened).toBe(2)
       expect(stats.total_spent).toBe(1000)
       expect(stats.total_won).toBe(1150)

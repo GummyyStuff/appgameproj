@@ -4,20 +4,5 @@
 # ============================================
 
 # ====================
-# TEST CONFIGURATION
+# RUN SETTINGS
 # ====================
-[test]
-# Frontend test setup with Happy DOM
-preload = ["./happy-dom.ts", "./src/test-utils/test-setup.ts"]
-
-# Enable code coverage
-coverage = true
-
-# Coverage threshold for frontend (percentage)
-coverageThreshold = 80
-
-# Test timeout (milliseconds)
-timeout = 10000
-
-# Run tests in parallel (better performance)
-bail = false

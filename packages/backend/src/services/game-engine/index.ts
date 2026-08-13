@@ -3,21 +3,13 @@
  * Central export point for all game engine components
  */
 
-// Core engine
 export { CoreGameEngine } from './core-engine'
-
-// Game implementations
-export { RouletteGame } from './roulette-game'
 export { BlackjackGame } from './blackjack-game'
-
-// Component classes
+export { WheelOfChanceGame } from './wheel-of-chance-game'
 export { SecureRandomGenerator } from './random-generator'
+export { ProvablyFairService, provablyFairService } from './provably-fair-service'
 export { PayoutCalculator } from './payout-calculator'
 export { GameValidator } from './game-validator'
 export { GameStateManager } from './game-state-manager'
-
-// Types and interfaces
 export * from './types'
-
-// Create singleton instance for application use
 export const gameEngine = new CoreGameEngine()

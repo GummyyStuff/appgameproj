@@ -79,6 +79,6 @@ Player Places Bet → Cards Dealt → Player Makes Decision → Dealer Plays Han
 ```
 
 ## Related Features
-- [Roulette Rules](./roulette.md)
+- [Wheel of Chance Rules](./wheel-of-chance.md)
 - [Case Opening Rules](./case-opening.md)
-- [Game Statistics](../backend/statistics-README.md)
+- [Statistics System](../backend/statistics-README.md)

@@ -1,106 +1,191 @@
-/**
- * Case Opening Concurrency Tests
- * Tests for debouncing, rapid clicking, and concurrent case openings
- */
+import { describe, test, expect, beforeEach, vi } from 'vitest'
+import { renderHook, act } from '@testing-library/react'
 
-import { describe, test, expect, beforeEach } from 'bun:test';
+vi.mock('../../components/providers/ToastProvider', () => ({
+  useToastContext: () => ({
+    success: vi.fn(),
+    error: vi.fn(),
+    warning: vi.fn(),
+    info: vi.fn(),
+    addToast: vi.fn(),
+    removeToast: vi.fn(),
+    clearAllToasts: vi.fn(),
+  }),
+}))
 
-describe('Case Opening Debouncing', () => {
-  test('should enforce minimum 500ms between case openings', () => {
-    const startTime = Date.now();
-    const minInterval = 500;
+vi.mock('../useAuth', () => ({
+  useAuth: () => ({
+    user: { id: 'test-user', email: 'test@example.com' },
+    session: { access_token: 'test-token' },
+    loading: false,
+  }),
+}))
 
-    // Simulate debounce check
-    const lastOpenTime = startTime;
-    const now = startTime + 100; // Only 100ms later
+vi.mock('../useBalance', () => ({
+  useBalance: () => ({
+    balance: 10000,
+    refetch: vi.fn(),
+    isLoading: false,
+    error: null,
+  }),
+}))
 
-    const timeSinceLastOpen = now - lastOpenTime;
-    const shouldDebounce = timeSinceLastOpen < minInterval;
+vi.mock('../useAchievements', () => ({
+  useAchievements: () => ({
+    trackGamePlayed: vi.fn(),
+  }),
+}))
 
-    expect(shouldDebounce).toBe(true);
-    expect(timeSinceLastOpen).toBe(100);
-  });
+vi.mock('../useSoundEffects', () => ({
+  useSoundEffects: () => ({
+    playWinSound: vi.fn(),
+    playLoseSound: vi.fn(),
+    playCaseOpen: vi.fn(),
+    playCaseReveal: vi.fn(),
+    playRarityReveal: vi.fn(),
+  }),
+  useSoundPreferences: () => ({
+    soundEnabled: true,
+  }),
+}))
 
-  test('should allow opening after 500ms has passed', () => {
-    const startTime = Date.now();
-    const minInterval = 500;
+vi.mock('../useGamePreferences', () => ({
+  useGamePreferences: () => ({
+    quickOpen: false,
+    currentDuration: 4000,
+  }),
+}))
 
-    const lastOpenTime = startTime;
-    const now = startTime + 600; // 600ms later
+vi.mock('../useCaseData', () => ({
+  useCaseData: () => ({
+    caseTypes: [],
+    isLoadingCases: false,
+    selectedCase: null,
+    error: null,
+    selectCase: vi.fn(),
+    clearError: vi.fn(),
+    loadCaseTypes: vi.fn(),
+  }),
+}))
 
-    const timeSinceLastOpen = now - lastOpenTime;
-    const shouldDebounce = timeSinceLastOpen < minInterval;
+vi.mock('../useCaseAnimation', () => ({
+  useCaseAnimation: () => ({
+    startAnimation: vi.fn(),
+    resetAnimation: vi.fn(),
+  }),
+}))
 
-    expect(shouldDebounce).toBe(false);
-    expect(timeSinceLastOpen).toBe(600);
-  });
+vi.mock('../useCaseOpening', () => ({
+  useCaseOpening: () => ({
+    loadCaseItems: vi.fn().mockResolvedValue([]),
+    completeCase: vi.fn().mockResolvedValue(null),
+    resetOpening: vi.fn(),
+    openingError: null,
+  }),
+}))
 
-  test('should prevent concurrent processing flag issues', () => {
-    let isProcessing = false;
-    let openAttempts = 0;
+vi.mock('../../services/caseCache', () => ({
+  useOptimisticCaseOpening: () => ({
+    mutateAsync: vi.fn(),
+  }),
+  getCaseCacheService: () => ({
+    prefetchCaseItems: vi.fn().mockResolvedValue(undefined),
+    creditWinnings: vi.fn(),
+  }),
+}))
 
-    const attemptOpen = () => {
-      if (isProcessing) {
-        return false; // Rejected
-      }
-      isProcessing = true;
-      openAttempts++;
-      return true;
-    };
+vi.mock('../../utils/performanceMonitoring', () => ({
+  performanceMonitoring: {
+    initialize: vi.fn(),
+  },
+  usePerformanceMonitoring: () => ({
+    monitorAPICall: vi.fn().mockImplementation((_p: string, _m: string, fn: () => any) => fn()),
+    monitorGameAction: vi.fn(),
+    startTiming: vi.fn().mockReturnValue(vi.fn()),
+  }),
+}))
 
-    // First attempt should succeed
-    const result1 = attemptOpen();
-    expect(result1).toBe(true);
-    expect(openAttempts).toBe(1);
+vi.mock('@tanstack/react-query', () => ({
+  useQueryClient: () => ({
+    invalidateQueries: vi.fn(),
+    setQueryData: vi.fn(),
+  }),
+}))
 
-    // Second attempt while processing should fail
-    const result2 = attemptOpen();
-    expect(result2).toBe(false);
-    expect(openAttempts).toBe(1); // Still 1, second was rejected
+import { useCaseOpeningGame } from '../useCaseOpeningGame'
 
-    // Clear processing flag
-    isProcessing = false;
+describe('useCaseOpeningGame concurrency', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
 
-    // Now should succeed again
-    const result3 = attemptOpen();
-    expect(result3).toBe(true);
-    expect(openAttempts).toBe(2);
-  });
-});
+  test('should initialize in idle phase with isProcessing false', () => {
+    const { result } = renderHook(() => useCaseOpeningGame())
+    expect(result.current.gameState.phase).toBe('idle')
+    expect(result.current.isProcessing).toBe(false)
+  })
 
-describe('Case Opening State Machine', () => {
-  test('should only allow opening in idle or complete phases', () => {
-    const validPhases = ['idle', 'complete'];
-    const blockedPhases = ['loading', 'opening', 'animating', 'revealing', 'error'];
+  test('should not open case when no case is selected', async () => {
+    const { result } = renderHook(() => useCaseOpeningGame())
+    await act(async () => {
+      await result.current.openCase()
+    })
+    expect(result.current.gameState.phase).toBe('idle')
+  })
 
-    validPhases.forEach(phase => {
-      const canOpen = phase === 'idle' || phase === 'complete';
-      expect(canOpen).toBe(true);
-    });
+  test('should reset game to idle state and clear processing', () => {
+    const { result } = renderHook(() => useCaseOpeningGame())
+    act(() => {
+      result.current.resetGame()
+    })
+    expect(result.current.gameState.phase).toBe('idle')
+    expect(result.current.gameState.selectedCase).toBeNull()
+    expect(result.current.gameState.result).toBeNull()
+    expect(result.current.isProcessing).toBe(false)
+  })
 
-    blockedPhases.forEach(phase => {
-      const canOpen = phase === 'idle' || phase === 'complete';
-      expect(canOpen).toBe(false);
-    });
-  });
+  test('should return all UseCaseOpeningGameReturn members', () => {
+    const { result } = renderHook(() => useCaseOpeningGame())
+    expect(result.current).toHaveProperty('gameState')
+    expect(result.current).toHaveProperty('caseTypes')
+    expect(result.current).toHaveProperty('isLoadingCases')
+    expect(result.current).toHaveProperty('error')
+    expect(result.current).toHaveProperty('displayBalance')
+    expect(result.current).toHaveProperty('openCase')
+    expect(result.current).toHaveProperty('resetGame')
+    expect(result.current).toHaveProperty('completeAnimation')
+    expect(result.current).toHaveProperty('loadCaseTypes')
+    expect(result.current).toHaveProperty('isProcessing')
+  })
 
-  test('should transition through correct phases', () => {
-    const transitions = [
-      { from: 'idle', to: 'loading', valid: true },
-      { from: 'loading', to: 'opening', valid: true },
-      { from: 'opening', to: 'animating', valid: true },
-      { from: 'animating', to: 'complete', valid: true },
-      { from: 'complete', to: 'idle', valid: true },
-      { from: 'idle', to: 'error', valid: true },
-      { from: 'loading', to: 'error', valid: true },
-      { from: 'complete', to: 'loading', valid: false }, // Can't go back to loading from complete
-    ];
+  test('should have valid game state shape', () => {
+    const { result } = renderHook(() => useCaseOpeningGame())
+    const { gameState } = result.current
+    expect(gameState).toHaveProperty('phase')
+    expect(gameState).toHaveProperty('selectedCase')
+    expect(gameState).toHaveProperty('result')
+    expect(gameState).toHaveProperty('history')
+    expect(gameState).toHaveProperty('error')
+    expect(gameState).toHaveProperty('transactionId')
+    expect(Array.isArray(gameState.history)).toBe(true)
+  })
 
-    transitions.forEach(({ from, to, valid }) => {
-      // Simplified validation - in real implementation, check state machine rules
-      const isValid = ['idle', 'loading', 'opening', 'animating', 'revealing', 'complete', 'error'].includes(to);
-      expect(isValid).toBe(true);
-    });
-  });
-});
+  test('should preserve empty history after reset', () => {
+    const { result } = renderHook(() => useCaseOpeningGame())
+    act(() => {
+      result.current.resetGame()
+    })
+    expect(result.current.gameState.history).toEqual([])
+  })
 
+  test('should have displayBalance matching mocked balance', () => {
+    const { result } = renderHook(() => useCaseOpeningGame())
+    expect(result.current.displayBalance).toBe(10000)
+  })
+
+  test('should have no error on initialization', () => {
+    const { result } = renderHook(() => useCaseOpeningGame())
+    expect(result.current.error).toBeNull()
+    expect(result.current.gameState.error).toBeNull()
+  })
+})

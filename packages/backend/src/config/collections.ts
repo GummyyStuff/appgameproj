@@ -27,7 +27,8 @@ export type CollectionId = typeof COLLECTION_IDS[keyof typeof COLLECTION_IDS];
 
 export interface UserProfile {
   $id?: string;
-  userId: string;
+  $createdAt: string;
+  $updatedAt: string;
   username: string;
   displayName?: string;
   email?: string; // User's email from Discord OAuth
@@ -41,19 +42,17 @@ export interface UserProfile {
   chatRulesVersion: number;
   chatRulesAcceptedAt?: string;
   isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
 }
 
 export interface GameHistory {
   $id?: string;
+  $createdAt: string;
   userId: string;
-  gameType: 'roulette' | 'case_opening';
+  gameType: 'wheel_of_chance' | 'case_opening';
   betAmount: number;
   winAmount: number;
   resultData: string; // JSON string
   gameDuration?: number;
-  createdAt: string;
 }
 
 export interface DailyBonus {
@@ -67,18 +66,19 @@ export interface DailyBonus {
 
 export interface CaseType {
   $id?: string;
+  $createdAt: string;
+  $updatedAt: string;
   name: string;
   price: number;
   description: string;
   imageUrl?: string;
   rarityDistribution: string; // JSON string
   isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
 }
 
 export interface TarkovItem {
   $id?: string;
+  $createdAt: string;
   name: string;
   rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
   baseValue: number;
@@ -86,29 +86,28 @@ export interface TarkovItem {
   imageUrl?: string;
   description?: string;
   isActive: boolean;
-  createdAt: string;
 }
 
 export interface CaseItemPool {
   $id?: string;
+  $createdAt: string;
   caseTypeId: string;
   itemId: string;
   weight: number;
   valueMultiplier: number;
-  createdAt: string;
   caseItemKey: string; // Composite: caseTypeId_itemId
 }
 
 export interface ChatMessage {
   $id?: string;
+  $createdAt: string;
+  $updatedAt: string;
   userId: string;
   username: string;
   content: string;
   isDeleted: boolean;
   deletedAt?: string;
   deletedBy?: string;
-  createdAt: string;
-  updatedAt: string;
 }
 
 export interface ChatPresence {
@@ -135,6 +134,7 @@ export interface AuditLog {
  */
 export interface AchievementDefinition {
   $id?: string;
+  $createdAt: string;
   achievementId: string; // Unique identifier: 'first-case', 'case-opener-10', etc.
   title: string; // Display name: "First Case"
   description: string; // "Open your first case"
@@ -145,7 +145,6 @@ export interface AchievementDefinition {
   rewardAmount?: number; // Currency amount if rewardType is 'currency'
   rewardItem?: string; // Item identifier if rewardType is 'title' or 'cosmetic'
   isActive: boolean; // Can be used to disable achievements
-  createdAt: string; // ISO 8601 datetime
 }
 
 /**
@@ -154,15 +153,15 @@ export interface AchievementDefinition {
  */
 export interface UserAchievement {
   $id?: string;
-  userId: string; // References UserProfile.userId
+  $createdAt: string;
+  $updatedAt: string;
+  userId: string; // References UserProfile.$id (Appwrite user ID)
   achievementId: string; // References AchievementDefinition.achievementId
   progress: number; // Current progress (0 to maxProgress)
   unlocked: boolean; // True when progress >= maxProgress
   unlockedAt?: string; // ISO 8601 datetime when unlocked
   claimed: boolean; // True when reward has been claimed
   claimedAt?: string; // ISO 8601 datetime when reward was claimed
-  createdAt: string; // ISO 8601 datetime
-  updatedAt: string; // ISO 8601 datetime
   userAchievementKey: string; // Composite unique key: `${userId}_${achievementId}`
 }
 

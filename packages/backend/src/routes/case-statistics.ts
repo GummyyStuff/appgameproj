@@ -70,7 +70,7 @@ caseStatisticsRoutes.get('/', asyncHandler(async (c: Context) => {
     const queries = [
       appwriteDb.equal('userId', user.id),
       appwriteDb.equal('gameType', 'case_opening'),
-      appwriteDb.orderDesc('createdAt'),
+      appwriteDb.orderDesc('$createdAt'),
       appwriteDb.limit(1000) // Reasonable limit for statistics
     ]
 
@@ -153,7 +153,7 @@ caseStatisticsRoutes.get('/', asyncHandler(async (c: Context) => {
 
         itemWins.get(itemKey)!.wins.push({
           value: itemValue,
-          timestamp: game.createdAt
+          timestamp: game.$createdAt
         })
 
         // Track rarity distribution

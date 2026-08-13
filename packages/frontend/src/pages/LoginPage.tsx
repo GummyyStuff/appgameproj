@@ -43,6 +43,7 @@ const LoginPage: React.FC = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest', // CSRF protection
         },
         credentials: 'include', // Important for cookies
         body: JSON.stringify({

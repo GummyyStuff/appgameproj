@@ -17,7 +17,7 @@ export class UserService {
   /**
    * Get user profile by user ID (with caching)
    */
-  static async getUserProfile(userId: string): Promise<UserProfile | null> {
+   static async getUserProfile(userId: string): Promise<UserProfile | null> {
     try {
       // Try cache first
       const cached = await CacheService.getUserProfile(userId);
@@ -25,26 +25,22 @@ export class UserService {
         return cached;
       }
 
-      // Cache miss - query Appwrite
-      const { data, error } = await appwriteDb.listDocuments<UserProfile>(
+      // Document ID is the Appwrite user ID, so we can look it up directly
+      const { data: profile, error } = await appwriteDb.getDocument<UserProfile>(
         COLLECTION_IDS.USERS,
-        [appwriteDb.equal('userId', userId)]
+        userId
       );
-      
+
       if (error) {
-        console.error('Error querying user profile:', error);
+        console.error('Error getting user profile:', error);
         return null;
       }
-      
-      if (data && data.length > 0) {
-        const profile = data[0];
-        
-        // Cache the result
+
+      if (profile) {
         await CacheService.setUserProfile(userId, profile);
-        
         return profile;
       }
-      
+
       return null;
     } catch (error) {
       console.error('Error getting user profile:', error);
@@ -93,9 +89,7 @@ export class UserService {
       return existing;
     }
 
-    const now = new Date().toISOString();
     const profileData = {
-      userId,
       username: data.username,
       displayName: data.displayName || data.username,
       balance: data.balance || 10000, // Starting balance
@@ -106,25 +100,92 @@ export class UserService {
       avatarPath: data.avatarUrl || 'defaults/default-avatar.svg',
       chatRulesVersion: 1,
       isActive: true,
-      createdAt: now,
-      updatedAt: now,
-      email: data.email,
     };
 
     try {
-      // Create document using Appwrite SDK
+      // Use userId as document ID for deterministic profile lookup
       const { data: createdProfile, error } = await appwriteDb.createDocument<UserProfile>(
         COLLECTION_IDS.USERS,
         profileData,
-        undefined, // Let the database service generate a unique ID
+        userId, // Use userId as document ID
         [
           `read("user:${userId}")`,
           `update("user:${userId}")`,
+          `read("any")`,
         ]
       );
 
       if (error) {
-        throw new Error(error);
+        console.log(`⚠️ createDocument returned error for ${userId}: ${error}`);
+        // Document ID already exists (409) - try to update it with missing fields
+        const { data: updatedProfile, error: updateError } = await appwriteDb.updateDocument<UserProfile>(
+          COLLECTION_IDS.USERS,
+          userId,
+          {
+            username: data.username,
+            displayName: data.displayName || data.username,
+            balance: data.balance || 10000,
+            avatarPath: data.avatarUrl || 'defaults/default-avatar.svg',
+          },
+          [
+            `read("user:${userId}")`,
+            `update("user:${userId}")`,
+            `read("any")`,
+          ]
+        );
+        if (updatedProfile) {
+          await CacheService.invalidateUserProfile(userId);
+          await CacheService.invalidateUserBalance(userId);
+          return updatedProfile;
+        }
+        // Update also failed - document may be orphaned, try delete + recreate
+        console.log(`⚠️ Update failed for ${userId}, trying delete + recreate...`);
+        await appwriteDb.deleteDocument(COLLECTION_IDS.USERS, userId).catch(() => {});
+        const { data: recreatedProfile, error: recreateError } = await appwriteDb.createDocument<UserProfile>(
+          COLLECTION_IDS.USERS,
+          profileData,
+          userId,
+          [
+            `read("user:${userId}")`,
+            `update("user:${userId}")`,
+            `read("any")`,
+          ]
+        );
+        if (recreatedProfile) {
+          await CacheService.invalidateUserProfile(userId);
+          await CacheService.invalidateUserBalance(userId);
+          return recreatedProfile;
+        }
+        // Recreate also failed - try with unique ID instead of userId as doc ID
+        console.log(`⚠️ Recreate with userId as doc ID failed, trying with unique ID...`);
+        const { data: uniqueProfile, error: uniqueError } = await appwriteDb.createDocument<UserProfile>(
+          COLLECTION_IDS.USERS,
+          profileData,
+          undefined, // Let Appwrite generate unique ID
+          [
+            `read("user:${userId}")`,
+            `update("user:${userId}")`,
+            `read("any")`,
+          ]
+        );
+        if (uniqueProfile) {
+          await CacheService.invalidateUserProfile(userId);
+          await CacheService.invalidateUserBalance(userId);
+          return uniqueProfile;
+        }
+        // Last resort: try getDocument
+        const { data: existingProfile } = await appwriteDb.getDocument<UserProfile>(
+          COLLECTION_IDS.USERS,
+          userId
+        );
+        if (existingProfile) {
+          await CacheService.invalidateUserProfile(userId);
+          await CacheService.invalidateUserBalance(userId);
+          return existingProfile;
+        }
+        // All DB operations failed - throw error
+        console.error(`❌ All DB operations failed for ${userId}`);
+        throw new Error(`Failed to create user profile in database`);
       }
 
       return createdProfile!;
@@ -146,10 +207,7 @@ export class UserService {
       return { success: false, error: 'User profile not found' };
     }
 
-    const updatedData = {
-      ...updates,
-      updatedAt: new Date().toISOString(),
-    };
+    const updatedData = { ...updates };
 
     const { data, error } = await appwriteDb.updateDocument<UserProfile>(
       COLLECTION_IDS.USERS,
@@ -194,10 +252,7 @@ export class UserService {
     const { error } = await appwriteDb.updateDocument<UserProfile>(
       COLLECTION_IDS.USERS,
       profile.$id!,
-      {
-        balance: newBalance,
-        updatedAt: new Date().toISOString(),
-      }
+      { balance: newBalance }
     );
 
     if (error) {
@@ -229,11 +284,11 @@ export class UserService {
         return { success: false, error: 'User not found' };
       }
 
-      // Check if version (updatedAt) has changed since we read it
-      if (profile.updatedAt !== expectedVersion) {
+      // Check if version ($updatedAt) has changed since we read it
+      if (profile.$updatedAt !== expectedVersion) {
         console.log('⚠️ Version mismatch detected:', {
           expected: expectedVersion,
-          actual: profile.updatedAt
+          actual: profile.$updatedAt
         });
         return { success: false, versionMismatch: true };
       }
@@ -257,6 +312,7 @@ export class UserService {
 
   /**
    * Increment user statistics (invalidates cache)
+   * C1 FIX: Uses atomic increment instead of read-modify-write.
    */
   static async incrementStats(
     userId: string,
@@ -268,26 +324,18 @@ export class UserService {
       return { success: false, error: 'User profile not found' };
     }
 
-    const { error } = await appwriteDb.updateDocument<UserProfile>(
-      COLLECTION_IDS.USERS,
-      profile.$id!,
-      {
-        totalWagered: profile.totalWagered + wagered,
-        totalWon: profile.totalWon + won,
-        gamesPlayed: profile.gamesPlayed + 1,
-        updatedAt: new Date().toISOString(),
-      }
-    );
+    await Promise.all([
+      appwriteDb.incrementDocumentAttribute(COLLECTION_IDS.USERS, profile.$id!, 'totalWagered', wagered),
+      appwriteDb.incrementDocumentAttribute(COLLECTION_IDS.USERS, profile.$id!, 'totalWon', won),
+      appwriteDb.incrementDocumentAttribute(COLLECTION_IDS.USERS, profile.$id!, 'gamesPlayed', 1),
+    ]);
 
-    if (!error) {
-      // Invalidate user caches after stats update
-      await Promise.all([
-        CacheService.invalidateUserProfile(userId),
-        CacheService.invalidateUserStats(userId),
-      ]);
-    }
+    await Promise.all([
+      CacheService.invalidateUserProfile(userId),
+      CacheService.invalidateUserStats(userId),
+    ]);
 
-    return { success: !error, error: error || undefined };
+    return { success: true };
   }
 
   /**
@@ -350,7 +398,7 @@ export class UserService {
       total_won: profile.totalWon,
       games_played: profile.gamesPlayed,
       net_profit: profile.totalWon - profile.totalWagered,
-      member_since: profile.createdAt,
+      member_since: profile.$createdAt,
       last_daily_bonus: profile.lastDailyBonus,
       can_claim_bonus: !profile.lastDailyBonus || 
         new Date(profile.lastDailyBonus).toDateString() !== new Date().toDateString(),

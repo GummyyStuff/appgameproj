@@ -75,6 +75,6 @@ Player Selects Case → Bet Confirmed → Seed Generated → Items Determined �
 ```
 
 ## Related Features
-- [Roulette Rules](./roulette.md)
+- [Wheel of Chance Rules](./wheel-of-chance.md)
 - [Blackjack Rules](./blackjack.md)
-- [Provably Fair Algorithms](../backend/statistics-README.md#provably-fair)
+- [Statistics System](../backend/statistics-README.md)

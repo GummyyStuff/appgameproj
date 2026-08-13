@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import pathMod from 'path'
 import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
 import { serveStatic } from 'hono/bun'
@@ -7,6 +8,7 @@ import { errorHandler } from './middleware/error'
 import { requestLogger } from './middleware/logger'
 import { securityHeadersMiddleware, requestTimeoutMiddleware, ipSecurityMiddleware } from './middleware/security'
 import { apiRateLimit } from './middleware/rate-limit'
+import { csrfMiddleware } from './middleware/auth'
 import { validateContentType, validateRequestSize } from './middleware/validation'
 import { performanceMiddleware } from './middleware/performance'
 import { apiRoutes } from './routes/api'
@@ -193,12 +195,13 @@ app.get('/api/statistics/global', async (c) => {
 
 // API routes with rate limiting and authentication middleware
 app.use('/api/*', apiRateLimit)
+app.use('/api/*', csrfMiddleware)
 app.route('/api', apiRoutes)
 
 // Serve static files from public directory (built frontend)
 // Serve all static files including Font Awesome
-app.use('/*', serveStatic({ 
-  root: './public',
+app.use('/*', serveStatic({
+  root: pathMod.resolve(__dirname, '../../frontend/dist'),
   rewriteRequestPath: (path) => {
     const rewritten = path.replace(/^\//, '')
     console.log(`📁 [STATIC] Request: ${path} → Rewritten: ${rewritten}`)
@@ -276,7 +279,11 @@ app.get('*', async (c) => {
   c.header('Pragma', 'no-cache')
   c.header('Expires', '0')
   
-  return serveStatic({ path: './public/index.html' })(c, async () => {})
+  // Serve the actual built index.html from frontend dist
+  const fs = await import('fs')
+  const indexPath = pathMod.resolve(__dirname, '../../frontend/dist/index.html')
+  const html = fs.readFileSync(indexPath, 'utf-8')
+  return c.html(html)
 })
 
 // Global error handler

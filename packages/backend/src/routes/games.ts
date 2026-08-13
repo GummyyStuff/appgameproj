@@ -5,37 +5,48 @@ import { gameBetRateLimit } from '../middleware/rate-limit'
 import { validationMiddleware, commonSchemas } from '../middleware/validation'
 import { auditGame, auditLog } from '../middleware/audit'
 import { z } from 'zod'
-import { Databases, Query } from 'node-appwrite'
-import { RouletteGame } from '../services/game-engine/roulette-game'
+import { WheelOfChanceGame } from '../services/game-engine/wheel-of-chance-game'
+import {
+  generateWheelLayout,
+  signWheelLayout,
+  verifyWheelLayoutSignature,
+  validateWheelLayout
+} from '../services/game-engine/wheel-layout'
+import { provablyFairService } from '../services/game-engine/provably-fair-service'
 import { CaseOpeningService } from '../services/case-opening-appwrite'
 import { Sentry, logger, startSpan } from '../lib/sentry'
 import { CurrencyService } from '../services/currency'
 import { realtimeGameService } from '../services/realtime-game'
 import { appwriteClient } from '../config/appwrite'
-
-const DATABASE_ID = process.env.APPWRITE_DATABASE_ID!
-const databases = new Databases(appwriteClient)
+import { requestDeduplication } from '../services/request-deduplication'
 
 export const gameRoutes = new Hono()
 
-// Apply optional auth to all routes first (allows GET requests without auth)
 gameRoutes.use('*', optionalAuthMiddleware)
 
-// Apply critical auth with session validation to game betting endpoints (money operations)
-gameRoutes.use('/roulette/bet', criticalAuthMiddleware)
-gameRoutes.use('/cases/open', criticalAuthMiddleware)  // Fixed: was '/case-opening/open'
+gameRoutes.use('/cases/open', criticalAuthMiddleware)
+gameRoutes.use('/wheel-of-chance/spin', criticalAuthMiddleware)
 
-// Apply stricter rate limiting to betting routes
-gameRoutes.use('/roulette/bet', gameBetRateLimit)
-gameRoutes.use('/cases/open', gameBetRateLimit)  // Fixed: was '/case-opening/open'
+gameRoutes.use('/cases/open', gameBetRateLimit)
+gameRoutes.use('/wheel-of-chance/spin', gameBetRateLimit)
 
-// Game validation schemas
-const rouletteBetSchema = z.object({
+const wheelBetSchema = z.object({
   amount: commonSchemas.betAmount,
-  betType: z.string().min(1).max(20),
-  betValue: z.union([z.number(), z.string()]).transform(val => 
-    typeof val === 'string' ? val : val.toString()
-  )
+  bets: z.array(z.object({
+    segmentIndex: z.number().int().min(0).max(11),
+    amount: z.number().int().min(1)
+  })).min(1).max(10),
+  wheel_layout: z.array(z.object({
+    index: z.number().int(),
+    type: z.string(),
+    label: z.string(),
+    multiplier: z.number(),
+    color: z.string(),
+    startAngle: z.number(),
+    endAngle: z.number(),
+    bettable: z.boolean()
+  })).length(12),
+  layout_signature: z.string().min(16)
 })
 
 
@@ -47,146 +58,137 @@ gameRoutes.get('/', asyncHandler(async (c: Context) => {
   return c.json({
     message: 'Tarkov Casino Games API',
     available_games: {
-      roulette: '/api/games/roulette',
+      wheel_of_chance: '/api/games/wheel-of-chance',
       case_opening: '/api/games/cases'
     },
     status: 'Games API ready'
   })
 }))
 
-// Roulette game endpoints
-gameRoutes.get('/roulette', asyncHandler(async (c: Context) => {
+
+gameRoutes.get('/wheel-of-chance', asyncHandler(async (c: Context) => {
+  const wheelLayout = generateWheelLayout()
+  const signature = signWheelLayout(wheelLayout)
   return c.json({
-    message: 'Roulette game information',
-    bet_types: RouletteGame.getBetTypes(),
-    wheel_layout: RouletteGame.getWheelLayout(),
+    message: 'Wheel of Chance game information',
+    wheel_layout: wheelLayout,
+    layout_signature: signature,
+    segment_count: WheelOfChanceGame.getSegmentCount(),
+    multiplier_pool: WheelOfChanceGame.getMultiplierPool(),
+    special_pool: WheelOfChanceGame.getSpecialPool(),
     min_bet: 1,
     max_bet: 10000
   })
 }))
 
-gameRoutes.post('/roulette/bet',
-  validationMiddleware(rouletteBetSchema),
-  auditGame('roulette_bet'),
+gameRoutes.post('/wheel-of-chance/spin',
+  validationMiddleware(wheelBetSchema),
+  auditGame('wheel_spin'),
   asyncHandler(async (c: Context) => {
   const user = c.get('user')
   if (!user) {
     Sentry.addBreadcrumb({
       category: 'auth',
-      message: 'Roulette bet attempted without authentication',
+      message: 'Wheel spin attempted without authentication',
       level: 'warning'
     });
     return c.json({ error: 'Authentication required' }, 401)
   }
 
-  const { amount, betType, betValue } = c.get('validatedData')
+  const { amount, bets, wheel_layout, layout_signature } = c.get('validatedData')
 
-  // Add breadcrumb for bet attempt
+  if (!verifyWheelLayoutSignature(wheel_layout, layout_signature)) {
+    Sentry.captureMessage('Wheel spin rejected: invalid layout signature', {
+      level: 'warning',
+      tags: { game: 'wheel_of_chance', action: 'invalid_layout_signature' },
+      extra: { user_id: user.id }
+    });
+    return c.json({ error: 'Invalid wheel layout signature' }, 400)
+  }
+
+  if (!validateWheelLayout(wheel_layout)) {
+    Sentry.captureMessage('Wheel spin rejected: invalid layout structure', {
+      level: 'warning',
+      tags: { game: 'wheel_of_chance', action: 'invalid_layout_structure' },
+      extra: { user_id: user.id }
+    });
+    return c.json({ error: 'Invalid wheel layout' }, 400)
+  }
+
+  const totalBets = bets.reduce((sum: number, b: { amount: number }) => sum + b.amount, 0)
+  if (totalBets !== amount) {
+    return c.json({ error: 'Sum of bets must equal declared amount' }, 400)
+  }
+
   Sentry.addBreadcrumb({
     category: 'game',
-    message: 'Roulette bet initiated',
+    message: 'Wheel spin initiated',
     level: 'info',
     data: {
       user_id: user.id,
-      bet_type: betType,
-      bet_amount: amount
+      bet_count: bets.length,
+      total_bet: amount
     }
   });
 
-  // Check user balance with span
   const balance = await startSpan(
-    {
-      op: 'db.query',
-      name: 'Get User Balance'
-    },
+    { op: 'db.query', name: 'Get User Balance' },
     async (span) => {
       span?.setAttribute('db.operation', 'GET_BALANCE');
       span?.setAttribute('db.user_id', user.id);
       return await CurrencyService.getBalance(user.id);
     }
   );
-  
+
   if (balance < amount) {
-    Sentry.captureMessage('Insufficient balance for roulette bet', {
+    Sentry.captureMessage('Insufficient balance for wheel spin', {
       level: 'warning',
-      tags: {
-        game: 'roulette',
-        action: 'insufficient_balance'
-      },
-      extra: {
-        user_id: user.id,
-        balance,
-        required_amount: amount,
-        shortfall: amount - balance
-      }
+      tags: { game: 'wheel_of_chance', action: 'insufficient_balance' },
+      extra: { user_id: user.id, balance, required_amount: amount, shortfall: amount - balance }
     });
     return c.json({ error: 'Insufficient balance' }, 400)
   }
 
   try {
-    // Log game start
     const ip = c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP')
-    
-    await startSpan(
-      {
-        op: 'game.roulette',
-        name: 'Roulette Bet Placement'
-      },
+
+    return await startSpan(
+      { op: 'game.wheel_of_chance', name: 'Wheel Spin' },
       async (gameSpan) => {
-        gameSpan?.setAttribute('game.type', 'roulette');
-        gameSpan?.setAttribute('game.bet_type', betType);
+        gameSpan?.setAttribute('game.type', 'wheel_of_chance');
         gameSpan?.setAttribute('game.bet_amount', amount);
         gameSpan?.setAttribute('game.user_id', user.id);
-        
-        await auditLog.gamePlayStarted(user.id, 'roulette', amount, ip)
-        
-        // Broadcast game start
-        await startSpan(
-          { op: 'realtime.broadcast', name: 'Broadcast Game Start' },
-          async (broadcastSpan) => {
-            broadcastSpan?.setAttribute('event.type', 'game_start');
-            return await realtimeGameService.handleRouletteGameStart(user.id, amount, betType, betValue);
-          }
-        );
 
-        // Create roulette game instance
-        const rouletteGame = new RouletteGame()
+        await auditLog.gamePlayStarted(user.id, 'wheel_of_chance', amount, ip)
 
-        // Create bet object
+        const wheelGame = new WheelOfChanceGame()
+
         const bet = {
           userId: user.id,
           amount,
-          gameType: 'roulette' as const,
-          betType,
-          betValue
+          gameType: 'wheel_of_chance' as const,
+          bets,
+          wheel_layout
         }
 
-        // Broadcast spin start
-        const gameId = `roulette-${Date.now()}-${user.id}`
-        await realtimeGameService.handleRouletteSpinStart(user.id, gameId)
+        const gameId = `wheel-${Date.now()}-${user.id}`
 
-        // Play the game with span
         const result = await startSpan(
-          {
-            op: 'game.play',
-            name: 'Play Roulette'
-          },
+          { op: 'game.play', name: 'Play Wheel' },
           async (playSpan) => {
             try {
               playSpan?.setAttribute('game_id', gameId);
-              const gameResult = await rouletteGame.play(bet);
-              
-              // Set span status based on game result
+              const gameResult = await wheelGame.play(bet);
+
               if (!gameResult.success) {
-                playSpan?.setStatus({ code: 2 }); // 2 = error
+                playSpan?.setStatus({ code: 2 });
                 playSpan?.setAttribute('error', gameResult.error || 'unknown');
               } else {
-                playSpan?.setStatus({ code: 1 }); // 1 = ok
+                playSpan?.setStatus({ code: 1 });
               }
-              
+
               return gameResult;
             } catch (error) {
-              // Mark span as failed
               playSpan?.setStatus({ code: 2 });
               if (error instanceof Error) {
                 playSpan?.setAttribute('error.message', error.message);
@@ -198,44 +200,37 @@ gameRoutes.post('/roulette/bet',
         );
 
         if (!result.success) {
-          logger.error('Roulette game failed', { 
-            user_id: user.id, 
-            bet_type: betType, 
-            error: result.error 
+          logger.error('Wheel game failed', {
+            user_id: user.id,
+            error: result.error
           });
           return c.json({ error: result.error || 'Game failed' }, 400)
         }
 
-        // Process currency transaction with span
         const transactionResult = await startSpan(
-          {
-            op: 'currency.transaction',
-            name: 'Process Game Transaction'
-          },
+          { op: 'currency.transaction', name: 'Process Wheel Transaction' },
           async (txSpan) => {
             try {
               txSpan?.setAttribute('transaction.type', 'game');
-              txSpan?.setAttribute('game.type', 'roulette');
-              
+              txSpan?.setAttribute('game.type', 'wheel_of_chance');
+
               const txResult = await CurrencyService.processGameTransaction(
                 user.id,
-                'roulette',
+                'wheel_of_chance',
                 amount,
                 result.winAmount,
                 result.resultData
               );
-              
-              // Set span status based on transaction result
+
               if (!txResult.success) {
-                txSpan?.setStatus({ code: 2 }); // 2 = error
+                txSpan?.setStatus({ code: 2 });
                 txSpan?.setAttribute('transaction.error', txResult.error || 'unknown');
               } else {
-                txSpan?.setStatus({ code: 1 }); // 1 = ok
+                txSpan?.setStatus({ code: 1 });
               }
-              
+
               return txResult;
             } catch (error) {
-              // Mark span as failed
               txSpan?.setStatus({ code: 2 });
               if (error instanceof Error) {
                 txSpan?.setAttribute('error.message', error.message);
@@ -247,18 +242,17 @@ gameRoutes.post('/roulette/bet',
         );
 
         if (!transactionResult.success) {
-          Sentry.captureMessage('Currency transaction failed for roulette', {
+          Sentry.captureMessage('Currency transaction failed for wheel', {
             level: 'error',
-            tags: { game: 'roulette', action: 'transaction_failed' },
+            tags: { game: 'wheel_of_chance', action: 'transaction_failed' },
             extra: { user_id: user.id, bet_amount: amount }
           });
           return c.json({ error: 'Transaction failed' }, 500)
         }
 
-        // Add success breadcrumb
         Sentry.addBreadcrumb({
           category: 'game',
-          message: 'Roulette bet completed successfully',
+          message: 'Wheel spin completed successfully',
           level: 'info',
           data: {
             user_id: user.id,
@@ -267,13 +261,8 @@ gameRoutes.post('/roulette/bet',
           }
         });
 
-        // Broadcast game completion
-        await realtimeGameService.handleRouletteGameComplete(user.id, gameId, result)
+        await auditLog.gameCompleted(user.id, 'wheel_of_chance', amount, result.winAmount, ip)
 
-        // Log game completion
-        await auditLog.gameCompleted(user.id, 'roulette', amount, result.winAmount, ip)
-        
-        // Broadcast balance update
         await realtimeGameService.handleBalanceUpdate(
           user.id,
           transactionResult.newBalance,
@@ -291,23 +280,42 @@ gameRoutes.post('/roulette/bet',
         })
       }
     );
-    
+
   } catch (error) {
     Sentry.captureException(error, {
-      tags: {
-        game: 'roulette',
-        action: 'bet_placement'
-      },
-      extra: {
-        user_id: user.id,
-        bet_amount: amount,
-        bet_type: betType
-      }
+      tags: { game: 'wheel_of_chance', action: 'spin' },
+      extra: { user_id: user.id, bet_amount: amount }
     });
-    logger.error('Roulette bet error', { error, user_id: user.id });
+    logger.error('Wheel spin error', { error, user_id: user.id });
     return c.json({ error: 'Internal server error' }, 500)
   }
 }))
+
+// Provably fair verification endpoint
+const provablyFairVerifySchema = z.object({
+  server_seed: z.string().min(16),
+  client_seed: z.string().min(8),
+  nonce: z.number().int().min(0)
+})
+
+gameRoutes.post('/provably-fair/verify',
+  validationMiddleware(provablyFairVerifySchema),
+  asyncHandler(async (c: Context) => {
+    const { server_seed, client_seed, nonce } = c.get('validatedData')
+
+    const outcome = await provablyFairService.generateOutcome({
+      serverSeed: server_seed,
+      clientSeed: client_seed,
+      nonce
+    })
+
+    return c.json({
+      hash: outcome.hash,
+      random_value: outcome.randomValue,
+      server_seed_hash: provablyFairService.hashServerSeed(server_seed)
+    })
+  })
+)
 
 // Case Opening game endpoints
 gameRoutes.get('/cases', asyncHandler(async (c: Context) => {
@@ -357,7 +365,8 @@ gameRoutes.get('/cases/:caseTypeId', asyncHandler(async (c: Context) => {
 const simplifiedCaseOpeningSchema = z.object({
   caseTypeId: z.string().min(1, 'Case type ID is required'),
   previewOnly: z.boolean().optional().default(false),
-  requestId: z.string().optional() // For request deduplication
+  requestId: z.string().optional(), // For request deduplication
+  delayCredit: z.boolean().optional() // Frontend UX pattern - backend always processes atomically
 })
 
 gameRoutes.post('/cases/open',
@@ -389,16 +398,13 @@ gameRoutes.post('/cases/open',
     }
   });
 
-    // Request deduplication using promise-based approach (prevents race conditions)
+    // Request deduplication using RequestDeduplicationService
     const dedupKey = requestId ? `case_open_${user.id}_${requestId}` : null
-    const requestPromises = (global as any).requestPromises as Map<string, Promise<any>> | undefined
     
-    if (dedupKey && requestPromises) {
-      // If request is already in flight, wait for it and return same result
-      const existingPromise = requestPromises.get(dedupKey)
-      if (existingPromise) {
-        console.log(`🔄 Deduplicating request: ${dedupKey}`)
-        return await existingPromise
+    if (dedupKey) {
+      const existingResult = await requestDeduplication.getInFlight<any>(dedupKey)
+      if (existingResult) {
+        return existingResult
       }
     }
 
@@ -468,6 +474,19 @@ gameRoutes.post('/cases/open',
 
         const ip = c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP')
 
+        // Pre-check balance to avoid wasted computation on item selection
+        const balanceCheck = await CurrencyService.validateBalance(user.id, caseType.price)
+        if (!balanceCheck.isValid) {
+          Sentry.captureMessage('Insufficient balance for case opening', {
+            level: 'warning',
+            tags: { game: 'case_opening', action: 'balance_check_failed' },
+            extra: { user_id: user.id, case_type_id: caseTypeId, required: caseType.price, current: balanceCheck.currentBalance }
+          })
+          return c.json({
+            error: `Insufficient balance. Required: ${caseType.price}, Current: ${balanceCheck.currentBalance}`
+          }, 400)
+        }
+
         // Open the case with span
         const openingResult = await startSpan(
           {
@@ -508,9 +527,9 @@ gameRoutes.post('/cases/open',
           message: 'Case opened successfully',
           level: 'info',
           data: {
-            item_won: openingResult.item_won.name,
+            item_won: openingResult.item_won?.name || 'unknown',
             currency_awarded: openingResult.currency_awarded,
-            item_rarity: openingResult.item_won.rarity
+            item_rarity: openingResult.item_won?.rarity || 'unknown'
           }
         });
 
@@ -608,7 +627,8 @@ gameRoutes.post('/cases/open',
           user_id: user.id,
           case_type_id: caseTypeId 
         });
-        return c.json({ error: error?.message || 'Internal server error' }, 500)
+        const isProd = process.env.NODE_ENV === 'production';
+        return c.json({ error: isProd ? 'Internal server error' : (error?.message || 'Internal server error') }, 500)
       }
     }
   );
@@ -616,22 +636,8 @@ gameRoutes.post('/cases/open',
 
   // Store promise for deduplication and execute
   if (dedupKey) {
-    // Initialize cache if needed
-    if (!(global as any).requestPromises) {
-      (global as any).requestPromises = new Map<string, Promise<any>>()
-    }
-    
-    const promiseCache = (global as any).requestPromises as Map<string, Promise<any>>
-    
-    // Execute and store promise
-    const requestPromise = processRequest().finally(() => {
-      // Clean up after request completes (success or failure)
-      setTimeout(() => {
-        promiseCache.delete(dedupKey)
-      }, 30000) // Keep for 30s to handle retries
-    })
-    
-    promiseCache.set(dedupKey, requestPromise)
+    const requestPromise = processRequest()
+    await requestDeduplication.setInFlight(dedupKey, requestPromise)
     return await requestPromise
   } else {
     // No deduplication requested, execute directly

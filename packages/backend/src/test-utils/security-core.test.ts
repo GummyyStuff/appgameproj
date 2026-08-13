@@ -1,4 +1,4 @@
-import { describe, test, expect } from 'bun:test'
+import { describe, test, expect } from 'vitest'
 import { InputSanitizer, ThreatDetector } from '../middleware/validation'
 
 describe('Security Core Functions', () => {
@@ -122,7 +122,7 @@ describe('Security Core Functions', () => {
     test('should analyze input for multiple threats', () => {
       const maliciousInput = "'; DROP TABLE users; <script>alert(1)</script> ../../../etc/passwd"
       const threats = ThreatDetector.analyzeInput(maliciousInput)
-      
+
       expect(threats).toContain('sql_injection')
       expect(threats).toContain('xss')
       expect(threats).toContain('path_traversal')

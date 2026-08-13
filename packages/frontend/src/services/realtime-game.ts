@@ -13,7 +13,7 @@ const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID!
 
 export interface GameStateUpdate {
   userId: string
-  gameType: 'roulette' | 'blackjack' | 'case_opening'
+  gameType: 'wheel_of_chance' | 'blackjack' | 'case_opening'
   gameId?: string
   status: 'betting' | 'playing' | 'completed'
   data?: any
@@ -52,7 +52,7 @@ export class RealtimeGameService {
    * Uses client.subscribe() for Web/JavaScript
    */
   async subscribeToGame(
-    gameType: 'roulette' | 'blackjack' | 'case_opening',
+    gameType: 'wheel_of_chance' | 'blackjack' | 'case_opening',
     userId: string,
     onUpdate: (update: GameStateUpdate) => void
   ) {
@@ -98,7 +98,7 @@ export class RealtimeGameService {
    * Unsubscribe from game-specific updates
    */
   async unsubscribeFromGame(
-    gameType: 'roulette' | 'blackjack' | 'case_opening',
+    gameType: 'wheel_of_chance' | 'blackjack' | 'case_opening',
     userId: string
   ) {
     const key = `${gameType}-${userId}`
@@ -110,7 +110,7 @@ export class RealtimeGameService {
    * Uses client.subscribe() for Web/JavaScript
    */
   async subscribeToGameRoom(
-    gameType: 'roulette' | 'blackjack' | 'case_opening',
+    gameType: 'wheel_of_chance' | 'blackjack' | 'case_opening',
     onUpdate: (state: GameRoomState) => void
   ) {
     const key = `room-${gameType}`
@@ -152,7 +152,7 @@ export class RealtimeGameService {
    * Unsubscribe from game room updates
    */
   async unsubscribeFromGameRoom(
-    gameType: 'roulette' | 'blackjack' | 'case_opening'
+    gameType: 'wheel_of_chance' | 'blackjack' | 'case_opening'
   ) {
     const key = `room-${gameType}`
     this.unsubscribe(key)
@@ -162,7 +162,7 @@ export class RealtimeGameService {
    * Join a game room (presence)
    */
   async joinGameRoom(
-    gameType: 'roulette' | 'blackjack' | 'case_opening',
+    gameType: 'wheel_of_chance' | 'blackjack' | 'case_opening',
     userId: string,
     username: string
   ) {
@@ -180,7 +180,7 @@ export class RealtimeGameService {
    * Leave a game room (presence)
    */
   async leaveGameRoom(
-    gameType: 'roulette' | 'blackjack' | 'case_opening',
+    gameType: 'wheel_of_chance' | 'blackjack' | 'case_opening',
     userId: string,
     username: string
   ) {
@@ -198,7 +198,7 @@ export class RealtimeGameService {
    * Broadcast a game action
    */
   async broadcastGameAction(
-    gameType: 'roulette' | 'blackjack' | 'case_opening',
+    gameType: 'wheel_of_chance' | 'blackjack' | 'case_opening',
     userId: string,
     action: string,
     data?: any

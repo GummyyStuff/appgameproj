@@ -27,20 +27,6 @@ export const TarkovIcons = {
   ),
 
   // Game icons
-  Roulette: ({ className = '', size = 24 }: IconProps) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" className={className} fill="currentColor">
-      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none"/>
-      <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1" fill="none"/>
-      <circle cx="12" cy="12" r="6" stroke="currentColor" strokeWidth="1" fill="none"/>
-      <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="1" fill="none"/>
-      <circle cx="12" cy="12" r="2" fill="currentColor"/>
-      <line x1="12" y1="2" x2="12" y2="6" stroke="currentColor" strokeWidth="2"/>
-      <line x1="12" y1="18" x2="12" y2="22" stroke="currentColor" strokeWidth="2"/>
-      <line x1="2" y1="12" x2="6" y2="12" stroke="currentColor" strokeWidth="2"/>
-      <line x1="18" y1="12" x2="22" y2="12" stroke="currentColor" strokeWidth="2"/>
-    </svg>
-  ),
-
   Blackjack: ({ className = '', size = 24 }: IconProps) => (
     <svg width={size} height={size} viewBox="0 0 24 24" className={className} fill="currentColor">
       <rect x="3" y="4" width="6" height="9" rx="1" stroke="currentColor" strokeWidth="2" fill="none"/>

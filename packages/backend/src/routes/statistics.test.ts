@@ -1,245 +1,321 @@
-/**
- * API endpoint tests for Statistics routes
- * Tests key statistics endpoints with basic functionality
- */
+import { describe, test, expect, beforeEach, vi } from 'vitest'
+import { Hono } from 'hono'
 
-import { describe, test, expect } from 'bun:test'
+const mockGetAdvancedStatistics = vi.fn()
+const mockGetUserStatistics = vi.fn()
+const mockGetGameHistory = vi.fn()
+const mockGetFilteredGameHistory = vi.fn()
+const mockCalculateTimeSeriesData = vi.fn()
+const mockCalculateGameTypeBreakdown = vi.fn()
+const mockCalculateWinStreaks = vi.fn()
+const mockGetLeaderboard = vi.fn()
+const mockCalculateBetPatterns = vi.fn()
+const mockCalculatePlayingHabits = vi.fn()
 
-describe('Statistics API Routes', () => {
-  describe('Route Structure', () => {
-    test('should have all required statistics routes defined', async () => {
-      // Import the routes to check they exist
-      const { statisticsRoutes } = await import('./statistics')
-      
-      expect(statisticsRoutes).toBeDefined()
-      expect(typeof statisticsRoutes).toBe('object')
+vi.mock('../middleware/auth', () => ({
+  criticalAuthMiddleware: async (c: any, next: any) => {
+    c.set('user', { id: 'test-user-123', email: 'test@example.com' })
+    await next()
+  },
+}))
+
+vi.mock('../services/statistics-appwrite', () => ({
+  StatisticsServiceAppwrite: {
+    getAdvancedStatistics: (...args: any[]) => mockGetAdvancedStatistics(...args),
+    getFilteredGameHistory: (...args: any[]) => mockGetFilteredGameHistory(...args),
+    calculateTimeSeriesData: (...args: any[]) => mockCalculateTimeSeriesData(...args),
+    calculateGameTypeBreakdown: (...args: any[]) => mockCalculateGameTypeBreakdown(...args),
+    calculateWinStreaks: (...args: any[]) => mockCalculateWinStreaks(...args),
+    getLeaderboard: (...args: any[]) => mockGetLeaderboard(...args),
+    calculateBetPatterns: (...args: any[]) => mockCalculateBetPatterns(...args),
+    calculatePlayingHabits: (...args: any[]) => mockCalculatePlayingHabits(...args),
+  },
+}))
+
+vi.mock('../services/user-service', () => ({
+  UserService: {
+    getUserStatistics: (...args: any[]) => mockGetUserStatistics(...args),
+  },
+}))
+
+vi.mock('../services/game-service', () => ({
+  GameService: {
+    getGameHistory: (...args: any[]) => mockGetGameHistory(...args),
+  },
+}))
+
+import { statisticsRoutes } from './statistics'
+import { HTTPException } from 'hono/http-exception'
+
+function createApp() {
+  const app = new Hono()
+  app.onError((err, c) => {
+    if (err instanceof HTTPException) {
+      return c.json({ error: err.message }, err.status)
+    }
+    return c.json({ error: 'Internal server error' }, 500)
+  })
+  app.route('/', statisticsRoutes)
+  return app
+}
+
+describe('Statistics API', () => {
+  let app: Hono
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    app = createApp()
+  })
+
+  describe('GET /advanced', () => {
+    test('should return advanced statistics', async () => {
+      mockGetAdvancedStatistics.mockResolvedValue({
+        overview: { totalGames: 50, totalWagered: 5000 },
+      })
+
+      const res = await app.request('/advanced')
+      expect(res.status).toBe(200)
+      const data = await res.json()
+      expect(data.success).toBe(true)
+      expect(data.statistics).toBeDefined()
+      expect(data.generated_at).toBeDefined()
+    })
+
+    test('should accept filter query parameters', async () => {
+      mockGetAdvancedStatistics.mockResolvedValue({})
+
+      const res = await app.request('/advanced?gameType=wheel_of_chance&winOnly=true')
+      expect(res.status).toBe(200)
+      const data = await res.json()
+      expect(data.filters.gameType).toBe('wheel_of_chance')
+      expect(data.filters.winOnly).toBe(true)
+    })
+
+    test('should return 400 for invalid game type', async () => {
+      const res = await app.request('/advanced?gameType=invalid')
+      expect(res.status).toBe(400)
+    })
+
+    test('should return 400 when both winOnly and lossOnly are set', async () => {
+      const res = await app.request('/advanced?winOnly=true&lossOnly=true')
+      expect(res.status).toBe(400)
+    })
+
+    test('should return 500 when service throws', async () => {
+      mockGetAdvancedStatistics.mockRejectedValue(new Error('DB error'))
+
+      const res = await app.request('/advanced')
+      expect(res.status).toBe(500)
     })
   })
 
-  describe('Route Dependencies', () => {
-    test('should import all required services', async () => {
-      // NOTE: StatisticsService and DatabaseService have been migrated to Appwrite
-      const { StatisticsService } = await import('../services/statistics-appwrite')
-      const { appwriteDb } = await import('../services/appwrite-database')
-      
-      expect(StatisticsService).toBeDefined()
-      expect(appwriteDb).toBeDefined()
-      
-      // Check that key methods exist
-      expect(typeof StatisticsService.getAdvancedStatistics).toBe('function')
-      expect(typeof StatisticsService.calculateTimeSeriesData).toBe('function')
-      expect(typeof StatisticsService.calculateGameTypeBreakdown).toBe('function')
-      expect(typeof StatisticsService.calculateWinStreaks).toBe('function')
-      expect(typeof StatisticsService.calculateBetPatterns).toBe('function')
-      expect(typeof StatisticsService.calculatePlayingHabits).toBe('function')
-    expect(typeof StatisticsService.getLeaderboard).toBe('function')
-    expect(typeof StatisticsService.getGlobalStatistics).toBe('function')
-    
-    // DatabaseService is deprecated - these methods are now in StatisticsService
-    // expect(typeof DatabaseService.getUserStatistics).toBe('function')
-    // expect(typeof DatabaseService.getGameHistory).toBe('function')
+  describe('GET /basic', () => {
+    test('should return basic user statistics', async () => {
+      mockGetUserStatistics.mockResolvedValue({
+        totalGames: 50,
+        totalWagered: 5000,
+        totalWon: 7000,
+      })
+
+      const res = await app.request('/basic')
+      expect(res.status).toBe(200)
+      const data = await res.json()
+      expect(data.success).toBe(true)
+      expect(data.statistics).toBeDefined()
+      expect(data.generated_at).toBeDefined()
+    })
+
+    test('should return 500 when service throws', async () => {
+      mockGetUserStatistics.mockRejectedValue(new Error('DB error'))
+
+      const res = await app.request('/basic')
+      expect(res.status).toBe(500)
     })
   })
 
-  describe('Validation Schemas', () => {
-    test('should validate statistics filters correctly', async () => {
-      // Test that the validation schemas work as expected
-      const { z } = await import('zod')
-      const { isValidGameType } = await import('../types/database')
-      
-      // Test game type validation
-      expect(isValidGameType('roulette')).toBe(true)
-      expect(isValidGameType('case_opening')).toBe(true)
-      expect(isValidGameType('invalid')).toBe(false)
-      
-      // Test that zod is available for validation
-      expect(z).toBeDefined()
-      expect(typeof z.object).toBe('function')
+  describe('GET /history', () => {
+    test('should return paginated game history', async () => {
+      mockGetGameHistory.mockResolvedValue({
+        games: [{ id: '1', game_type: 'roulette' }],
+        total: 1,
+      })
+
+      const res = await app.request('/history?limit=10&offset=0')
+      expect(res.status).toBe(200)
+      const data = await res.json()
+      expect(data.success).toBe(true)
+      expect(data.generated_at).toBeDefined()
+    })
+
+    test('should return 400 for invalid limit', async () => {
+      const res = await app.request('/history?limit=999')
+      expect(res.status).toBe(400)
+    })
+
+    test('should return 400 for invalid game type', async () => {
+      const res = await app.request('/history?gameType=invalid')
+      expect(res.status).toBe(400)
     })
   })
 
-  describe('Error Handling', () => {
-    test('should have proper error handling middleware', async () => {
-      const { asyncHandler } = await import('../middleware/error')
-      const { HTTPException } = await import('hono/http-exception')
-      
-      expect(asyncHandler).toBeDefined()
-      expect(typeof asyncHandler).toBe('function')
-      expect(HTTPException).toBeDefined()
+  describe('GET /time-series', () => {
+    test('should return time series data', async () => {
+      mockGetFilteredGameHistory.mockResolvedValue([])
+      mockCalculateTimeSeriesData.mockReturnValue([
+        { date: '2024-01-15', games: 5, wagered: 500, won: 700, profit: 200 },
+      ])
+
+      const res = await app.request('/time-series')
+      expect(res.status).toBe(200)
+      const data = await res.json()
+      expect(data.success).toBe(true)
+      expect(data.time_series).toBeDefined()
+    })
+
+    test('should accept date filter parameters', async () => {
+      mockGetFilteredGameHistory.mockResolvedValue([])
+      mockCalculateTimeSeriesData.mockReturnValue([])
+
+      const res = await app.request('/time-series?dateFrom=2024-01-01T00:00:00Z&dateTo=2024-01-31T23:59:59Z')
+      expect(res.status).toBe(200)
     })
   })
 
-  describe('Authentication', () => {
-    test('should have authentication middleware', async () => {
-      const { authMiddleware } = await import('../middleware/auth')
-      
-      expect(authMiddleware).toBeDefined()
-      expect(typeof authMiddleware).toBe('function')
+  describe('GET /game-breakdown', () => {
+    test('should return game type breakdown', async () => {
+      mockGetFilteredGameHistory.mockResolvedValue([])
+      mockCalculateGameTypeBreakdown.mockReturnValue([
+        { gameType: 'roulette', totalGames: 30 },
+        { gameType: 'case_opening', totalGames: 20 },
+      ])
+
+      const res = await app.request('/game-breakdown')
+      expect(res.status).toBe(200)
+      const data = await res.json()
+      expect(data.success).toBe(true)
+      expect(data.game_breakdown).toHaveLength(2)
     })
   })
 
-  describe('Statistics Service Integration', () => {
-    test('should handle empty statistics correctly', () => {
-      const { StatisticsService } = require('../services/statistics-appwrite')
-      
-      const emptyStats = StatisticsService.getEmptyStatistics()
-      expect(emptyStats).toBeDefined()
-      expect(emptyStats.overview).toBeDefined()
-      expect(emptyStats.gameBreakdown).toEqual([])
-      expect(emptyStats.timeSeriesData).toEqual([])
-      
-      const emptyGameStats = StatisticsService.getEmptyGameStatistics()
-      expect(emptyGameStats).toBeDefined()
-      expect(emptyGameStats.totalGames).toBe(0)
-      expect(emptyGameStats.totalWagered).toBe(0)
-      expect(emptyGameStats.totalWon).toBe(0)
+  describe('GET /streaks', () => {
+    test('should return win/loss streaks', async () => {
+      mockGetFilteredGameHistory.mockResolvedValue([])
+      mockCalculateWinStreaks.mockReturnValue({
+        longest: 5,
+        longestLoss: 3,
+        current: 2,
+      })
+
+      const res = await app.request('/streaks')
+      expect(res.status).toBe(200)
+      const data = await res.json()
+      expect(data.success).toBe(true)
+      expect(data.streaks.longest).toBe(5)
+    })
+  })
+
+  describe('GET /leaderboard', () => {
+    test('should return leaderboard data', async () => {
+      mockGetLeaderboard.mockResolvedValue([
+        { userId: 'user-1', value: 50000 },
+        { userId: 'user-2', value: 40000 },
+      ])
+
+      const res = await app.request('/leaderboard?metric=balance&limit=10')
+      expect(res.status).toBe(200)
+      const data = await res.json()
+      expect(data.success).toBe(true)
+      expect(data.leaderboard).toHaveLength(2)
+      expect(data.metric).toBe('balance')
+      expect(data.limit).toBe(10)
     })
 
-    test('should calculate statistics with sample data', () => {
-      const { StatisticsService } = require('../services/statistics-appwrite')
-      
-      const sampleGames = [
+    test('should return 400 for invalid metric', async () => {
+      const res = await app.request('/leaderboard?metric=invalid')
+      expect(res.status).toBe(400)
+    })
+
+    test('should return 400 for limit over 100', async () => {
+      const res = await app.request('/leaderboard?limit=200')
+      expect(res.status).toBe(400)
+    })
+
+    test('should use default values when params not provided', async () => {
+      mockGetLeaderboard.mockResolvedValue([])
+
+      const res = await app.request('/leaderboard')
+      expect(res.status).toBe(200)
+      const data = await res.json()
+      expect(data.metric).toBe('balance')
+      expect(data.limit).toBe(10)
+    })
+  })
+
+  describe('GET /betting-patterns', () => {
+    test('should return betting patterns analysis', async () => {
+      mockGetFilteredGameHistory.mockResolvedValue([])
+      mockCalculateBetPatterns.mockReturnValue({
+        betDistribution: [100, 200, 300],
+        mostCommonBet: 100,
+      })
+
+      const res = await app.request('/betting-patterns')
+      expect(res.status).toBe(200)
+      const data = await res.json()
+      expect(data.success).toBe(true)
+      expect(data.betting_patterns).toBeDefined()
+    })
+  })
+
+  describe('GET /playing-habits', () => {
+    test('should return playing habits analysis', async () => {
+      mockGetFilteredGameHistory.mockResolvedValue([])
+      mockCalculatePlayingHabits.mockReturnValue({
+        mostActiveHour: 20,
+        mostActiveDay: 'Saturday',
+        averageSessionLength: 45,
+        totalPlayTime: 500,
+      })
+
+      const res = await app.request('/playing-habits')
+      expect(res.status).toBe(200)
+      const data = await res.json()
+      expect(data.success).toBe(true)
+      expect(data.playing_habits).toBeDefined()
+    })
+  })
+
+  describe('GET /export', () => {
+    test('should return export data', async () => {
+      mockGetFilteredGameHistory.mockResolvedValue([
         {
-          $id: '1',
-          userId: 'test-user',
-          gameType: 'roulette',
-          betAmount: 100,
-          winAmount: 200,
-          resultData: JSON.stringify({ bet_type: 'red', bet_value: 'red', winning_number: 7, multiplier: 2 }),
-          createdAt: '2024-01-15T10:00:00Z'
+          created_at: '2024-01-15T10:00:00Z',
+          game_type: 'roulette',
+          bet_amount: 100,
+          win_amount: 200,
+          game_duration: 30,
+          result_data: { winning_number: 7 },
         },
-        {
-          $id: '2',
-          userId: 'test-user',
-          gameType: 'case_opening',
-          betAmount: 50,
-          winAmount: 0,
-          resultData: JSON.stringify({ 
-            caseId: 'test-case',
-            itemWon: { name: 'Test Item', rarity: 'common', value: 0 }
-          }),
-          createdAt: '2024-01-15T11:00:00Z'
-        }
-      ]
+      ])
 
-      const overview = StatisticsService.calculateOverviewStatistics(sampleGames)
-      expect(overview.totalGames).toBe(2)
-      expect(overview.totalWagered).toBe(150)
-      expect(overview.totalWon).toBe(200)
-      expect(overview.netProfit).toBe(50)
-      expect(overview.winRate).toBe(50) // 1 win out of 2 games
-
-      const breakdown = StatisticsService.calculateGameTypeBreakdown(sampleGames)
-      expect(breakdown).toHaveLength(2) // All game types should be included: roulette, case_opening
-      
-      const rouletteBreakdown = breakdown.find(b => b.gameType === 'roulette')
-      expect(rouletteBreakdown).toBeDefined()
-      expect(rouletteBreakdown!.statistics.totalGames).toBe(1)
-      expect(rouletteBreakdown!.statistics.winRate).toBe(100)
-
-      const caseOpeningBreakdown = breakdown.find(b => b.gameType === 'case_opening')
-      expect(caseOpeningBreakdown).toBeDefined()
-      expect(caseOpeningBreakdown!.statistics.totalGames).toBe(1)
-      expect(caseOpeningBreakdown!.statistics.winRate).toBe(0)
-
-      const timeSeries = StatisticsService.calculateTimeSeriesData(sampleGames)
-      expect(timeSeries).toHaveLength(1) // Both games on same date
-      expect(timeSeries[0].date).toBe('2024-01-15')
-      expect(timeSeries[0].games).toBe(2)
-      expect(timeSeries[0].wagered).toBe(150)
-      expect(timeSeries[0].won).toBe(200)
-      expect(timeSeries[0].profit).toBe(50)
-
-      const streaks = StatisticsService.calculateWinStreaks(sampleGames)
-      expect(streaks.longest).toBe(1)
-      expect(streaks.longestLoss).toBe(1)
-      expect(typeof streaks.current).toBe('number')
-
-      const patterns = StatisticsService.calculateBetPatterns(sampleGames)
-      expect(patterns.betDistribution.length).toBeGreaterThan(0)
-      expect(typeof patterns.mostCommonBet).toBe('number')
-
-      const habits = StatisticsService.calculatePlayingHabits(sampleGames)
-      expect(typeof habits.mostActiveHour).toBe('number')
-      expect(typeof habits.mostActiveDay).toBe('string')
-      expect(typeof habits.averageSessionLength).toBe('number')
-      expect(typeof habits.totalPlayTime).toBe('number')
+      const res = await app.request('/export')
+      expect(res.status).toBe(200)
+      const data = await res.json()
+      expect(data.success).toBe(true)
+      expect(data.export_data).toHaveLength(1)
+      expect(data.total_records).toBe(1)
+      expect(data.export_data[0].date).toBe('2024-01-15')
+      expect(data.export_data[0].game_type).toBe('roulette')
     })
-  })
 
-  describe('Database Service Integration', () => {
-    test('should have all required database methods', () => {
-      const { appwriteDb } = require('../services/appwrite-database')
-      
-      // Check that all required methods exist
-      expect(typeof appwriteDb.listDocuments).toBe('function')
-      expect(typeof appwriteDb.getDocument).toBe('function')
-      expect(typeof appwriteDb.createDocument).toBe('function')
-      expect(typeof appwriteDb.updateDocument).toBe('function')
-      expect(typeof appwriteDb.deleteDocument).toBe('function')
-      expect(typeof appwriteDb.equal).toBe('function')
-      expect(typeof appwriteDb.greaterThan).toBe('function')
-      expect(typeof appwriteDb.lessThan).toBe('function')
-      // NOTE: getLeaderboard and getGlobalGameStats are now in StatisticsService
-      const { StatisticsService } = require('../services/statistics-appwrite')
-      expect(typeof StatisticsService.getLeaderboard).toBe('function')
-      expect(typeof StatisticsService.getGlobalStatistics).toBe('function')
-    })
-  })
+    test('should return empty export when no games', async () => {
+      mockGetFilteredGameHistory.mockResolvedValue([])
 
-  describe('Type Safety', () => {
-    test('should have proper TypeScript types', async () => {
-      const { 
-        GameHistory, 
-        UserStatistics, 
-        GameHistoryResponse,
-        TABLE_NAMES,
-        RPC_FUNCTIONS,
-        GAME_CONFIG
-      } = await import('../types/database')
-      
-      // Check that constants are defined
-      expect(TABLE_NAMES).toBeDefined()
-      expect(TABLE_NAMES.USER_PROFILES).toBe('user_profiles')
-      expect(TABLE_NAMES.GAME_HISTORY).toBe('game_history')
-      expect(TABLE_NAMES.DAILY_BONUSES).toBe('daily_bonuses')
-      
-      expect(RPC_FUNCTIONS).toBeDefined()
-      expect(RPC_FUNCTIONS.GET_USER_BALANCE).toBe('get_user_balance')
-      expect(RPC_FUNCTIONS.PROCESS_GAME_TRANSACTION).toBe('process_game_transaction')
-      expect(RPC_FUNCTIONS.GET_USER_STATISTICS).toBe('get_user_statistics')
-      expect(RPC_FUNCTIONS.GET_GAME_HISTORY).toBe('get_game_history')
-      
-      expect(GAME_CONFIG).toBeDefined()
-      expect(GAME_CONFIG.STARTING_BALANCE).toBe(10000)
-      expect(GAME_CONFIG.DAILY_BONUS_AMOUNT).toBe(1000)
-      expect(GAME_CONFIG.GAME_TYPES).toEqual(['roulette', 'case_opening'])
-    })
-  })
-
-  describe('API Route Structure', () => {
-    test('should export statistics routes properly', async () => {
-      const statisticsModule = await import('./statistics')
-      
-      expect(statisticsModule.statisticsRoutes).toBeDefined()
-      
-      // The routes should be a Hono instance
-      expect(typeof statisticsModule.statisticsRoutes).toBe('object')
-      expect(statisticsModule.statisticsRoutes.constructor.name).toBe('Hono')
-    })
-  })
-
-  describe('Middleware Integration', () => {
-    test('should have proper middleware setup', async () => {
-      // Check that all required middleware exists
-      const authModule = await import('../middleware/auth')
-      const errorModule = await import('../middleware/error')
-      
-      expect(authModule.authMiddleware).toBeDefined()
-      expect(errorModule.asyncHandler).toBeDefined()
-      
-      expect(typeof authModule.authMiddleware).toBe('function')
-      expect(typeof errorModule.asyncHandler).toBe('function')
+      const res = await app.request('/export')
+      expect(res.status).toBe(200)
+      const data = await res.json()
+      expect(data.export_data).toHaveLength(0)
+      expect(data.total_records).toBe(0)
     })
   })
 })

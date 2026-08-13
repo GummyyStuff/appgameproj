@@ -333,6 +333,17 @@ const achievementDefinitions: Omit<AchievementDefinition, '$id' | 'createdAt'>[]
     isActive: true,
   },
   {
+    achievementId: 'wheel-master',
+    title: 'Wheel Master',
+    description: 'Win 100 Wheel of Chance games',
+    category: 'progression',
+    rarity: 'rare',
+    maxProgress: 100,
+    rewardType: 'currency',
+    rewardAmount: 15000,
+    isActive: true,
+  },
+  {
     achievementId: 'blackjack-ace',
     title: 'Blackjack Ace',
     description: 'Get 10 blackjacks in a single session',
@@ -434,7 +445,7 @@ const achievementDefinitions: Omit<AchievementDefinition, '$id' | 'createdAt'>[]
     isActive: true,
   },
   {
-    achievementId: 'big-win',
+    achievementId: 'big-trade-win',
     title: 'Big Win',
     description: 'Profit ₽5,000 in a single trade',
     category: 'special',
@@ -523,10 +534,7 @@ async function seedAchievements() {
     try {
       const { error } = await appwriteDb.createDocument(
         COLLECTION_IDS.ACHIEVEMENT_DEFINITIONS,
-        {
-          ...achievement,
-          createdAt: new Date().toISOString(),
-        }
+        { ...achievement }
       );
       
       if (error) {

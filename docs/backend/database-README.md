@@ -71,8 +71,8 @@ const queryResult = await databases.listDocuments(
 
 ## Related Components
 - [Appwrite Integration Guide](./appwrite-README.md)
-- [Authentication Flow](../frontend/README.md#authentication)
-- [Performance Optimization](../backend/redis-README.md)
+- [Developer Guide](../README.md)
+- [Performance Optimization](./redis-README.md)
 
 ## Version History
 - v0.1: Initial implementation following migration to Appwrite

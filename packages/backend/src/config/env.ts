@@ -35,6 +35,9 @@ const envSchema = z.object({
   
   // Sentry Configuration
   SENTRY_DSN: z.string().url().optional(),
+
+  // CSP Configuration
+  CSP_CONNECT_EXTRA: z.string().optional(),
   
   // Redis Configuration
   REDIS_URL: z.string().url().optional(), // e.g., redis://localhost:6379

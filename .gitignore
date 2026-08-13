@@ -14,6 +14,9 @@ lerna-debug.log*
 .env.test.local
 .env.production.local
 
+# npm config (may contain FA Pro token)
+.npmrc
+
 # Build outputs
 dist/
 build/
@@ -34,6 +37,10 @@ pids
 # Coverage directory used by tools like istanbul
 coverage/
 *.lcov
+
+# Playwright test state and OpenCode workspace data
+test-results/
+.opencode/
 
 # nyc test coverage
 .nyc_output

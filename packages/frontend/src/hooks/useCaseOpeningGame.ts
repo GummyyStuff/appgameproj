@@ -16,7 +16,6 @@ import { CaseOpeningResponse } from '../services/caseOpeningApi'
 import { useOptimisticCaseOpening, getCaseCacheService } from '../services/caseCache'
 import { useErrorHandling } from './useErrorHandling'
 import { performanceMonitoring, usePerformanceMonitoring } from '../utils/performanceMonitoring'
-import { userExperienceMonitor, useUserExperienceMonitoring } from '../utils/userExperienceMetrics'
 
 export interface UseCaseOpeningGameReturn {
   gameState: SimplifiedGameState
@@ -66,7 +65,6 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
 
   // Performance monitoring hooks
   const { monitorAPICall, monitorGameAction, startTiming } = usePerformanceMonitoring()
-  const { recordCaseOpening, recordErrorRecovery, startUserFlow, recordFlowStep, completeUserFlow } = useUserExperienceMonitoring()
 
   // Debouncing state for preventing rapid clicks
   const [isProcessing, setIsProcessing] = useState(false)
@@ -84,6 +82,9 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
     performanceMonitoring.initialize()
     return () => {
       // Cleanup on unmount
+      if (animationTimeoutRef.current) {
+        clearTimeout(animationTimeoutRef.current)
+      }
     }
   }, [])
 
@@ -99,6 +100,9 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
 
   // Track pending winnings to delay balance update until congratulations
   const [pendingWinnings, setPendingWinnings] = useState<number>(0)
+
+  // Track setTimeout for cleanup on unmount
+  const animationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Calculate display balance (with delayCredit, balance already only has deduction, no winnings yet)
   const displayBalance = balance
@@ -125,13 +129,11 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
    * Quick open mode - skips animation and shows result immediately (CS2-style)
    * Based on CS2 case simulator's quick open implementation
    */
-  const handleQuickOpen = useCallback(async (selectedCase: CaseType, flowId: string) => {
+   const handleQuickOpen = useCallback(async (selectedCase: CaseType, flowId: string) => {
     try {
-      recordFlowStep(flowId, 'quick_open_started', true)
-      
       // Play immediate unlock sound (different from regular open)
       playCaseOpen()
-      
+
       // Make API call to open case
       const openingResponse = await monitorAPICall(
         '/api/games/cases/open',
@@ -144,13 +146,11 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
         })
       )
 
-      recordFlowStep(flowId, 'quick_open_api_success', true)
-
       const result = openingResponse.opening_result
 
       // Transition directly to complete phase (skip animation phases)
       transitionToPhase('complete', 'Quick open completed')
-      
+
       setGameState(prev => ({
         ...prev,
         phase: 'complete',
@@ -161,7 +161,7 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
 
       // Play rarity-based reveal sound
       playRarityReveal(result.item_won.rarity)
-      
+
       // Show success message with winnings
       toast.success(
         'Case Opened Instantly!',
@@ -169,15 +169,9 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
         { duration: 3000 }
       )
 
-      recordFlowStep(flowId, 'quick_open_completed', true)
-      completeUserFlow(flowId)
-
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to quick open case')
       const recovered = await errorHandling.handleError(error, 'quick open')
-
-      recordFlowStep(flowId, 'quick_open_error', false, error.message)
-      recordErrorRecovery(recovered)
 
       if (!recovered) {
         transitionToPhase('error', `Quick open failed: ${error.message}`)
@@ -186,10 +180,9 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
           phase: 'error',
           error: error.message
         }))
-        completeUserFlow(flowId)
       }
     }
-  }, [user, balance, caseData, optimisticCaseOpening, errorHandling, toast, playCaseOpen, playRarityReveal, transitionToPhase, monitorAPICall, recordFlowStep, recordErrorRecovery, completeUserFlow])
+  }, [user, balance, caseData, optimisticCaseOpening, errorHandling, toast, playCaseOpen, playRarityReveal, transitionToPhase, monitorAPICall])
 
   /**
    * Opens a case and manages the complete case opening flow.
@@ -216,18 +209,13 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
     const selectedCase = caseType || caseData.selectedCase
     const caseOpeningStart = performance.now()
 
-    // Start user flow tracking
-    const flowId = startUserFlow('case_opening', 'select_case')
-
     if (!selectedCase || !user) {
-      recordFlowStep(flowId, 'validation_failed', false, 'No case selected or user not authenticated')
       return
     }
 
     // Prevent opening a case while another one is in progress
     if (gameState.phase !== 'idle' && gameState.phase !== 'complete') {
       console.warn('Cannot open case: another case opening is in progress', gameState.phase)
-      recordFlowStep(flowId, 'validation_failed', false, 'Case opening already in progress')
       toast.warning('Please wait', 'Another case is already opening')
       return
     }
@@ -237,7 +225,6 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
     const timeSinceLastOpen = now - lastOpenTimeRef.current
     if (timeSinceLastOpen < 500) {
       console.warn('Debouncing: Click too fast', timeSinceLastOpen)
-      recordFlowStep(flowId, 'validation_failed', false, `Click debounced (${timeSinceLastOpen}ms since last)`)
       toast.warning('Too fast!', 'Please wait before opening another case')
       return
     }
@@ -250,24 +237,20 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
     setIsProcessing(true)
     lastOpenTimeRef.current = now
 
-    recordFlowStep(flowId, 'balance_check', true)
-
     if (balance < selectedCase.price) {
       toast.error('Insufficient balance', `You need ${formatCurrency(selectedCase.price - balance, 'roubles')} more`)
-      recordFlowStep(flowId, 'balance_check_failed', false, 'Insufficient balance')
       return
     }
 
     // Check if quick open mode is enabled (CS2-style instant result)
     if (quickOpen) {
-      await handleQuickOpen(selectedCase, flowId)
+      await handleQuickOpen(selectedCase, '')
       return
     }
 
     // Update selected case if passed as parameter
     if (caseType) {
       caseData.selectCase(caseType)
-      recordFlowStep(flowId, 'case_selected', true, `Selected case: ${caseType.name}`)
 
       // Prefetch case items for better performance
       const prefetchTiming = startTiming('case_prefetch')
@@ -275,11 +258,9 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
         const cacheService = getCaseCacheService()
         await cacheService.prefetchCaseItems(caseType.id)
         prefetchTiming()
-        recordFlowStep(flowId, 'cache_prefetch', true)
       } catch (error) {
         console.warn('Cache service not available for prefetching:', error)
         prefetchTiming()
-        recordFlowStep(flowId, 'cache_prefetch', false, 'Cache service unavailable')
       }
     }
 
@@ -295,8 +276,6 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
       error: null,
       selectedCase
     }))
-
-    recordFlowStep(flowId, 'loading_started', true)
 
     // Play case opening sound
     playCaseOpen()
@@ -315,14 +294,10 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
         })
       )
 
-      recordFlowStep(flowId, 'api_call_success', true)
-
       // Show deduction message
       toast.success('Case Opened', `-${formatCurrency(selectedCase.price, 'roubles')} spent on case`, {
         duration: 2000
       })
-
-      recordFlowStep(flowId, 'balance_deducted', true)
 
       // Store transaction ID for later winnings credit
       setGameState(prev => ({
@@ -334,17 +309,13 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
       setPendingWinnings(openingResponse.opening_result.currency_awarded)
 
       // Setup animation with small delay to ensure DOM is ready (reduced from 1000ms to 100ms)
-      setTimeout(async () => {
-        recordFlowStep(flowId, 'animation_setup_started', true)
-        await setupCaseOpeningAnimation(selectedCase, flowId, undefined, openingResponse)
+      animationTimeoutRef.current = setTimeout(async () => {
+        await setupCaseOpeningAnimation(selectedCase, '', undefined, openingResponse)
       }, 100)
 
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to open case')
       const recovered = await errorHandling.handleError(error, 'case opening')
-
-      recordFlowStep(flowId, 'error_occurred', false, error.message)
-      recordErrorRecovery(recovered)
 
       if (!recovered) {
         transitionToPhase('error', `Case opening failed: ${error.message}`)
@@ -353,15 +324,12 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
           phase: 'error',
           error: error.message
         }))
-        completeUserFlow(flowId)
-      } else {
-        recordFlowStep(flowId, 'error_recovered', true)
       }
     } finally {
       // Clear processing flag after operation completes
       setIsProcessing(false)
     }
-  }, [user, balance, gameState.phase, caseData, caseOpening, errorHandling, toast, playCaseOpen, transitionToPhase, startUserFlow, recordFlowStep, recordErrorRecovery, completeUserFlow, monitorAPICall, monitorGameAction, startTiming, currentDuration, quickOpen, isProcessing])
+  }, [user, balance, gameState.phase, caseData, caseOpening, errorHandling, toast, playCaseOpen, transitionToPhase, monitorAPICall, monitorGameAction, startTiming, currentDuration, quickOpen, isProcessing])
 
   // Consolidated function using TypeScript function overloading for flexible parameter handling
   const setupCaseOpeningAnimation: {
@@ -382,17 +350,13 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
     const animationSetupTiming = startTiming('animation_setup')
 
     try {
-      recordFlowStep(flowId, 'animation_setup_started', true)
-
       // Load case items for carousel generation
       const caseItemsTiming = startTiming('case_items_load')
       const caseItems = await caseOpening.loadCaseItems(selectedCase.id)
       caseItemsTiming()
-      recordFlowStep(flowId, 'case_items_loaded', true, `${caseItems.length} items loaded`)
 
       // Transition to opening phase with carousel animation config
       transitionToPhase('opening', 'Setting up carousel animation')
-      recordFlowStep(flowId, 'animation_config_created', true)
 
       const animationConfig: AnimationConfig = {
         type: 'carousel',
@@ -402,7 +366,6 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
       }
 
       caseAnimation.startAnimation(animationConfig)
-      recordFlowStep(flowId, 'animation_started', true)
 
       setGameState(prev => ({
         ...prev,
@@ -435,16 +398,12 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
         itemPool = itemPool.slice(0, 20)
       }
 
-      recordFlowStep(flowId, 'item_pool_filtered', true, `${itemPool.length} valid items`)
-
       // Check if we have enough items for a proper carousel animation
       if (itemPool.length < CAROUSEL_TIMING.MIN_SEQUENCE_LENGTH) {
         // Not enough items for carousel - use reveal animation instead
-        recordFlowStep(flowId, 'insufficient_items_for_carousel', false, `Only ${itemPool.length} items, need ${CAROUSEL_TIMING.MIN_SEQUENCE_LENGTH}`)
 
         // Transition to revealing phase for simple reveal animation
         transitionToPhase('revealing', 'Insufficient items for carousel, using reveal animation')
-        recordFlowStep(flowId, 'reveal_phase_started', true)
 
         const revealAnimationConfig: AnimationConfig = {
           type: 'reveal',
@@ -470,7 +429,6 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
         // when the animation completes, which will credit the winnings
 
         animationSetupTiming()
-        recordFlowStep(flowId, 'animation_setup_completed', true)
         return
       }
 
@@ -481,11 +439,9 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
       const sequenceGenerationTiming = startTiming('sequence_generation')
       const carouselSequence = generateCarouselSequence(itemPool, winningItem, sequenceLength, winningPosition)
       sequenceGenerationTiming()
-      recordFlowStep(flowId, 'sequence_generated', true, `Sequence length: ${carouselSequence.length}`)
 
       // Transition to animating phase with carousel data
       transitionToPhase('animating', 'Starting carousel animation')
-      recordFlowStep(flowId, 'animating_phase_started', true)
 
       const updatedAnimationConfig: AnimationConfig = {
         ...animationConfig,
@@ -494,7 +450,6 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
       }
 
       caseAnimation.startAnimation(updatedAnimationConfig)
-      recordFlowStep(flowId, 'carousel_animation_started', true)
 
       setGameState(prev => ({
         ...prev,
@@ -510,13 +465,10 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
       }))
 
       animationSetupTiming()
-      recordFlowStep(flowId, 'animation_setup_completed', true)
 
     } catch (error) {
       console.error('Animation setup error:', error)
       animationSetupTiming()
-
-      recordFlowStep(flowId, 'animation_setup_error', false, error instanceof Error ? error.message : 'Unknown error')
 
       // Fallback to reveal animation
       const recovered = await errorHandling.handleError(
@@ -524,13 +476,10 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
         'animation setup'
       )
 
-      recordErrorRecovery(recovered)
-
       if (recovered) {
-        recordFlowStep(flowId, 'fallback_attempted', true)
         // Try reveal fallback - only if we have openingResponse
         if (openingResponse) {
-          await handleRevealFallback(selectedCase, openingResponse, flowId)
+          await handleRevealFallback(selectedCase, openingResponse, '')
         }
       } else {
         transitionToPhase('error', 'Animation setup failed')
@@ -539,20 +488,16 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
           phase: 'error',
           error: 'Failed to setup animation'
         }))
-        completeUserFlow(flowId)
       }
     }
-  }, [caseOpening, caseAnimation, transitionToPhase, errorHandling, startTiming, recordFlowStep, recordErrorRecovery, completeUserFlow, currentDuration])
+  }, [caseOpening, caseAnimation, transitionToPhase, errorHandling, startTiming, currentDuration])
 
   const handleRevealFallback = useCallback(async (selectedCase: CaseType, openingResponse: CaseOpeningResponse, flowId: string) => {
     try {
-      recordFlowStep(flowId, 'reveal_fallback_started', true)
-
       // Use the result from the opening response (already completed)
       const result = openingResponse.opening_result
 
       transitionToPhase('revealing', 'Using reveal fallback')
-      recordFlowStep(flowId, 'reveal_phase_started', true)
 
       const revealAnimationConfig: AnimationConfig = {
         type: 'reveal',
@@ -579,21 +524,26 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
 
     } catch (error) {
       console.error('Reveal fallback error:', error)
-      recordFlowStep(flowId, 'reveal_fallback_error', false, error instanceof Error ? error.message : 'Unknown error')
       transitionToPhase('error', 'Reveal fallback failed')
       setGameState(prev => ({
         ...prev,
         phase: 'error',
         error: 'Failed to complete case opening'
       }))
-      completeUserFlow(flowId)
     }
-  }, [transitionToPhase, recordFlowStep, completeUserFlow])
+  }, [transitionToPhase])
 
 
   const completeAnimation = useCallback(async (result: CaseOpeningResult) => {
     if (!gameState.pendingCompletion) {
-      console.warn('No pending completion data found')
+      console.error('completeAnimation called without pendingCompletion data')
+      toast.error('Animation error', 'No pending completion data found')
+      transitionToPhase('error', 'Animation completion failed: no pending data')
+      setGameState(prev => ({
+        ...prev,
+        phase: 'error',
+        error: 'Animation completion failed: no pending data'
+      }))
       return
     }
 
@@ -621,7 +571,6 @@ export const useCaseOpeningGame = (): UseCaseOpeningGameReturn => {
 
       // Animation is complete - transition to complete phase with final result
       transitionToPhase('complete', 'Case opening animation completed')
-      // recordCaseOpening(finalResult) // TODO: Fix function signature
 
       setGameState(prev => ({
         ...prev,

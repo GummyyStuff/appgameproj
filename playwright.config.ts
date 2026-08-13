@@ -1,10 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
+import { STORAGE_STATE_PATH } from './e2e/auth-state';
 
 /**
  * Playwright Configuration for E2E Testing
- * 
- * This configuration enables end-to-end testing that's impossible with Happy DOM.
- * We'll use Playwright for real browser testing of UI components.
  */
 
 export default defineConfig({
@@ -15,31 +13,46 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
   use: {
-    baseURL: 'http://localhost:5173',
+    baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
   },
 
   projects: [
     {
+      name: 'setup',
+      testMatch: /auth\.setup\.ts/,
+    },
+    {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: STORAGE_STATE_PATH,
+      },
+      dependencies: ['setup'],
     },
 
     {
       name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
+      use: {
+        ...devices['Desktop Firefox'],
+        storageState: STORAGE_STATE_PATH,
+      },
+      dependencies: ['setup'],
     },
 
     {
       name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
+      use: {
+        ...devices['Desktop Safari'],
+        storageState: STORAGE_STATE_PATH,
+      },
+      dependencies: ['setup'],
     },
   ],
 
   webServer: {
     command: 'bun run dev',
-    url: 'http://localhost:5173',
+    url: 'http://localhost:3000/api/health',
     reuseExistingServer: !process.env.CI,
   },
 });
-

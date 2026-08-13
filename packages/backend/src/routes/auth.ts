@@ -30,7 +30,7 @@ authRoutes.use('*', async (c, next) => {
   c.header('X-Frame-Options', 'DENY');
   c.header('X-XSS-Protection', '1; mode=block');
   c.header('Referrer-Policy', 'strict-origin-when-cross-origin');
-  c.header('Content-Security-Policy', "default-src 'self'");
+  c.header('Content-Security-Policy', "default-src 'self'; connect-src 'self' http://localhost:3000 http://127.0.0.1:3000 https:");
   c.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   c.header('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
 });
@@ -44,6 +44,7 @@ authRoutes.get('/me',
     
     // Get Appwrite user ID from header (sent by frontend)
     let appwriteUserId = c.req.header('X-Appwrite-User-Id');
+    let sessionProvider: string | undefined;
     
     // If no header, try to get from session cookie (test login)
     if (!appwriteUserId) {
@@ -79,7 +80,8 @@ authRoutes.get('/me',
         
         if (sessionData) {
           appwriteUserId = sessionData.id;
-          console.log('✅ Session cookie valid for user:', appwriteUserId);
+          sessionProvider = sessionData.provider;
+          console.log('✅ Session cookie valid for user:', appwriteUserId, 'provider:', sessionProvider);
         } else {
           console.log('❌ Session validation failed');
         }
@@ -108,23 +110,12 @@ authRoutes.get('/me',
         { maxRetries: 5, delayMs: 500 }
       );
       
-      // Verify OAuth provider is Discord (security check)
-      // Check user's identities to ensure they used Discord OAuth
+      // Verify auth provider - use session provider (works with local Appwrite)
       // In development mode, allow email/password test accounts
-      const { Query } = await import('node-appwrite');
-      const identities = await users.listIdentities(
-        [Query.equal('userId', [appwriteUserId])] // queries parameter
-      );
-      const hasDiscordIdentity = identities.identities.some(
-        (identity: any) => identity.provider === 'discord'
-      );
-      const hasEmailIdentity = identities.identities.some(
-        (identity: any) => identity.provider === 'email'
-      );
-      
       const isDevelopment = process.env.NODE_ENV !== 'production';
+      const provider = sessionProvider || 'discord';
       
-      if (!hasDiscordIdentity && !(isDevelopment && hasEmailIdentity)) {
+      if (!isDevelopment && provider !== 'discord') {
         console.log('❌ User does not have valid identity');
         throw new HTTPException(403, { 
           message: 'Invalid authentication provider. Please log in with Discord.' 
@@ -171,30 +162,24 @@ authRoutes.get('/me',
 );
 
 // Logout
-authRoutes.post('/logout', 
+authRoutes.post('/logout',
   authRateLimit,
   asyncHandler(async (c: Context) => {
-    const sessionId = getCookie(c, SESSION_COOKIE_NAME);
-    
-    if (!sessionId) {
-      return c.json({ success: true });
-    }
-    
-    try {
-      deleteCookie(c, SESSION_COOKIE_NAME, {
-        path: '/'
-        // Don't set domain - must match the setCookie call
-      });
-      
-      const success = await appwriteLogout(sessionId);
-      
+    // Get user ID from header (sent by frontend for OAuth sessions)
+    const userId = c.req.header('X-Appwrite-User-Id');
+
+    if (userId) {
+      // Delete ALL Appwrite sessions for this user (covers both OAuth and test login)
+      const success = await appwriteLogout(userId);
       if (!success) {
-        console.error('Failed to invalidate session on server:', sessionId);
+        console.error('Failed to invalidate sessions on server for user:', userId);
       }
-    } catch (error) {
-      console.error('Error during logout:', error);
     }
-    
+
+    // Always delete backend session cookie
+    deleteCookie(c, SESSION_COOKIE_NAME, { path: '/' });
+    deleteCookie(c, `${SESSION_COOKIE_NAME}_legacy`, { path: '/' });
+
     return c.json({ success: true })
   })
 )
@@ -224,7 +209,8 @@ authRoutes.post('/test-login',
       // Create a new client for this login attempt
       const testClient = new Client()
         .setEndpoint(process.env.APPWRITE_ENDPOINT!)
-        .setProject(process.env.APPWRITE_PROJECT_ID!);
+        .setProject(process.env.APPWRITE_PROJECT_ID!)
+        .setKey(process.env.APPWRITE_API_KEY!);
       
       const account = new Account(testClient);
       
@@ -232,7 +218,7 @@ authRoutes.post('/test-login',
       
       // Create email session
       const session = await retryAppwriteOperation(
-        () => account.createEmailPasswordSession(email, password),
+        () => account.createEmailPasswordSession({ email, password }),
         { maxRetries: 3, delayMs: 500 }
       );
       

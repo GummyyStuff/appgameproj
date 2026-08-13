@@ -90,7 +90,7 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
 
   const getGameIcon = (gameType: string) => {
     switch (gameType) {
-      case 'roulette': return <FontAwesomeSVGIcons.Circle size={16} />
+      case 'wheel_of_chance': return <FontAwesomeSVGIcons.Clover size={16} />
       case 'case_opening': return <FontAwesomeSVGIcons.Gift size={16} />
       case 'admin': return <FontAwesomeSVGIcons.Shield size={16} />
       default: return <FontAwesomeSVGIcons.Gamepad size={16} />
@@ -99,7 +99,7 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
 
   const getGameName = (gameType: string) => {
     switch (gameType) {
-      case 'roulette': return 'Roulette'
+      case 'wheel_of_chance': return 'Wheel of Chance'
       case 'case_opening': return 'Case Opening'
       case 'admin': return 'Admin'
       default: return gameType ? gameType.charAt(0).toUpperCase() + gameType.slice(1) : 'Unknown'
@@ -146,7 +146,7 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
               className="bg-tarkov-secondary border border-tarkov-primary rounded-md px-3 py-1 text-white text-sm focus:outline-none focus:ring-2 focus:ring-tarkov-accent"
             >
               <option value="all">All Games</option>
-              <option value="roulette">Roulette</option>
+              <option value="wheel_of_chance">Wheel of Chance</option>
               <option value="case_opening">Case Opening</option>
             </select>
             
@@ -223,7 +223,7 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
                 {!compact && transaction.result_data && (
                   <div className="mt-2 pt-2 border-t border-tarkov-primary">
                     <div className="text-xs text-gray-400">
-                      {transaction.gameType === 'roulette' && transaction.result_data.winning_number !== undefined && (
+                      {transaction.gameType === 'wheel_of_chance' && transaction.result_data.winning_segment !== undefined && (
                         <span>Winning Number: {transaction.result_data.winning_number}</span>
                       )}
                       {false && transaction.result_data.action && (

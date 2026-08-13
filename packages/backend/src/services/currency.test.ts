@@ -1,15 +1,4 @@
-import { describe, test, expect } from 'bun:test'
-
-// Set test environment variables
-process.env.NODE_ENV = 'test'
-process.env.SUPABASE_URL = 'http://localhost:54321'
-process.env.SUPABASE_ANON_KEY = 'test-anon-key'
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key'
-process.env.JWT_SECRET = 'test-jwt-secret'
-process.env.STARTING_BALANCE = '10000'
-process.env.DAILY_BONUS = '1000'
-
-// NOTE: This test file tests the static utility methods of CurrencyService
+import { describe, test, expect } from 'vitest'
 import { CurrencyService } from './currency'
 
 describe('CurrencyService Static Methods', () => {
@@ -84,12 +73,10 @@ describe('CurrencyService Validation Logic', () => {
     test('should calculate cooldown correctly', () => {
       const today = new Date()
       const todayString = today.toDateString()
-      
-      // Same day should not allow claiming
+
       const sameDay = new Date()
       expect(sameDay.toDateString() === todayString).toBe(true)
-      
-      // Different day should allow claiming
+
       const yesterday = new Date()
       yesterday.setDate(yesterday.getDate() - 1)
       expect(yesterday.toDateString() !== todayString).toBe(true)
@@ -100,9 +87,9 @@ describe('CurrencyService Validation Logic', () => {
       const tomorrow = new Date(today)
       tomorrow.setDate(tomorrow.getDate() + 1)
       tomorrow.setHours(0, 0, 0, 0)
-      
+
       expect(tomorrow.getTime() > today.getTime()).toBe(true)
-      expect(tomorrow.getDate() === today.getDate() + 1 || 
+      expect(tomorrow.getDate() === today.getDate() + 1 ||
              (today.getDate() === new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate() && tomorrow.getDate() === 1)).toBe(true)
     })
   })
@@ -112,7 +99,7 @@ describe('CurrencyService Validation Logic', () => {
       expect(() => {
         if (100 <= 0) throw new Error('Bet amount must be positive')
       }).not.toThrow()
-      
+
       expect(() => {
         if (-100 <= 0) throw new Error('Bet amount must be positive')
       }).toThrow('Bet amount must be positive')
@@ -122,30 +109,27 @@ describe('CurrencyService Validation Logic', () => {
       expect(() => {
         if (100 < 0) throw new Error('Win amount cannot be negative')
       }).not.toThrow()
-      
+
       expect(() => {
         if (0 < 0) throw new Error('Win amount cannot be negative')
       }).not.toThrow()
-      
+
       expect(() => {
         if (-100 < 0) throw new Error('Win amount cannot be negative')
       }).toThrow('Win amount cannot be negative')
     })
 
     test('should calculate net results correctly', () => {
-      // Winning transaction
       const winAmount = 1500
       const betAmount = 1000
       const netResult = winAmount - betAmount
       expect(netResult).toBe(500)
-      
-      // Losing transaction
+
       const loseWinAmount = 0
       const loseBetAmount = 1000
       const loseNetResult = loseWinAmount - loseBetAmount
       expect(loseNetResult).toBe(-1000)
-      
-      // Break-even transaction
+
       const evenWinAmount = 1000
       const evenBetAmount = 1000
       const evenNetResult = evenWinAmount - evenBetAmount

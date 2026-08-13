@@ -190,6 +190,7 @@ export const useChatRealtime = () => {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
         },
         body: JSON.stringify({ content: content.trim() }),
       });

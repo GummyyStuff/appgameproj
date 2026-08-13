@@ -35,9 +35,15 @@ export const useBalance = (options: {
                 credentials: 'include',
                 headers: {
                     'Accept': 'application/json',
-                    'X-Appwrite-User-Id': user.id, // Add user ID header for auth
+                    'X-Appwrite-User-Id': user.id,
                 },
             });
+
+            if (response.status === 401) {
+                // Session expired - trigger re-auth
+                window.location.href = '/login';
+                return 0;
+            }
 
             if (!response.ok) {
                 throw new Error('Failed to fetch balance');

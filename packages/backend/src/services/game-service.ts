@@ -23,14 +23,13 @@ export class GameService {
     resultData: GameResultData,
     gameDuration?: number
   ): Promise<{ success: boolean; gameId?: string; error?: string }> {
-    const gameRecord: Omit<GameHistory, '$id'> = {
+    const gameRecord: Omit<GameHistory, '$id' | '$createdAt'> = {
       userId,
       gameType,
       betAmount,
       winAmount,
       resultData: JSON.stringify(resultData),
       gameDuration,
-      createdAt: new Date().toISOString(),
     };
 
     const { data, error } = await appwriteDb.createDocument<GameHistory>(
@@ -63,7 +62,7 @@ export class GameService {
       queries.push(appwriteDb.equal('gameType', options.gameType));
     }
 
-    queries.push(appwriteDb.orderDesc('createdAt'));
+    queries.push(appwriteDb.orderDesc('$createdAt'));
 
     if (options.limit) {
       queries.push(appwriteDb.limit(options.limit));
@@ -138,7 +137,7 @@ export class GameService {
   static async getRecentGames(limit: number = 10) {
     const { data, error } = await appwriteDb.listDocuments<GameHistory>(
       COLLECTION_IDS.GAME_HISTORY,
-      [appwriteDb.orderDesc('createdAt'), appwriteDb.limit(limit)]
+      [appwriteDb.orderDesc('$createdAt'), appwriteDb.limit(limit)]
     );
 
     if (error) {

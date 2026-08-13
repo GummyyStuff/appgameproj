@@ -5,7 +5,6 @@
 
 import React, { useState, useEffect } from 'react'
 import { performanceMonitoring, usePerformanceMonitoring, MonitoringDashboard, MonitoringAlert } from '../../utils/performanceMonitoring'
-import { userExperienceMonitor, useUserExperienceMonitoring } from '../../utils/userExperienceMetrics'
 import { TarkovCard } from '../ui/TarkovCard'
 import { TarkovButton } from '../ui/TarkovButton'
 import { TarkovBadge, TarkovProgressBar } from '../ui/TarkovIcons'
@@ -31,11 +30,9 @@ export const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
   onClose
 }) => {
   const [dashboard, setDashboard] = useState<MonitoringDashboard | null>(null)
-  const [uxMetrics, setUxMetrics] = useState<any>(null)
-  const [activeTab, setActiveTab] = useState<'overview' | 'performance' | 'ux' | 'alerts'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'performance' | 'alerts'>('overview')
 
   const { subscribeToDashboard } = usePerformanceMonitoring()
-  const { getPerformanceScore, getCoreWebVitals, getEngagementMetrics, getQualityMetrics } = useUserExperienceMonitoring()
 
   const updateDashboard = () => {
     try {
@@ -82,40 +79,16 @@ export const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
       setDashboard(newDashboard)
     })
 
-    // Update UX metrics
-    const updateUxMetrics = () => {
-      try {
-        setUxMetrics({
-          performanceScore: getPerformanceScore(),
-          coreWebVitals: getCoreWebVitals(),
-          engagement: getEngagementMetrics(),
-          quality: getQualityMetrics()
-        })
-      } catch (error) {
-        console.error('Error getting UX metrics:', error)
-        // Set default values
-        setUxMetrics({
-          performanceScore: { overall: 0, breakdown: { webVitals: 0, engagement: 0, quality: 0, errors: 0 } },
-          coreWebVitals: { FCP: null, LCP: null, CLS: null, FID: null, TTFB: null },
-          engagement: { sessionDuration: 0, pageViews: 0, interactions: 0, caseOpenings: 0, errorsEncountered: 0, timestamp: Date.now() },
-          quality: { timeToInteractive: null, timeToFirstCase: null, averageCaseOpeningTime: 0, errorRecoveryRate: 0, userSatisfactionScore: null, timestamp: Date.now() }
-        })
-      }
-    }
-
-    updateUxMetrics()
-
     // Set up periodic updates
     const interval = setInterval(() => {
       updateDashboard()
-      updateUxMetrics()
     }, 5000) // Update every 5 seconds
 
     return () => {
       unsubscribe()
       clearInterval(interval)
     }
-  }, [isVisible, subscribeToDashboard, getPerformanceScore, getCoreWebVitals, getEngagementMetrics, getQualityMetrics, updateDashboard])
+  }, [isVisible, subscribeToDashboard, updateDashboard])
 
   const exportData = () => {
     const data = performanceMonitoring.exportMonitoringData()
@@ -143,9 +116,8 @@ export const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
 
   // Debug what's missing
   const hasDashboard = !!dashboard
-  const hasUxMetrics = !!uxMetrics
 
-  if (!hasDashboard || !hasUxMetrics) {
+  if (!hasDashboard) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <TarkovCard className="p-8 text-center max-w-md">
@@ -156,21 +128,14 @@ export const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
               <span>{hasDashboard ? '✅' : '❌'}</span>
               <span>Dashboard data</span>
             </div>
-            <div className={`flex items-center space-x-2 ${hasUxMetrics ? 'text-green-400' : 'text-red-400'}`}>
-              <span>{hasUxMetrics ? '✅' : '❌'}</span>
-              <span>UX metrics</span>
-            </div>
+
           </div>
           {!hasDashboard && (
             <p className="text-xs mt-4 text-tarkov-secondary">
               Dashboard: {JSON.stringify(dashboard, null, 2)}
             </p>
           )}
-          {!hasUxMetrics && (
-            <p className="text-xs mt-2 text-tarkov-secondary">
-              UX Metrics: {JSON.stringify(uxMetrics, null, 2)}
-            </p>
-          )}
+
         </TarkovCard>
       </div>
     )
@@ -188,7 +153,6 @@ export const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
   const tabs = [
     { id: 'overview', label: 'Overview', icon: '📊' },
     { id: 'performance', label: 'Performance', icon: '⚡' },
-    { id: 'ux', label: 'UX Metrics', icon: '👤' },
     { id: 'alerts', label: 'Alerts', icon: '🚨' }
   ]
 
@@ -274,16 +238,6 @@ export const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
                   />
                 </TarkovCard>
 
-                <TarkovCard variant="default" className="p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-sm font-medium text-tarkov-primary">Performance Score</h3>
-                    <span className="text-tarkov-accent">📈</span>
-                  </div>
-                  <div className="text-2xl font-bold text-tarkov-primary mb-2">{uxMetrics.performanceScore.overall}/100</div>
-                  <TarkovBadge variant={uxMetrics.performanceScore.overall >= 80 ? 'success' : uxMetrics.performanceScore.overall >= 60 ? 'default' : 'danger'}>
-                    {uxMetrics.performanceScore.overall >= 80 ? 'Excellent' : uxMetrics.performanceScore.overall >= 60 ? 'Good' : 'Needs Improvement'}
-                  </TarkovBadge>
-                </TarkovCard>
               </div>
 
               {/* Recent Alerts */}
@@ -404,133 +358,6 @@ export const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
             </div>
           )}
 
-          {activeTab === 'ux' && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Core Web Vitals */}
-                <TarkovCard variant="default" className="p-4">
-                  <h3 className="text-lg font-medium text-tarkov-primary mb-4">Core Web Vitals</h3>
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-tarkov-primary">FCP (First Contentful Paint)</span>
-                      <TarkovBadge variant={uxMetrics.coreWebVitals.FCP && uxMetrics.coreWebVitals.FCP < 1800 ? 'success' : 'danger'}>
-                        {uxMetrics.coreWebVitals.FCP ? formatDuration(uxMetrics.coreWebVitals.FCP) : 'N/A'}
-                      </TarkovBadge>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-tarkov-primary">LCP (Largest Contentful Paint)</span>
-                      <TarkovBadge variant={uxMetrics.coreWebVitals.LCP && uxMetrics.coreWebVitals.LCP < 2500 ? 'success' : 'danger'}>
-                        {uxMetrics.coreWebVitals.LCP ? formatDuration(uxMetrics.coreWebVitals.LCP) : 'N/A'}
-                      </TarkovBadge>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-tarkov-primary">CLS (Cumulative Layout Shift)</span>
-                      <TarkovBadge variant={uxMetrics.coreWebVitals.CLS && uxMetrics.coreWebVitals.CLS < 0.1 ? 'success' : 'danger'}>
-                        {uxMetrics.coreWebVitals.CLS ? uxMetrics.coreWebVitals.CLS.toFixed(3) : 'N/A'}
-                      </TarkovBadge>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-tarkov-primary">FID (First Input Delay)</span>
-                      <TarkovBadge variant={uxMetrics.coreWebVitals.FID && uxMetrics.coreWebVitals.FID < 100 ? 'success' : 'danger'}>
-                        {uxMetrics.coreWebVitals.FID ? formatDuration(uxMetrics.coreWebVitals.FID) : 'N/A'}
-                      </TarkovBadge>
-                    </div>
-                  </div>
-                </TarkovCard>
-
-                {/* User Engagement */}
-                <TarkovCard variant="default" className="p-4">
-                  <h3 className="text-lg font-medium text-tarkov-primary mb-4">User Engagement</h3>
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-tarkov-primary">Session Duration</span>
-                      <TarkovBadge variant="default">{formatDuration(uxMetrics.engagement.sessionDuration)}</TarkovBadge>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-tarkov-primary">Page Views</span>
-                      <TarkovBadge variant="default">{uxMetrics.engagement.pageViews}</TarkovBadge>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-tarkov-primary">Interactions</span>
-                      <TarkovBadge variant="default">{uxMetrics.engagement.interactions}</TarkovBadge>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-tarkov-primary">Case Openings</span>
-                      <TarkovBadge variant="default">{uxMetrics.engagement.caseOpenings}</TarkovBadge>
-                    </div>
-                  </div>
-                </TarkovCard>
-
-                {/* Performance Score Breakdown */}
-                <TarkovCard variant="default" className="p-4">
-                  <h3 className="text-lg font-medium text-tarkov-primary mb-4">Performance Score Breakdown</h3>
-                  <ResponsiveContainer width="100%" height={200}>
-                    <PieChart>
-                      <Pie
-                        data={[
-                          { name: 'Web Vitals', value: uxMetrics.performanceScore.breakdown.webVitals },
-                          { name: 'Engagement', value: uxMetrics.performanceScore.breakdown.engagement },
-                          { name: 'Quality', value: uxMetrics.performanceScore.breakdown.quality },
-                          { name: 'Errors', value: uxMetrics.performanceScore.breakdown.errors }
-                        ]}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={40}
-                        outerRadius={80}
-                        paddingAngle={5}
-                        dataKey="value"
-                      >
-                        {[
-                          uxMetrics.performanceScore.breakdown.webVitals,
-                          uxMetrics.performanceScore.breakdown.engagement,
-                          uxMetrics.performanceScore.breakdown.quality,
-                          uxMetrics.performanceScore.breakdown.errors
-                        ].map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: '#1F2937',
-                          border: '1px solid #374151',
-                          borderRadius: '6px'
-                        }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </TarkovCard>
-
-                {/* Quality Metrics */}
-                <TarkovCard variant="default" className="p-4">
-                  <h3 className="text-lg font-medium text-tarkov-primary mb-4">Quality Metrics</h3>
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-tarkov-primary">Time to Interactive</span>
-                      <TarkovBadge variant="default">
-                        {uxMetrics.quality.timeToInteractive ? formatDuration(uxMetrics.quality.timeToInteractive) : 'N/A'}
-                      </TarkovBadge>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-tarkov-primary">Avg Case Opening Time</span>
-                      <TarkovBadge variant="default">{formatDuration(uxMetrics.quality.averageCaseOpeningTime)}</TarkovBadge>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-tarkov-primary">Error Recovery Rate</span>
-                      <TarkovBadge variant={uxMetrics.quality.errorRecoveryRate > 0.8 ? 'success' : 'danger'}>
-                        {(uxMetrics.quality.errorRecoveryRate * 100).toFixed(1)}%
-                      </TarkovBadge>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-tarkov-primary">User Satisfaction</span>
-                      <TarkovBadge variant="default">
-                        {uxMetrics.quality.userSatisfactionScore ? `${uxMetrics.quality.userSatisfactionScore}/5` : 'N/A'}
-                      </TarkovBadge>
-                    </div>
-                  </div>
-                </TarkovCard>
-              </div>
-            </div>
-          )}
 
           {activeTab === 'alerts' && (
             <div className="space-y-6">

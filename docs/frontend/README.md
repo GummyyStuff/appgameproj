@@ -32,7 +32,7 @@ Key implementation aspects:
 ## Requirements and Dependencies
 - React 19.1+
 - TypeScript 5.9+
-- Vite 7.1+
+- Bun native bundler
 - Tailwind CSS 4.1+
 - Bun runtime for development
 - Appwrite client SDK
@@ -64,7 +64,6 @@ function UserProfile() {
 ## Related Components
 - [Appwrite Integration](../backend/appwrite-README.md)
 - [API Reference](../api/README.md)
-- [Game Components](./games-components-README.md)
 
 ## Version History
 - v0.1: Initial frontend architecture documentation

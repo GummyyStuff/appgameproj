@@ -146,7 +146,6 @@ export class AchievementService {
           progress: newProgress,
           unlocked: nowUnlocked,
           unlockedAt: nowUnlocked && !wasUnlocked ? new Date().toISOString() : current.unlockedAt,
-          updatedAt: new Date().toISOString(),
         }
       );
       
@@ -171,8 +170,6 @@ export class AchievementService {
           unlocked,
           unlockedAt: unlocked ? new Date().toISOString() : undefined,
           claimed: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
           userAchievementKey,
         }
       );
@@ -251,7 +248,6 @@ export class AchievementService {
       {
         claimed: true,
         claimedAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
       }
     );
     

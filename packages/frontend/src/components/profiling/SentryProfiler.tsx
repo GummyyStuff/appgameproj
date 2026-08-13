@@ -20,8 +20,8 @@ interface SentryProfilerProps {
  * Sentry Profiler wrapper component
  * 
  * @example
- * <SentryProfiler name="GameComponent" component="RouletteGame">
- *   <RouletteGame />
+ * <SentryProfiler name="GameComponent" component="WheelSpinner">
+ *   <WheelSpinner />
  * </SentryProfiler>
  */
 export function SentryProfiler({ 

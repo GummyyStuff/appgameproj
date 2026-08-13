@@ -363,12 +363,12 @@ const mockAchievements: Achievement[] = [
     unlocked: false
   },
   {
-    id: 'roulette-master',
-    title: 'Roulette Master',
-    description: 'Win 100 roulette games',
+    id: 'wheel-master',
+    title: 'Wheel Master',
+    description: 'Win 100 Wheel of Chance games',
     category: 'progression',
     rarity: 'rare',
-    progress: 45,
+    progress: 0,
     maxProgress: 100,
     unlocked: false
   },
@@ -428,7 +428,7 @@ const AchievementSystem: React.FC<AchievementSystemProps> = ({
       // Original achievements (Roulette/Blackjack)
       'high-roller': FontAwesomeSVGIcons.RubleSign,
       'lucky-seven': FontAwesomeSVGIcons.Bolt,
-      'roulette-master': FontAwesomeSVGIcons.Circle,
+      'wheel-master': FontAwesomeSVGIcons.Clover,
       'stock-trader': FontAwesomeSVGIcons.ChartLine,
     }
     return iconMap[achievementId] || FontAwesomeSVGIcons.Shield

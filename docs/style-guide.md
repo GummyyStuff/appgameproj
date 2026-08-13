@@ -23,9 +23,9 @@ The purpose of this style guide is to:
 
 ## Documentation Standards
 
-### Frontmatter Requirements
+### Frontmatter (Optional)
 
-All documentation files must include the following frontmatter at the beginning:
+Documentation files may include frontmatter for metadata. It is not required:
 
 ```yaml
 ---
@@ -161,13 +161,7 @@ All documentation follows semantic versioning:
 
 ### Template Usage
 
-Use the following templates for new documentation:
-
-1. **Technical Implementation**: For feature details and implementation guides
-2. **Maintenance Process**: For operational procedures and maintenance tasks  
-3. **User Guide**: For gameplay rules and user-facing features
-
-All templates are located in `/docs/templates/` directory.
+For new documentation, follow the section structure outlined above and mirror the structure of existing docs in the relevant subdirectory (backend/, frontend/, etc.).
 
 ## Best Practices Summary
 

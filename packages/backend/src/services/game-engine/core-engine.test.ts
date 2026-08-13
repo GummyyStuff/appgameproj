@@ -1,9 +1,4 @@
-/**
- * Tests for CoreGameEngine
- * Integration tests for the complete game engine system
- */
-
-import { describe, test, expect, beforeEach } from 'bun:test'
+import { describe, test, expect, beforeEach } from 'vitest'
 import { CoreGameEngine } from './core-engine'
 import { GameBet, ProvablyFairSeed } from './types'
 
@@ -68,15 +63,12 @@ describe('CoreGameEngine', () => {
         gameType: 'roulette'
       }
 
-      // First bet should be valid
       const isValid1 = await engine.validateBet(bet)
       expect(isValid1).toBe(true)
 
-      // Process first game (it will complete immediately)
       const result1 = await engine.processGame(bet)
       expect(result1.success).toBe(true)
 
-      // Second bet should now be valid since first game completed
       const isValid2 = await engine.validateBet(bet)
       expect(isValid2).toBe(true)
     })
@@ -152,7 +144,6 @@ describe('CoreGameEngine', () => {
       expect(result.winAmount).toBeGreaterThanOrEqual(0)
     })
 
-
     test('should reject invalid bets', async () => {
       const invalidBet: GameBet = {
         userId: '',
@@ -190,7 +181,6 @@ describe('CoreGameEngine', () => {
       const result = await engine.processGame(bet)
 
       if (result.success) {
-        // Verify the result data structure is valid for roulette
         const rouletteResult = result.resultData as any
         expect(rouletteResult.bet_type).toBeDefined()
         expect(rouletteResult.bet_value).toBeDefined()
@@ -210,9 +200,8 @@ describe('CoreGameEngine', () => {
       const result = await engine.processGame(bet)
 
       if (result.success) {
-        // Verify payout is reasonable for blackjack
         expect(result.winAmount).toBeGreaterThanOrEqual(0)
-        expect(result.winAmount).toBeLessThanOrEqual(bet.amount * 2) // Max reasonable payout
+        expect(result.winAmount).toBeLessThanOrEqual(bet.amount * 2)
       }
     })
   })
@@ -242,7 +231,7 @@ describe('CoreGameEngine', () => {
       const winningPayout = engine.calculatePayout(bet, winningResult as any)
       const losingPayout = engine.calculatePayout(bet, losingResult as any)
 
-      expect(winningPayout).toBe(3500) // 100 * 35
+      expect(winningPayout).toBe(3500)
       expect(losingPayout).toBe(0)
     })
 
@@ -275,11 +264,10 @@ describe('CoreGameEngine', () => {
       const winPayout = engine.calculatePayout(bet, winResult as any)
       const lossPayout = engine.calculatePayout(bet, lossResult as any)
 
-      expect(blackjackPayout).toBe(150) // 100 * 1.5
-      expect(winPayout).toBe(100) // 100 * 1
+      expect(blackjackPayout).toBe(150)
+      expect(winPayout).toBe(100)
       expect(lossPayout).toBe(0)
     })
-
 
     test('should return 0 for invalid game types', () => {
       const bet: GameBet = {
@@ -333,8 +321,7 @@ describe('CoreGameEngine', () => {
       }
 
       await engine.processGame(bet)
-      
-      // Clean up games older than 0 hours (should clean everything)
+
       const cleanedCount = await engine.cleanup(0)
       expect(typeof cleanedCount).toBe('number')
       expect(cleanedCount).toBeGreaterThanOrEqual(0)
@@ -356,7 +343,6 @@ describe('CoreGameEngine', () => {
         expect(result.gameId).toBeDefined()
       })
 
-      // All games should have unique IDs
       const gameIds = results.map(r => r.gameId)
       const uniqueIds = new Set(gameIds)
       expect(uniqueIds.size).toBe(2)
@@ -369,15 +355,12 @@ describe('CoreGameEngine', () => {
         gameType: 'roulette'
       }
 
-      // First game should succeed
       const result1 = await engine.processGame(bet)
       expect(result1.success).toBe(true)
 
-      // Second game should also succeed since first completed
       const result2 = await engine.processGame(bet)
       expect(result2.success).toBe(true)
-      
-      // Both should have different game IDs
+
       expect(result1.gameId).not.toBe(result2.gameId)
     })
 

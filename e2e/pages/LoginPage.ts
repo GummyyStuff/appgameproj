@@ -1,6 +1,7 @@
 /**
  * Login Page Object Model
- * Encapsulates authentication page interactions
+ * Encapsulates authentication page interactions.
+ * The development build exposes a test-login form (#test-email / #test-password).
  */
 
 import { Page, Locator } from '@playwright/test';
@@ -10,21 +11,19 @@ export class LoginPage {
   readonly emailInput: Locator;
   readonly passwordInput: Locator;
   readonly submitButton: Locator;
-  readonly signUpLink: Locator;
   readonly errorMessage: Locator;
 
   constructor(page: Page) {
     this.page = page;
-    this.emailInput = page.locator('input[type="email"]');
-    this.passwordInput = page.locator('input[type="password"]');
-    this.submitButton = page.getByRole('button', { name: /sign in|login/i });
-    this.signUpLink = page.getByRole('link', { name: /sign up|register/i });
-    this.errorMessage = page.locator('[role="alert"]');
+    this.emailInput = page.locator('#test-email');
+    this.passwordInput = page.locator('#test-password');
+    this.submitButton = page.getByRole('button', { name: 'Test Login', exact: true });
+    this.errorMessage = page.getByText(/invalid|incorrect|error|failed/i).first();
   }
 
   async goto() {
-    await this.page.goto('/login');
-    await this.page.waitForLoadState('networkidle');
+    await this.page.goto('/login', { waitUntil: 'domcontentloaded' });
+    await this.emailInput.waitFor({ timeout: 15000 });
   }
 
   async login(email: string, password: string) {
@@ -33,12 +32,7 @@ export class LoginPage {
     await this.submitButton.click();
   }
 
-  async navigateToSignUp() {
-    await this.signUpLink.click();
-  }
-
   async getErrorMessage() {
     return await this.errorMessage.textContent();
   }
 }
-

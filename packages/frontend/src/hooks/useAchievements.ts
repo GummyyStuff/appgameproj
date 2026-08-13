@@ -47,6 +47,7 @@ export const useAchievements = () => {
       return {
         'Content-Type': 'application/json',
         'X-Appwrite-User-Id': user.$id,
+        'X-Requested-With': 'XMLHttpRequest',
       };
     } catch (error) {
       console.error('Failed to get user for auth headers:', error);
@@ -168,7 +169,7 @@ export const useAchievements = () => {
   const trackGamePlayed = useCallback(async (
     betAmount: number,
     winAmount: number,
-    gameType?: 'roulette' | 'case_opening'
+    gameType?: 'case_opening' | 'wheel_of_chance'
   ) => {
     // Track wins
     if (winAmount > 0) {
@@ -181,8 +182,8 @@ export const useAchievements = () => {
     }
 
     // Game-specific tracking
-    if (gameType === 'roulette' && winAmount > 0) {
-      await updateAchievementProgress('roulette-master', 1);
+    if (gameType === 'wheel_of_chance' && winAmount > 0) {
+      await updateAchievementProgress('wheel-master', 1);
     }
   }, [updateAchievementProgress]);
 

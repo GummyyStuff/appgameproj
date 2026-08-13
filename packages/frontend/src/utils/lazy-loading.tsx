@@ -22,39 +22,17 @@ export function withLazyLoading<T extends object>(
 /**
  * Lazy-loaded game components
  */
-export const LazyRouletteGame = withLazyLoading(
-  () => import('@/components/games/RouletteWheel'),
+export const LazyWheelOfChanceGame = withLazyLoading(
+  () => import('@/components/games/WheelSpinner'),
   <div className="flex items-center justify-center h-64">
     <LoadingSpinner />
-    <span className="ml-2 text-tarkov-text">Loading Roulette...</span>
+    <span className="ml-2 text-tarkov-text">Loading Wheel...</span>
   </div>
 );
-
-// BlackjackGame component not yet implemented
-// export const LazyBlackjackGame = withLazyLoading(
-//   () => import('@/components/games/BlackjackGame'),
-//   <div className="flex items-center justify-center h-64">
-//     <LoadingSpinner />
-//     <span className="ml-2 text-tarkov-text">Loading Blackjack...</span>
-//   </div>
-// );
-
-
 
 /**
  * Lazy-loaded page components
  */
-export const LazyRoulettePage = withLazyLoading(
-  () => import('@/pages/RoulettePage')
-);
-
-// BlackjackPage component not yet implemented
-// export const LazyBlackjackPage = withLazyLoading(
-//   () => import('@/pages/BlackjackPage')
-// );
-
-
-
 export const LazyLeaderboardPage = withLazyLoading(
   () => import('@/pages/LeaderboardPage')
 );
@@ -74,23 +52,16 @@ export const LazyGameHistoryTable = withLazyLoading(
   () => import('@/components/ui/GameHistoryTable')
 );
 
-
-
 export const LazyAchievementSystem = withLazyLoading(
   () => import('@/components/ui/AchievementSystem')
 );
-
-
 
 /**
  * Preload critical components
  */
 export function preloadCriticalComponents() {
-  // Preload components that are likely to be used soon
   const preloadPromises = [
-    import('@/components/games/RouletteWheel'),
-    // import('@/components/games/BlackjackGame'), // Not yet implemented
-
+    import('@/components/games/WheelSpinner'),
   ];
 
   return Promise.all(preloadPromises);
@@ -120,14 +91,10 @@ export function preloadOnHover(componentImport: () => Promise<any>) {
  * Hook for progressive loading
  */
 export function useProgressiveLoading() {
-  const preloadGame = (gameType: 'roulette' | 'blackjack') => {
+  const preloadGame = (gameType: 'wheel_of_chance') => {
     switch (gameType) {
-      case 'roulette':
-        return import('@/components/games/RouletteWheel');
-      case 'blackjack':
-        // return import('@/components/games/BlackjackGame'); // Not yet implemented
-        return Promise.resolve();
-
+      case 'wheel_of_chance':
+        return import('@/components/games/WheelSpinner');
       default:
         return Promise.resolve();
     }
@@ -135,12 +102,8 @@ export function useProgressiveLoading() {
 
   const preloadPage = (page: string) => {
     switch (page) {
-      case 'roulette':
-        return import('@/pages/RoulettePage');
-      case 'blackjack':
-        // return import('@/pages/BlackjackPage'); // Not yet implemented
-        return Promise.resolve();
-
+      case 'wheel':
+        return import('@/pages/WheelOfChancePage');
       case 'profile':
         return import('@/pages/ProfilePage');
       case 'leaderboard':

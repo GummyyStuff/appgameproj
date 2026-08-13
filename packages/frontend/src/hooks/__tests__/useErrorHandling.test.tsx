@@ -1,41 +1,28 @@
+import { describe, test, expect, beforeEach, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
-import { test, expect, describe, beforeEach, mock } from 'bun:test'
 import * as matchers from '@testing-library/jest-dom/matchers'
 
-// Extend expect with Testing Library matchers
-expect.extend(matchers)
-
-// Create mock functions
-const mockError = mock(() => {})
-const mockSuccess = mock(() => {})
-const mockInfo = mock(() => {})
-const mockWarning = mock(() => {})
-
-// Mock the toast provider module
-mock.module('../../components/providers/ToastProvider', () => ({
+vi.mock('../../components/providers/ToastProvider', () => ({
   useToastContext: () => ({
-    success: mockSuccess,
-    error: mockError,
-    info: mockInfo,
-    warning: mockWarning
-  })
+    success: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+    warning: vi.fn(),
+    addToast: vi.fn(),
+    removeToast: vi.fn(),
+    clearAllToasts: vi.fn(),
+  }),
 }))
 
-// Import the hook after mocking
 import { useErrorHandling } from '../useErrorHandling'
 
 describe('useErrorHandling', () => {
   beforeEach(() => {
-    // Reset all mocks before each test
-    mockError.mockClear()
-    mockSuccess.mockClear()
-    mockInfo.mockClear()
-    mockWarning.mockClear()
+    vi.clearAllMocks()
   })
 
-  test('should initialize with no error', () => {
+  test('should initialize with no error and not retrying', () => {
     const { result } = renderHook(() => useErrorHandling())
-
     expect(result.current.currentError).toBeNull()
     expect(result.current.isRetrying).toBe(false)
   })
@@ -53,7 +40,7 @@ describe('useErrorHandling', () => {
     expect(result.current.currentError).toBe('Please log in to continue')
   })
 
-  test('should handle validation errors', async () => {
+  test('should handle validation errors with original message', async () => {
     const { result } = renderHook(() => useErrorHandling())
     const validationError = new Error('Insufficient balance')
 
@@ -68,32 +55,27 @@ describe('useErrorHandling', () => {
 
   test('should clear error', async () => {
     const { result } = renderHook(() => useErrorHandling())
-    
-    // First set an error
-    await act(async () => {
-      const error = new Error('Test error')
-      await result.current.handleError(error, 'test context')
-    })
 
+    await act(async () => {
+      await result.current.handleError(new Error('Authentication failed'), 'test')
+    })
     expect(result.current.currentError).not.toBeNull()
 
-    // Now clear it
     act(() => {
       result.current.clearError()
     })
-
     expect(result.current.currentError).toBeNull()
   })
 
-  test('should get user-friendly error messages', () => {
+  test('should return user-friendly message for network errors', () => {
     const { result } = renderHook(() => useErrorHandling())
     const networkError = new Error('Network request failed')
-    
+
     const message = result.current.getErrorMessage(networkError)
     expect(message).toBe('Connection problem. Retrying...')
   })
 
-  test('should handle animation errors', async () => {
+  test('should recover via fallback for animation context errors', async () => {
     const { result } = renderHook(() => useErrorHandling())
     const animationError = new Error('Animation failed')
 
@@ -102,7 +84,7 @@ describe('useErrorHandling', () => {
       recovered = await result.current.handleError(animationError, 'animation context')
     })
 
-    expect(recovered).toBe(true) // Should recover via fallback
+    expect(recovered).toBe(true)
   })
 
   test('should handle balance validation errors', async () => {
@@ -116,5 +98,44 @@ describe('useErrorHandling', () => {
 
     expect(recovered).toBe(false)
     expect(result.current.currentError).toBe('Insufficient balance')
+  })
+
+  test('should retry operation successfully', async () => {
+    const { result } = renderHook(() => useErrorHandling())
+    const operation = vi.fn().mockResolvedValue('success')
+
+    let returnValue: string | null = null
+    await act(async () => {
+      returnValue = await result.current.retryOperation(operation, 'test')
+    })
+
+    expect(returnValue).toBe('success')
+    expect(operation).toHaveBeenCalledTimes(1)
+  })
+
+  test('should return all expected interface members', () => {
+    const { result } = renderHook(() => useErrorHandling())
+    expect(result.current).toHaveProperty('handleError')
+    expect(result.current).toHaveProperty('retryOperation')
+    expect(result.current).toHaveProperty('getErrorMessage')
+    expect(result.current).toHaveProperty('clearError')
+    expect(result.current).toHaveProperty('currentError')
+    expect(result.current).toHaveProperty('isRetrying')
+  })
+
+  test('should return user-friendly message for unknown errors', () => {
+    const { result } = renderHook(() => useErrorHandling())
+    const unknownError = new Error('Something bizarre happened')
+
+    const message = result.current.getErrorMessage(unknownError)
+    expect(message).toBe('Something went wrong. Please try again.')
+  })
+
+  test('should return user-friendly message for authentication errors', () => {
+    const { result } = renderHook(() => useErrorHandling())
+    const authError = new Error('unauthorized access')
+
+    const message = result.current.getErrorMessage(authError)
+    expect(message).toBe('Please log in to continue')
   })
 })

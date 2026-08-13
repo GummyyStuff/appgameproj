@@ -1,246 +1,257 @@
----
-title: "Tarkov Casino Documentation v0.1"
-audience: developer
-layer: technical
-status: stable
-tags: [documentation, overview, project]
-last_updated: 08/07/2026
----
-
 # Tarkov Casino Documentation
 
 **Version:** 0.1
 
-Welcome to the comprehensive documentation for the Tarkov Casino project - a Tarkov-themed casino gaming website with virtual currency.
-
-This is the new documentation structure following the v0.1 release. All previous documentation has been archived in `/docs/archive/v0.1/`.
+Welcome to the Tarkov Casino project documentation. This is the main developer guide covering architecture, setup, development, testing, and deployment.
 
 ---
 
-## 📚 Documentation Index
+## Architecture
 
-### Getting Started
-- [Main README](../README.md) - Project overview and quick start
-- [Migration Summary](./technical/MIGRATION-SUMMARY.md) - Supabase to Appwrite migration details
+Monorepo (Bun workspaces) with two packages:
 
-### Technical Documentation
-- [Bug Fixes & Improvements](./technical/bug-fixes-and-improvements.md) - Comprehensive bug fixes and improvements
-- [Sentry Implementation](./technical/sentry-comprehensive.md) - Complete Sentry integration documentation
-- [Testing Strategy](./testing/testing.md) - Testing approach and implementation
-- [Build Environment Variables](./technical/BUN_BUILD_ENV_VARS.md) - Build environment configuration
-- [Vite to Bun Migration](./technical/VITE_TO_BUN_MIGRATION.md) - Migration from Vite to Bun
+| Package | Stack |
+|---|---|
+| `packages/frontend/` | React 19, TypeScript, Tailwind CSS 4, Bun native bundler |
+| `packages/backend/` | Hono + TypeScript, Appwrite BaaS, optional Redis cache |
 
-### Backend Documentation
+The backend serves the built frontend via `serveStatic`. There is no separate frontend dev server — frontend `dev` delegates to the backend.
 
-#### Core Systems
-- [Appwrite Integration Guide](./backend/appwrite-README.md) - **START HERE** for Appwrite setup
-- [Database Guide](./backend/database-README.md) - Database schema and operations
-- [Appwrite Realtime](./backend/appwrite-realtime.md) - Real-time features and WebSocket subscriptions
-- [Statistics System](./backend/statistics-README.md) - Game analytics and statistics
+**Ports:** backend on `3000`, frontend dev proxy on `5173` (Playwright E2E only).
 
-#### Performance & Caching
-- [Redis/Dragonfly Caching](./backend/redis-README.md) - High-performance caching layer
-- [Redis Quick Reference](./backend/REDIS_QUICK_REFERENCE.md) - Quick reference guide
+### Technology Stack
 
-### Frontend Documentation
-- [Frontend Architecture](./frontend/README.md) - React app structure and Appwrite client SDK
-- [Performance Optimization](./frontend/performance-optimization.md) - Frontend performance guide
-- [Roulette Performance Fixes](./maintenance/roulette-performance-fixes.md) - Game-specific optimizations
-- [Component Hooks](./frontend/hooks-README.md) - Custom React hooks documentation
-- [Game Components](./frontend/games-components-README.md) - Game component architecture
-- [Styles Guide](./frontend/styles-README.md) - Design system and styling
+**Backend**
+- Runtime: Bun
+- Framework: Hono 4.9+
+- Database: Appwrite 18.0+ (BaaS)
+- Cache: Dragonfly (Redis-compatible, optional)
+- Language: TypeScript 5.9+
+- Real-time: Appwrite Realtime (WebSocket)
 
-### API Documentation
-- [API Reference](./api/README.md) - Complete API endpoint documentation
-- [API Authentication](./api/README.md#authentication) - Appwrite authentication flow
-- [Real-time Events](./api/README.md#real-time-updates) - Appwrite Realtime channels
+**Frontend**
+- Framework: React 19.1+
+- Build Tool: Bun native bundler
+- Styling: Tailwind CSS 4.1+
+- Routing: React Router 7.9+
+- State: TanStack Query 5.89+
+- Animations: Framer Motion 12.23+
+- Language: TypeScript 5.9+
 
-### Game Rules
-- [Roulette Rules](./game-rules/roulette.md) - Classic casino roulette
-- [Blackjack Rules](./game-rules/blackjack.md) - Strategic card game
-- [Case Opening Rules](./game-rules/case-opening.md) - Tarkov-themed case opening
+**Testing**
+- Runner: Vitest v4.1.10
+- React Testing: @testing-library/react 16.3+
+- DOM Environment: jsdom
+- E2E: Playwright
 
-### Deployment & Operations
-- [Deployment Guide](./deployment/deployment.md) - **Production deployment** with Coolify + Appwrite
-- [Deployment README](./guides/README.md) - Detailed deployment procedures
-- [Backup & Recovery](./guides/backup-recovery.md) - Appwrite backup strategies
-
-### Maintenance
-- [Maintenance Guide](./maintenance/README.md) - Routine maintenance procedures
-- [Frontend Maintenance](./guides/frontend-maintenance.md) - Frontend-specific maintenance
-
-### Testing
-- [Testing Guide](./testing/testing.md) - Comprehensive testing with Bun Test
-
-### Additional Guides
-- [Chat System](../architecture/chat-system.md) - Appwrite Realtime chat implementation
-- [Carousel Management](./guides/carousel-management-guide.md) - Case opening carousel system
-- [FontAwesome Setup](./guides/fontawesome-docker-setup.md) - FontAwesome Pro in Docker
-
-### User Documentation
-- [User Guide](./user-guides/README.md) - End-user documentation
-
-### Architecture
-- [Frontend Architecture](./architecture/frontend-architecture.md) - Detailed frontend architecture
+**DevOps**
+- Containerization: Docker
+- Deployment: Coolify v4
+- CI/CD: GitHub Actions
 
 ---
 
-## 🎯 Quick Links
+## Quick Start
 
-### For Developers
+### Prerequisites
+- [Bun](https://bun.sh/) (latest)
+- [Docker](https://docker.com/) (optional, for local Dragonfly cache)
 
-**First Time Setup:**
-1. Read [Main README](../README.md) for quick start
-2. Follow [Appwrite Integration Guide](./backend/appwrite-README.md) for backend setup
-3. Configure [Frontend](./frontend/README.md) with Appwrite credentials
-4. Review [API Documentation](./api/README.md) for endpoints
+### Installation
 
-**Daily Development:**
-- [Appwrite Realtime](./backend/appwrite-realtime.md) for real-time features
-- [Redis/Dragonfly Guide](./backend/redis-README.md) for caching
-- [Testing Guide](./testing/testing.md) for running tests
+```bash
+git clone <repository-url>
+cd tarkov-casino
+bun install
+```
 
-**Deployment:**
-- [Deployment Guide](./deployment/deployment.md) for production setup
-- [Backup & Recovery](./guides/backup-recovery.md) for data protection
+### Environment Setup
 
-### For Operations
+Copy `.env.example` to `.env`. The `.env.example` still lists Supabase vars but those are deprecated — the app uses Appwrite.
 
-**Monitoring:**
-- [Maintenance Guide](./maintenance/README.md) for routine tasks
-- API Health: `/api/health` and `/api/health/detailed`
-- Appwrite Console for service monitoring
+**Required for production:**
+```env
+APPWRITE_ENDPOINT=https://<REGION>.cloud.appwrite.io/v1
+APPWRITE_PROJECT_ID=your_project_id
+APPWRITE_API_KEY=your_api_key
+NODE_ENV=production
+```
 
-**Troubleshooting:**
-- [Deployment Troubleshooting](./deployment/deployment.md#troubleshooting)
-- [Appwrite Documentation](https://appwrite.io/docs)
+**Optional** (defaults in `packages/backend/src/config/env.ts`):
+- `REDIS_ENABLED`, `REDIS_URL`, `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`
+- `STARTING_BALANCE` (default `10000`), `DAILY_BONUS` (default `1000`)
+- `JWT_SECRET` (required for tests, min 32 chars)
+- `SENTRY_DSN` for error tracking
+
+**Frontend build requires** `VITE_APPWRITE_ENDPOINT` and `VITE_APPWRITE_PROJECT_ID` in `packages/frontend/.env`.
+
+### Development
+
+```bash
+bun run dev   # builds frontend in dev mode + starts backend
+```
+
+The dev frontend build enables a test login UI. Access at http://localhost:3000.
+
+To create a test account:
+```bash
+bun run scripts/create-test-account.ts test@example.com password123 "Test User"
+```
+
+Dragonfly is optional for local development — the app falls back to the database if cache is unavailable.
 
 ---
 
-## 🏗️ Technology Stack
+## Development Commands
+
+```bash
+bun install                          # all dependencies (root)
+bun run dev                          # build frontend + start backend dev server
+bun run build                        # build both packages
+
+# Backend only
+cd packages/backend && bun run dev   # auto-reload server
+cd packages/backend && bun run build
+cd packages/backend && bunx vitest run
+
+# Frontend only
+cd packages/frontend && bun run build
+cd packages/frontend && bun run build:dev   # dev build (test login UI, no minification)
+cd packages/frontend && bunx vitest run
+```
+
+---
+
+## Testing
+
+```bash
+bun run test:all                      # run both workspace suites (vitest)
+
+# Backend subsets
+cd packages/backend && bun run test:api          # route tests
+cd packages/backend && bun run test:game-engine  # game engine tests
+cd packages/backend && bun run test:fairness     # provably fair tests
+
+# Frontend subsets
+cd packages/frontend && bun run test:components
+cd packages/frontend && bun run test:hooks
+
+# E2E
+npx playwright test                   # Playwright E2E (e2e/ directory)
+```
+
+The test framework is **Vitest v4** (migrated from `bun:test`). Backend runs in `node` env, frontend in `jsdom` with React Testing Library. See [Testing Strategy](./testing/testing.md) for full details.
+
+**Known issues:**
+- `bun run test:coverage` is currently broken: `@vitest/coverage-v8` needs Node's inspector API, which the Bun runtime does not support. Run vitest under Node or switch to `@vitest/coverage-istanbul`.
+
+---
+
+## Deployment
+
+```bash
+bun run deploy:prepare      # build + test Docker image
+bun run deploy:validate     # validate production config
+bun run docker:build        # build Docker image
+bun run docker:test         # test Docker image
+```
+
+**Coolify:** Docker build pack, `Dockerfile` at root, port `3000`. See `coolify.json` for full config.
+
+---
+
+## Health Checks
+
+```bash
+bun run health:check              # localhost
+bun run health:check:prod         # production URL
+```
+
+Endpoints: `/api/health`, `/api/health/detailed`, `/api/ready`, `/api/live`, `/api/metrics`
+
+---
+
+## Useful Scripts
+
+```bash
+bun run scripts/create-test-account.ts <email> <password> <name>
+bun run scripts/setup-indexes.ts
+bun run scripts/setup-chat-system.ts
+bun run analyze                   # bundle analysis
+bun run benchmark                 # performance benchmark
+```
+
+---
+
+## CI/CD
+
+GitHub Actions (`.github/workflows/ci.yml`) runs backend tests, frontend tests, E2E, security scans (Trivy), SonarCloud, and Docker build/deploy on `main`.
+
+---
+
+## Key Conventions
+
+- Bun native bundler — no Vite, no webpack
+- `bunfig.toml` at root controls install/runtime settings only; testing is handled by Vitest configs per package
+- `tsconfig.json` at root, workspace packages extend it
+- Redis cache is optional; app falls back to DB if unavailable
+- Root `lint` script references ESLint but no ESLint config exists — linting is not currently enforced
+- Backend build uses bytecode compilation (`--bytecode`) and minification in production
+- Frontend build drops `console`/`debugger` in production builds
+
+---
+
+## Documentation Index
 
 ### Backend
-- **Runtime**: Bun (latest)
-- **Framework**: Hono 4.9+
-- **Database**: Appwrite 18.0+ (BaaS)
-- **Cache**: Dragonfly (Redis-compatible)
-- **Language**: TypeScript 5.9+
-- **Real-time**: Appwrite Realtime (WebSocket)
+- [Appwrite Integration](./backend/appwrite-README.md) — Appwrite setup and usage
+- [Database Operations](./backend/database-README.md) — schema, queries, Appwrite TablesDB
+- [Appwrite Realtime](./backend/appwrite-realtime.md) — WebSocket subscriptions and live updates
+- [Redis/Dragonfly Caching](./backend/redis-README.md) — high-performance caching layer
+- [Statistics System](./backend/statistics-README.md) — game analytics and statistics
+- [Game Engine](./backend/game-engine-README.md) — provably fair game logic and architecture
+- [Leaderboard System](./backend/leaderboard-README.md) — Redis-powered player rankings
+- [Achievements System](./backend/achievements-README.md) — milestones and rewards
+- [Chat System](./backend/chat-README.md) — real-time messaging and presence
+- [Sentry Error Tracking](./backend/sentry-README.md) — production error monitoring
+- [Security](./backend/security.md) — auth, balance integrity, atomic operations
 
 ### Frontend
-- **Framework**: React 19.1+
-- **Build Tool**: Vite 7.1+
-- **Styling**: Tailwind CSS 4.1+
-- **Routing**: React Router 7.9+
-- **State**: TanStack Query 5.89+
-- **Animations**: Framer Motion 12.23+
-- **Language**: TypeScript 5.9+
+- [Frontend Architecture](./frontend/README.md) — React app structure and components
+
+### API
+- [API Reference](./api/README.md) — complete API endpoint documentation
+
+### Deployment & Operations
+- [Deployment Guide](./deployment/deployment.md) — production deployment with Coolify
+- [Maintenance Procedures](./maintenance/README.md) — routine maintenance and troubleshooting
 
 ### Testing
-- **Test Runner**: Bun Test (built-in)
-- **React Testing**: @testing-library/react 16.3+
-- **DOM Environment**: happy-dom 18.0+
+- [Testing Strategy](./testing/testing.md) — testing approach and implementation
 
-### DevOps
-- **Containerization**: Docker
-- **Orchestration**: Coolify v4
-- **CI/CD**: GitHub Actions (with Bun)
+### Game Rules
+- [Wheel of Chance](./game-rules/wheel-of-chance.md) — provably fair wheel spinner
+- [Blackjack](./game-rules/blackjack.md) — strategic card game
+- [Case Opening](./game-rules/case-opening.md) — Tarkov-themed case opening
 
----
-
-## 📖 Documentation Standards
-
-### File Organization
-
-- **Backend**: `/docs/backend/` - Server-side documentation
-- **Frontend**: `/docs/frontend/` - Client-side documentation
-- **API**: `/docs/api/` - API reference
-- **Deployment**: `/docs/deployment/` - Operations and deployment
-- **Game Rules**: `/docs/game-rules/` - Game mechanics
-
-### Writing Style
-
-- **Clear Headers**: Use descriptive section headers
-- **Code Examples**: Include working code examples
-- **Version Info**: Include version numbers where relevant
-- **Last Updated**: Add update dates to major docs
-- **Links**: Cross-reference related documentation
+### AI Configuration
+- [AI Tools](./ai/README.md) — unified AI tools configuration
 
 ---
 
-## 🔄 Keeping Documentation Updated
+## Notes
 
-### When to Update Documentation
-
-1. **Feature Changes**: Update relevant docs when features change
-2. **API Changes**: Update API docs immediately
-3. **Configuration Changes**: Update environment variable docs
-4. **Dependencies**: Update version numbers in tech stack
-5. **Deprecations**: Mark deprecated features clearly
-
-### Documentation Review Schedule
-
-- **Weekly**: Review recently changed features
-- **Monthly**: Comprehensive documentation review
-- **Quarterly**: Major documentation audit
-
----
-
-## 🤝 Contributing to Documentation
-
-### Guidelines
-
-1. **Accuracy**: Verify all information is current
-2. **Examples**: Include practical code examples
-3. **Testing**: Test all code examples before documenting
-4. **Clarity**: Write for developers of all skill levels
-5. **Consistency**: Follow existing documentation patterns
-
-### Documentation Pull Requests
-
-1. Create feature branch: `docs/description`
-2. Update relevant documentation
-3. Test any code examples
-4. Submit PR with clear description
-5. Link to related code changes
-
----
-
-## 📞 Support
-
-### Internal Resources
-- [GitHub Issues](https://github.com/your-repo/issues)
-- [Development Team](mailto:dev@example.com)
-
-### External Resources
-- [Appwrite Documentation](https://appwrite.io/docs)
-- [Appwrite Discord](https://appwrite.io/discord)
-- [Bun Documentation](https://bun.sh/docs)
-- [React Documentation](https://react.dev)
-
----
-
-## ⚠️ Important Notes
-
-### Migration from Supabase
-
-This project has migrated from Supabase to Appwrite. See [Migration Summary](./MIGRATION-SUMMARY.md) for details.
-
-**Old Supabase migration files are kept for reference only** and should not be used for new development:
-- `packages/backend/src/database/migrations/*.sql` - PostgreSQL migrations (deprecated)
-- Old Supabase configuration files
-
-### Appwrite as Primary Backend
+### Supabase Migration
+This project migrated from Supabase to Appwrite. Old Supabase migration files (`packages/backend/src/database/migrations/*.sql`) are kept for reference only and should not be used for new development.
 
 **All new development must use Appwrite:**
-- ✅ Use Appwrite SDK for all database operations
-- ✅ Use Appwrite Auth for authentication
-- ✅ Use Appwrite Realtime for live updates
-- ❌ Do not add new Supabase dependencies
-- ❌ Do not use PostgreSQL directly
+- Use Appwrite SDK for all database operations
+- Use Appwrite Auth for authentication
+- Use Appwrite Realtime for live updates
+- Do not add new Supabase dependencies
+- Do not use PostgreSQL directly
 
 ---
 
-**Last Updated:** 08/07/2026  
-**Documentation Version:** 0.1  
-**Status:** ✅ Current
+**Last Updated:** 08/12/2026
+**Documentation Version:** 0.1

@@ -37,7 +37,7 @@ export interface GameTypeBreakdown {
 }
 
 export interface StatisticsFilters {
-  gameType?: 'roulette' | 'case_opening';
+  gameType?: 'wheel_of_chance' | 'case_opening';
   dateFrom?: string;
   dateTo?: string;
   minBet?: number;
@@ -69,13 +69,13 @@ export interface AdvancedStatistics {
 
 interface GameHistoryDocument {
   $id: string;
+  $createdAt: string;
   userId: string;
-  gameType: 'roulette' | 'case_opening';
+  gameType: 'wheel_of_chance' | 'case_opening';
   betAmount: number;
   winAmount: number;
   resultData: string;
   gameDuration?: number;
-  createdAt: string;
 }
 
 export class StatisticsServiceAppwrite {
@@ -125,11 +125,11 @@ export class StatisticsServiceAppwrite {
     }
 
     if (filters.dateFrom) {
-      queries.push(appwriteDb.greaterThanEqual('createdAt', filters.dateFrom));
+      queries.push(appwriteDb.greaterThanEqual('$createdAt', filters.dateFrom));
     }
 
     if (filters.dateTo) {
-      queries.push(appwriteDb.lessThanEqual('createdAt', filters.dateTo));
+      queries.push(appwriteDb.lessThanEqual('$createdAt', filters.dateTo));
     }
 
     if (filters.minBet) {
@@ -149,7 +149,7 @@ export class StatisticsServiceAppwrite {
     }
 
     // Add ordering and limit
-    queries.push(appwriteDb.orderDesc('createdAt'));
+    queries.push(appwriteDb.orderDesc('$createdAt'));
     queries.push(appwriteDb.limit(1000)); // Reasonable limit for statistics
 
     const { data, error } = await appwriteDb.listDocuments<GameHistoryDocument>(
@@ -203,7 +203,7 @@ export class StatisticsServiceAppwrite {
    * Calculate game type breakdown with trends
    */
   static calculateGameTypeBreakdown(games: GameHistoryDocument[]): GameTypeBreakdown[] {
-    const gameTypes = ['roulette', 'case_opening'] as const;
+    const gameTypes = ['wheel_of_chance', 'case_opening'] as const;
     const breakdown: GameTypeBreakdown[] = [];
 
     gameTypes.forEach((gameType, index) => {
@@ -244,7 +244,7 @@ export class StatisticsServiceAppwrite {
     const dailyData = new Map<string, TimeSeriesData>();
 
     games.forEach(game => {
-      const date = new Date(game.createdAt).toISOString().split('T')[0];
+      const date = new Date(game.$createdAt).toISOString().split('T')[0];
       
       if (!dailyData.has(date)) {
         dailyData.set(date, {
@@ -280,7 +280,7 @@ export class StatisticsServiceAppwrite {
 
     // Sort games by date (oldest first) for streak calculation
     const sortedGames = [...games].sort((a, b) => 
-      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      new Date(a.$createdAt).getTime() - new Date(b.$createdAt).getTime()
     );
 
     sortedGames.forEach(game => {
@@ -368,8 +368,8 @@ export class StatisticsServiceAppwrite {
    * Calculate playing habits and patterns
    */
   static calculatePlayingHabits(games: GameHistoryDocument[]) {
-    const hours = games.map(game => new Date(game.createdAt).getHours());
-    const days = games.map(game => new Date(game.createdAt).toLocaleDateString('en-US', { weekday: 'long' }));
+    const hours = games.map(game => new Date(game.$createdAt).getHours());
+    const days = games.map(game => new Date(game.$createdAt).toLocaleDateString('en-US', { weekday: 'long' }));
     
     // Most active hour
     const hourCounts = new Map<number, number>();
@@ -409,18 +409,18 @@ export class StatisticsServiceAppwrite {
     if (games.length === 0) return [];
 
     const sortedGames = [...games].sort((a, b) => 
-      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      new Date(a.$createdAt).getTime() - new Date(b.$createdAt).getTime()
     );
 
     const sessions: { start: Date; end: Date; games: number; duration: number }[] = [];
     let currentSession = {
-      start: new Date(sortedGames[0].createdAt),
-      end: new Date(sortedGames[0].createdAt),
+      start: new Date(sortedGames[0].$createdAt),
+      end: new Date(sortedGames[0].$createdAt),
       games: 1
     };
 
     for (let i = 1; i < sortedGames.length; i++) {
-      const gameTime = new Date(sortedGames[i].createdAt);
+      const gameTime = new Date(sortedGames[i].$createdAt);
       const timeDiff = gameTime.getTime() - currentSession.end.getTime();
       
       // If more than 1 hour gap, start new session
@@ -496,7 +496,7 @@ export class StatisticsServiceAppwrite {
       
       return data.map((user: any, index: number) => ({
         rank: index + 1,
-        userId: user.userId,
+        userId: user.$id,
         username: user.username,
         value: user[attribute],
         balance: user.balance,
@@ -519,7 +519,7 @@ export class StatisticsServiceAppwrite {
       const dateFrom = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 
       const queries = [
-        appwriteDb.greaterThanEqual('createdAt', dateFrom),
+        appwriteDb.greaterThanEqual('$createdAt', dateFrom),
         appwriteDb.limit(10000) // Large limit for global stats
       ];
 

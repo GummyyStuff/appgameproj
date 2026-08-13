@@ -18,11 +18,16 @@ export async function authenticatedFetch(
   try {
     // Get current Appwrite user session
     const user = await account.get();
-    
-    // Merge headers with X-Appwrite-User-Id
+
+    // Create a JWT for server-side session validation
+    const jwt = await account.createJWT();
+
+    // Merge headers with X-Appwrite-User-Id and Authorization
     const headers = {
       ...options.headers,
       'X-Appwrite-User-Id': user.$id,
+      'Authorization': `Bearer ${jwt.jwt}`,
+      'X-Requested-With': 'XMLHttpRequest', // CSRF protection
     };
 
     // Make the request with updated headers

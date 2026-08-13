@@ -158,14 +158,9 @@ async function seedCaseTypes() {
   
   for (const caseData of caseTypes) {
     try {
-      const now = new Date().toISOString();
       const { data, error } = await appwriteDb.createDocument(
         COLLECTION_IDS.CASE_TYPES,
-        {
-          ...caseData,
-          createdAt: now,
-          updatedAt: now,
-        },
+        { ...caseData },
         ID.unique()
       );
 
@@ -190,14 +185,9 @@ async function seedTarkovItems() {
   
   for (const itemData of tarkovItems) {
     try {
-      const now = new Date().toISOString();
       const { data, error } = await appwriteDb.createDocument(
         COLLECTION_IDS.TARKOV_ITEMS,
-        {
-          ...itemData,
-          isActive: true,
-          createdAt: now,
-        },
+        { ...itemData, isActive: true },
         ID.unique()
       );
 
@@ -283,8 +273,6 @@ async function seedCaseItemPools(
     
     try {
       const caseItemKey = `${caseTypeId}_${itemId}`;
-      const now = new Date().toISOString();
-      
       const { error } = await appwriteDb.createDocument(
         COLLECTION_IDS.CASE_ITEM_POOLS,
         {
@@ -293,7 +281,6 @@ async function seedCaseItemPools(
           weight: mapping.weight,
           valueMultiplier: mapping.valueMultiplier,
           caseItemKey,
-          createdAt: now,
         },
         ID.unique()
       );

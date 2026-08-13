@@ -159,19 +159,19 @@ export const TarkovLoadingScreen: React.FC<LoadingScreenProps> = ({
 
 // Game-specific loading screens
 export const GameLoadingScreen: React.FC<{
-  gameType: 'roulette' | 'case_opening'
+  gameType: 'wheel_of_chance' | 'case_opening'
   message?: string
 }> = ({ gameType, message }) => {
   const gameConfig = {
-    roulette: {
-      icon: FontAwesomeSVGIcons.Circle,
-      title: 'Roulette Table',
+    wheel_of_chance: {
+      icon: FontAwesomeSVGIcons.Clover,
+      title: 'Wheel of Chance',
       defaultMessage: 'Preparing the wheel...',
       tips: [
-        "Red and Black pay 1:1, but the house edge comes from the green zero",
-        "Straight up bets on single numbers pay 35:1",
-        "Outside bets have better odds but lower payouts",
-        "The wheel has 37 numbers in European roulette (0-36)"
+        "Bonus segments are thinner and land less often",
+        "Base multipliers stay fixed from 0x to 50x",
+        "Bonus effects apply to all of your bets at once",
+        "Every spin is provably fair"
       ]
     },
 

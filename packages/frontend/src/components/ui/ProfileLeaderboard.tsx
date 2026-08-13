@@ -53,9 +53,9 @@ const mockLeaderboardData: LeaderboardEntry[] = [
       gamesPlayed: 980,
       winRate: 72.1,
       biggestWin: 120000,
-      favoriteGame: 'Roulette'
+      favoriteGame: 'Wheel of Chance'
     },
-    badges: ['Roulette Master', 'First Extract']
+    badges: ['Wheel Master', 'First Extract']
   },
   {
     rank: 3,
@@ -65,9 +65,9 @@ const mockLeaderboardData: LeaderboardEntry[] = [
       gamesPlayed: 1100,
       winRate: 65.8,
       biggestWin: 95000,
-      favoriteGame: 'Roulette'
+      favoriteGame: 'Wheel of Chance'
     },
-    badges: ['Roulette Master']
+    badges: ['Wheel Master']
   },
   {
     rank: 4,
@@ -89,7 +89,7 @@ const mockLeaderboardData: LeaderboardEntry[] = [
       gamesPlayed: 750,
       winRate: 64.3,
       biggestWin: 75000,
-      favoriteGame: 'Roulette'
+      favoriteGame: 'Wheel of Chance'
     },
     isCurrentUser: true,
     badges: ['First Extract', 'Lucky Seven']
@@ -130,7 +130,7 @@ const ProfileLeaderboard: React.FC<ProfileLeaderboardProps> = ({
           gamesPlayed: entry.gamesPlayed || 0,
           winRate: 0,
           biggestWin: 0,
-          favoriteGame: 'Roulette'
+          favoriteGame: 'Wheel of Chance'
         }
 
         // Map the API value to the appropriate stat based on the current metric

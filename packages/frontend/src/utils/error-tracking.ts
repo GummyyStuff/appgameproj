@@ -83,8 +83,15 @@ class ErrorTracker {
     window.fetch = async (...args) => {
       try {
         const response = await originalFetch(...args);
-        
+
         if (!response.ok) {
+          // Skip 401 on Appwrite auth endpoints - expected after logout / no session
+          const requestUrl = typeof args[0] === 'string' ? args[0] : (args[0] && args[0].url);
+          const isAppwriteAuth = requestUrl && requestUrl.includes('/v1/account');
+          if (response.status === 401 && isAppwriteAuth) {
+            return response;
+          }
+
           this.captureError(
             new Error(`Network Error: ${response.status} ${response.statusText}`),
             {
@@ -96,7 +103,7 @@ class ErrorTracker {
             'network'
           );
         }
-        
+
         return response;
       } catch (error) {
         this.captureError(
@@ -206,6 +213,7 @@ class ErrorTracker {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
         },
         body: JSON.stringify(errorReport),
       });
@@ -250,6 +258,7 @@ class ErrorTracker {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
         },
         body: JSON.stringify(feedback),
       });

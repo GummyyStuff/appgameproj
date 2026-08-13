@@ -26,13 +26,13 @@ export class AppwriteDatabaseService {
   ) {
     try {
       const finalDocumentId = documentId || ID.unique();
-      const response = await this.databases.createDocument(
-        DATABASE_ID,
+      const response = await this.databases.createDocument({
+        databaseId: DATABASE_ID,
         collectionId,
-        finalDocumentId,
-        data,
+        documentId: finalDocumentId,
+        data: data,
         permissions
-      );
+      });
       return { data: response as unknown as T & { $id: string }, error: null };
     } catch (error: any) {
       console.error(`Error creating document in ${collectionId}:`, error);
@@ -45,11 +45,11 @@ export class AppwriteDatabaseService {
    */
   async getDocument<T>(collectionId: CollectionId, documentId: string) {
     try {
-      const response = await this.databases.getDocument(
-        DATABASE_ID,
+      const response = await this.databases.getDocument({
+        databaseId: DATABASE_ID,
         collectionId,
         documentId
-      );
+      });
       return { data: response as unknown as T & { $id: string }, error: null };
     } catch (error: any) {
       console.error(`Error getting document from ${collectionId}:`, error);
@@ -72,13 +72,13 @@ export class AppwriteDatabaseService {
         hasPermissions: !!permissions
       });
       
-      const response = await this.databases.updateDocument(
-        DATABASE_ID,
+      const response = await this.databases.updateDocument({
+        databaseId: DATABASE_ID,
         collectionId,
         documentId,
-        data,
+        data: data,
         permissions
-      );
+      });
       
       console.log(`✅ Document updated successfully in ${collectionId}/${documentId}`);
       return { data: response as unknown as T & { $id: string }, error: null };
@@ -98,7 +98,11 @@ export class AppwriteDatabaseService {
    */
   async deleteDocument(collectionId: CollectionId, documentId: string) {
     try {
-      await this.databases.deleteDocument(DATABASE_ID, collectionId, documentId);
+      await this.databases.deleteDocument({
+        databaseId: DATABASE_ID,
+        collectionId,
+        documentId
+      });
       return { success: true, error: null };
     } catch (error: any) {
       console.error(`Error deleting document from ${collectionId}:`, error);
@@ -118,7 +122,11 @@ export class AppwriteDatabaseService {
       console.log(`📋 Listing documents from ${collectionId} with ${queries.length} queries`)
       
       const response = await retryAppwriteOperation(
-        () => this.databases.listDocuments(DATABASE_ID, collectionId, queries),
+        () => this.databases.listDocuments({
+          databaseId: DATABASE_ID,
+          collectionId,
+          queries
+        }),
         { maxRetries: 1, delayMs: 2000 }
       );
       

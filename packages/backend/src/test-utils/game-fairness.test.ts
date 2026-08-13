@@ -1,19 +1,13 @@
-/**
- * Game Fairness Testing Suite
- * Statistical validation and provably fair algorithm testing
- */
-
-import { describe, test, expect, beforeAll } from 'bun:test'
+import { describe, test, expect, beforeAll } from 'vitest'
 import { SecureRandomGenerator } from '../services/game-engine/random-generator'
-import { RouletteGame } from '../services/game-engine/roulette-game'
-// import { BlackjackGame } from '../services/game-engine/blackjack-game' // Not implemented yet
+import { WheelOfChanceGame } from '../services/game-engine/wheel-of-chance-game'
+import { generateWheelLayout, BONUS_ANGLE, BASE_ANGLE } from '../services/game-engine/wheel-layout'
+import { ProvablyFairService } from '../services/game-engine/provably-fair-service'
 import type { ProvablyFairSeed } from '../services/game-engine/types'
 
 describe('Game Fairness Testing', () => {
-  // Clear any leftover state from previous test suites
-  beforeAll(() => {
-    // BlackjackGame.clearActiveGames() // Not implemented yet
-  })
+  beforeAll(() => {})
+
   describe('Random Number Generation Fairness', () => {
     test('should pass chi-square test for uniform distribution', async () => {
       const generator = new SecureRandomGenerator()
@@ -22,21 +16,18 @@ describe('Game Fairness Testing', () => {
       const expected = samples / buckets
       const counts = new Array(buckets).fill(0)
 
-      // Generate random numbers and count distribution
       for (let i = 0; i < samples; i++) {
         const random = await generator.generateSecureRandom()
         const bucket = Math.floor(random * buckets)
         counts[bucket]++
       }
 
-      // Calculate chi-square statistic
       let chiSquare = 0
       for (let i = 0; i < buckets; i++) {
         const diff = counts[i] - expected
         chiSquare += (diff * diff) / expected
       }
 
-      // Critical value for 9 degrees of freedom at 95% confidence is 16.919
       expect(chiSquare).toBeLessThan(16.919)
     })
 
@@ -45,13 +36,11 @@ describe('Game Fairness Testing', () => {
       const samples = 1000
       const values: number[] = []
 
-      // Generate binary sequence (0 or 1 based on < 0.5)
       for (let i = 0; i < samples; i++) {
         const random = await generator.generateSecureRandom()
         values.push(random < 0.5 ? 0 : 1)
       }
 
-      // Count runs (consecutive identical values)
       let runs = 1
       for (let i = 1; i < values.length; i++) {
         if (values[i] !== values[i - 1]) {
@@ -59,20 +48,16 @@ describe('Game Fairness Testing', () => {
         }
       }
 
-      // Count 0s and 1s
       const ones = values.filter(v => v === 1).length
       const zeros = values.length - ones
 
-      // Expected runs and standard deviation
       const expectedRuns = (2 * ones * zeros) / samples + 1
-      const variance = (2 * ones * zeros * (2 * ones * zeros - samples)) / 
+      const variance = (2 * ones * zeros * (2 * ones * zeros - samples)) /
                       (samples * samples * (samples - 1))
       const stdDev = Math.sqrt(variance)
 
-      // Z-score should be within reasonable bounds (-2.5 to 2.5 for 95% confidence with tolerance)
-      // Use a slightly more lenient threshold to account for statistical variance
       const zScore = Math.abs(runs - expectedRuns) / stdDev
-      expect(zScore).toBeLessThan(2.5) // Increased from 2.0 to 2.5 for statistical tolerance
+      expect(zScore).toBeLessThan(2.5)
     })
 
     test('should generate cryptographically secure seeds', async () => {
@@ -80,17 +65,14 @@ describe('Game Fairness Testing', () => {
       const seeds: string[] = []
       const numSeeds = 100
 
-      // Generate multiple seeds
       for (let i = 0; i < numSeeds; i++) {
         const seed = await generator.generateSeed()
         seeds.push(seed)
       }
 
-      // All seeds should be unique
       const uniqueSeeds = new Set(seeds)
       expect(uniqueSeeds.size).toBe(numSeeds)
 
-      // All seeds should be proper hex strings
       for (const seed of seeds) {
         expect(seed).toMatch(/^[0-9a-f]{64}$/)
       }
@@ -104,14 +86,12 @@ describe('Game Fairness Testing', () => {
         nonce: 1
       }
 
-      // Generate same result multiple times
       const results = []
       for (let i = 0; i < 10; i++) {
         const result = await generator.generateProvablyFairResult(seed)
         results.push(result)
       }
 
-      // All results should be identical
       const firstResult = results[0]
       for (const result of results) {
         expect(result.hash).toBe(firstResult.hash)
@@ -119,7 +99,6 @@ describe('Game Fairness Testing', () => {
         expect(result.isValid).toBe(true)
       }
 
-      // Verify each result
       for (const result of results) {
         const isValid = await generator.verifyProvablyFairResult(result)
         expect(isValid).toBe(true)
@@ -127,258 +106,89 @@ describe('Game Fairness Testing', () => {
     })
   })
 
-  describe('Roulette Fairness Testing', () => {
-    test('should have correct theoretical return to player (RTP)', async () => {
-      // Clear any leftover state from previous tests
-      // BlackjackGame.clearActiveGames() // Not implemented yet
-
-      const roulette = new RouletteGame()
-      const betAmount = 100
-      const simulations = 10000
-
-      // Test different bet types
-      // RTP = payout * probability
-      // For red: payout is 1 (1:1), probability is 18/37, so RTP = 18/37
-      // For number: payout is 35 (35:1), probability is 1/37, so RTP = 35/37
-      // For dozen: payout is 2 (2:1), probability is 12/37, so RTP = 24/37
-      const betTypes = [
-        { type: 'red', value: 'red', expectedRTP: 18/37, multiplier: 1 }, // 1 * 18/37
-        { type: 'number', value: 17, expectedRTP: 35/37, multiplier: 35 }, // 35 * 1/37
-        { type: 'dozen', value: 1, expectedRTP: 24/37, multiplier: 2 }, // 2 * 12/37
-        { type: 'even', value: 'even', expectedRTP: 18/37, multiplier: 1 } // 1 * 18/37
-      ]
-
-      for (const betType of betTypes) {
-        let totalWins = 0
-        let totalBets = 0
-
-        for (let i = 0; i < simulations; i++) {
-          const bet = {
-            userId: `user${i}`,
-            amount: betAmount,
-            gameType: 'roulette' as const,
-            betType: betType.type as any,
-            betValue: betType.value
-          }
-
-          const result = await roulette.play(bet)
-          if (result.success) {
-            totalBets += betAmount
-            totalWins += result.winAmount
-          }
-        }
-
-        const actualRTP = totalWins / totalBets
-        const expectedRTP = betType.expectedRTP
-
-      // Allow 30% variance from expected RTP (statistical tests need high tolerance)
-      // With 1000 simulations, random variance is expected and normal
-      // Note: If RTP is consistently very low (e.g., 87%), review payout multipliers
-      const tolerance = 0.30
-      expect(Math.abs(actualRTP - expectedRTP)).toBeLessThan(tolerance)
-      }
-    })
-
-    test('should distribute winning numbers uniformly', async () => {
-      const roulette = new RouletteGame()
-      const simulations = 3700 // 100 per number
-      const numberCounts = new Array(37).fill(0)
+  describe('Wheel of Chance Fairness Testing', () => {
+    test('winning segments follow their angular weights', async () => {
+      const game = new WheelOfChanceGame()
+      const layout = generateWheelLayout(1337)
+      const simulations = 5000
+      const counts = new Array(layout.length).fill(0)
 
       for (let i = 0; i < simulations; i++) {
         const bet = {
-          userId: `user${i}`,
+          userId: 'fairness-user',
           amount: 100,
-          gameType: 'roulette' as const,
-          betType: 'red',
-          betValue: 'red'
+          gameType: 'wheel_of_chance' as const,
+          bets: [{ segmentIndex: 0, amount: 100 }],
+          wheel_layout: layout
         }
-
-        const result = await roulette.play(bet)
+        const result = await game.play(bet)
         if (result.success) {
-          const winningNumber = (result.resultData as any).winning_number
-          numberCounts[winningNumber]++
+          counts[(result.resultData as any).winning_segment]++
         }
       }
 
-      // Each number should appear roughly equally (within statistical bounds)
-      const expected = simulations / 37
-      const tolerance = expected * 0.5 // 50% tolerance for statistical variance
+      const totalBonusHits = counts.reduce((sum, count, idx) => sum + (layout[idx].bettable ? 0 : count), 0)
+      const totalBaseHits = counts.reduce((sum, count, idx) => sum + (layout[idx].bettable ? count : 0), 0)
 
-      for (let i = 0; i < 37; i++) {
-        expect(Math.abs(numberCounts[i] - expected)).toBeLessThan(tolerance)
-      }
+      const expectedBonusRatio = (3 * BONUS_ANGLE) / 360
+      const expectedBaseRatio = (9 * BASE_ANGLE) / 360
+
+      expect(totalBonusHits / simulations).toBeCloseTo(expectedBonusRatio, 1)
+      expect(totalBaseHits / simulations).toBeCloseTo(expectedBaseRatio, 1)
     })
 
-    test('should maintain correct payout ratios', () => {
-      const payoutTests = [
-        { betType: 'number', multiplier: 35, probability: 1/37, description: 'straight number bet' },
-        { betType: 'red', multiplier: 1, probability: 18/37, description: 'red/black bet' },
-        { betType: 'dozen', multiplier: 2, probability: 12/37, description: 'dozen bet' },
-        { betType: 'column', multiplier: 2, probability: 12/37, description: 'column bet' },
-        { betType: 'even', multiplier: 1, probability: 18/37, description: 'even money bet' },
-        { betType: 'odd', multiplier: 1, probability: 18/37, description: 'odd money bet' },
-        { betType: 'low', multiplier: 1, probability: 18/37, description: 'low bet' },
-        { betType: 'high', multiplier: 1, probability: 18/37, description: 'high bet' }
-      ]
-
-      for (const test of payoutTests) {
-        // Expected value should be negative (house edge)
-        const expectedValue = (test.multiplier * test.probability) - 1
-        expect(expectedValue).toBeLessThan(0)
-
-        // For 1:1 bets (red, black, even, odd, low, high), the house edge is -19/37 ≈ 51.35%
-        // For 2:1 bets (dozen, column), the house edge is -13/37 ≈ 35.14%
-        // For 35:1 bets (number), the house edge is -2/37 ≈ 5.41%
-        // The house edge varies significantly by bet type
-        const houseEdge = Math.abs(expectedValue)
-        expect(houseEdge).toBeGreaterThan(0.02)
-        // Allow for the wide variation in house edge across bet types
-        expect(houseEdge).toBeLessThan(0.55) 
+    test('spin results carry independently verifiable provably fair data', async () => {
+      const game = new WheelOfChanceGame()
+      const layout = generateWheelLayout(4242)
+      const bet = {
+        userId: 'fairness-user',
+        amount: 100,
+        gameType: 'wheel_of_chance' as const,
+        bets: [{ segmentIndex: 0, amount: 100 }],
+        wheel_layout: layout
       }
-    })
-  })
 
-  describe.skip('Blackjack Fairness Testing - SKIPPED: Blackjack game not implemented yet', () => {
-    test('should have correct basic strategy expected values', async () => {
+      const result = await game.play(bet)
+      expect(result.success).toBe(true)
+      const verification = (result.resultData as any).verification
+      expect(verification).toBeDefined()
+
+      const fair = new ProvablyFairService()
+      const recomputed = await fair.generateOutcome({
+        serverSeed: verification.server_seed,
+        clientSeed: verification.client_seed,
+        nonce: verification.nonce
+      })
+
+      expect(recomputed.randomValue).toBeCloseTo(verification.random_value, 9)
+      expect(fair.hashServerSeed(verification.server_seed)).toBe(verification.server_seed_hash)
+    })
+
+    test('payouts never exceed the theoretical maximum', async () => {
+      const game = new WheelOfChanceGame()
+      const layout = generateWheelLayout(7)
       const simulations = 1000
-      let playerWins = 0
-      let dealerWins = 0
-      let pushes = 0
-
-      for (let i = 0; i < simulations; i++) {
-        // Clear static state between simulations
-        BlackjackGame.clearActiveGames()
-        const blackjack = new BlackjackGame()
-        const bet = {
-          userId: `user${i}`,
-          amount: 100,
-          gameType: 'blackjack' as const
-        }
-
-        const initialResult = await blackjack.play(bet)
-        if (initialResult.success && initialResult.gameId) {
-          // Check if game is already completed (immediate blackjack)
-          if (initialResult.winAmount > 0) {
-            // Game is already completed
-            const gameResult = (initialResult.resultData as any).result
-            if (gameResult === 'player_win' || gameResult === 'blackjack') {
-              playerWins++
-            } else if (gameResult === 'dealer_win') {
-              dealerWins++
-            } else if (gameResult === 'push') {
-              pushes++
-            }
-          } else {
-            // Complete the game by standing (simulating basic strategy)
-            const standAction = {
-              userId: `user${i}`,
-              gameId: initialResult.gameId,
-              action: 'stand' as const
-            }
-
-            const finalResult = await blackjack.processAction(standAction)
-            if (finalResult.success) {
-              const gameResult = (finalResult.resultData as any).result
-              if (gameResult === 'player_win' || gameResult === 'blackjack') {
-                playerWins++
-              } else if (gameResult === 'dealer_win') {
-                dealerWins++
-              } else if (gameResult === 'push') {
-                pushes++
-              }
-            }
-          }
-        }
-      }
-
-      // Basic blackjack statistics (approximate)
-      const playerWinRate = playerWins / simulations
-      const dealerWinRate = dealerWins / simulations
-      const pushRate = pushes / simulations
-
-      // Player should win roughly 35-55% of hands (wide range for statistical variance)
-      expect(playerWinRate).toBeGreaterThan(0.30)
-      expect(playerWinRate).toBeLessThan(0.60)
-
-      // Dealer should win roughly 40-60% of hands (wide range for statistical variance)
-      expect(dealerWinRate).toBeGreaterThan(0.35)
-      expect(dealerWinRate).toBeLessThan(0.65)
-
-      // Pushes should be roughly 5-15% of hands
-      expect(pushRate).toBeGreaterThan(0.03)
-      expect(pushRate).toBeLessThan(0.18)
-    })
-
-    test('should deal cards from a properly shuffled deck', async () => {
-      const blackjack = new BlackjackGame()
-      const cardCounts: Record<string, number> = {}
-      const simulations = 520 // 10 full decks
+      let maxWin = 0
 
       for (let i = 0; i < simulations; i++) {
         const bet = {
-          userId: `user${i}`,
+          userId: 'fairness-user',
           amount: 100,
-          gameType: 'blackjack' as const
+          gameType: 'wheel_of_chance' as const,
+          bets: [{ segmentIndex: 0, amount: 100 }],
+          wheel_layout: layout
         }
-
-        const result = await blackjack.play(bet)
+        const result = await game.play(bet)
         if (result.success) {
-          const gameData = result.resultData as any
-          const allCards = [...gameData.player_hand, ...gameData.dealer_hand]
-          
-          for (const card of allCards) {
-            const cardKey = `${card.suit}-${card.value}`
-            cardCounts[cardKey] = (cardCounts[cardKey] || 0) + 1
-          }
+          maxWin = Math.max(maxWin, result.winAmount)
         }
       }
 
-      // Each card should appear roughly equally (4 times per deck)
-      const totalCards = Object.values(cardCounts).reduce((sum, count) => sum + count, 0)
-      const expectedPerCard = totalCards / 52 // 52 unique cards
-
-      for (const count of Object.values(cardCounts)) {
-        // Allow reasonable variance
-        expect(count).toBeGreaterThan(expectedPerCard * 0.5)
-        expect(count).toBeLessThan(expectedPerCard * 2.0)
-      }
-    })
-
-    test('should calculate hand values correctly', () => {
-      const testHands = [
-        { cards: [{ suit: 'hearts', value: 'K' }, { suit: 'spades', value: '7' }], expectedValue: 17 },
-        { cards: [{ suit: 'diamonds', value: 'A' }, { suit: 'clubs', value: 'K' }], expectedValue: 21 },
-        { cards: [{ suit: 'hearts', value: 'A' }, { suit: 'spades', value: 'A' }], expectedValue: 12 },
-        { cards: [{ suit: 'diamonds', value: '5' }, { suit: 'clubs', value: '6' }, { suit: 'hearts', value: 'A' }], expectedValue: 12 },
-        { cards: [{ suit: 'spades', value: 'K' }, { suit: 'hearts', value: 'Q' }, { suit: 'diamonds', value: 'J' }], expectedValue: 30 }
-      ]
-
-      for (const hand of testHands) {
-        let value = 0
-        let aces = 0
-
-        for (const card of hand.cards) {
-          if (card.value === 'A') {
-            aces++
-            value += 11
-          } else if (['K', 'Q', 'J'].includes(card.value)) {
-            value += 10
-          } else {
-            value += parseInt(card.value)
-          }
-        }
-
-        // Adjust for aces
-        while (value > 21 && aces > 0) {
-          value -= 10
-          aces--
-        }
-
-        expect(value).toBe(hand.expectedValue)
-      }
+      expect(maxWin).toBeLessThanOrEqual(100 * 100)
     })
   })
 
+  describe.skip('Blackjack Fairness Testing - SKIPPED: Blackjack game not implemented yet', () => {})
 
   describe('Cross-Game Consistency', () => {
     test('should maintain consistent random seed behavior across games', async () => {
@@ -389,14 +199,12 @@ describe('Game Fairness Testing', () => {
         nonce: 1
       }
 
-      // Generate same random value multiple times
       const values = []
       for (let i = 0; i < 10; i++) {
         const result = await generator.generateProvablyFairResult(seed)
         values.push(result.randomValue)
       }
 
-      // All values should be identical
       const firstValue = values[0]
       for (const value of values) {
         expect(value).toBe(firstValue)
@@ -405,14 +213,13 @@ describe('Game Fairness Testing', () => {
 
     test('should have reasonable house edge across all games', async () => {
       const games = [
-        { name: 'roulette', expectedHouseEdge: 0.027 }, // 2.7%
-        { name: 'blackjack', expectedHouseEdge: 0.005 } // 0.5% with basic strategy
+        { name: 'wheel_of_chance', expectedHouseEdge: 0.02 },
+        { name: 'blackjack', expectedHouseEdge: 0.005 }
       ]
 
       for (const game of games) {
-        // House edge should be positive but reasonable
         expect(game.expectedHouseEdge).toBeGreaterThan(0)
-        expect(game.expectedHouseEdge).toBeLessThan(0.1) // Less than 10%
+        expect(game.expectedHouseEdge).toBeLessThan(0.1)
       }
     })
   })
@@ -423,28 +230,23 @@ describe('Game Fairness Testing', () => {
       const samples = 1000
       const values: number[] = []
 
-      // Generate random values
       for (let i = 0; i < samples; i++) {
         const value = await generator.generateSecureRandom()
         values.push(value)
       }
 
-      // Sort values
       values.sort((a, b) => a - b)
 
-      // Calculate D statistic
       let maxD = 0
       for (let i = 0; i < samples; i++) {
         const empiricalCDF = (i + 1) / samples
-        const theoreticalCDF = values[i] // For uniform [0,1]
+        const theoreticalCDF = values[i]
         const d = Math.abs(empiricalCDF - theoreticalCDF)
         maxD = Math.max(maxD, d)
       }
 
-      // Critical value for 1000 samples at 95% confidence is 1.36/sqrt(n) ≈ 0.043
-      // Use a slightly more lenient threshold to account for statistical variance
       const criticalValue = 1.36 / Math.sqrt(samples)
-      expect(maxD).toBeLessThan(criticalValue * 1.05) // 5% tolerance for statistical variance
+      expect(maxD).toBeLessThan(criticalValue * 1.05)
     })
 
     test('should maintain entropy across multiple generations', async () => {
@@ -452,7 +254,6 @@ describe('Game Fairness Testing', () => {
       const samples = 1000
       const bitStrings: string[] = []
 
-      // Generate random bytes and convert to bit strings
       for (let i = 0; i < samples; i++) {
         const bytes = await generator.generateSecureBytes(4)
         const bitString = Array.from(bytes)
@@ -461,7 +262,6 @@ describe('Game Fairness Testing', () => {
         bitStrings.push(bitString)
       }
 
-      // Count 0s and 1s
       let totalBits = 0
       let ones = 0
 
@@ -470,10 +270,8 @@ describe('Game Fairness Testing', () => {
         ones += bitString.split('1').length - 1
       }
 
-      const zeros = totalBits - ones
       const ratio = ones / totalBits
 
-      // Should be close to 50/50
       expect(ratio).toBeGreaterThan(0.45)
       expect(ratio).toBeLessThan(0.55)
     })

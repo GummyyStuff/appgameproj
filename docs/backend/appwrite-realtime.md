@@ -53,7 +53,7 @@ const subscription = realtime.subscribe('collections/games/documents', (response
 
 ## Related Components
 - [Appwrite Integration Guide](./appwrite-README.md)
-- [Frontend Architecture](../frontend/README.md#realtime)
+- [Developer Guide](../README.md)
 - [Database Operations](./database-README.md)
 
 ## Version History

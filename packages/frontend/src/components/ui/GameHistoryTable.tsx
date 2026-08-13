@@ -209,7 +209,7 @@ const GameHistoryTable: React.FC<GameHistoryTableProps> = ({
 
   const getGameIcon = (gameType: string) => {
     switch (gameType) {
-      case 'roulette': return <FontAwesomeSVGIcons.Circle size={16} />
+      case 'wheel_of_chance': return <FontAwesomeSVGIcons.Clover size={16} />
       case 'case_opening': return <FontAwesomeSVGIcons.Square size={16} />
       default: return <FontAwesomeSVGIcons.Gamepad size={16} />
     }
@@ -217,7 +217,7 @@ const GameHistoryTable: React.FC<GameHistoryTableProps> = ({
 
   const getGameName = (gameType: string) => {
     switch (gameType) {
-      case 'roulette': return 'Roulette'
+      case 'wheel_of_chance': return 'Wheel of Chance'
       case 'case_opening': return 'Case Opening'
       default: return gameType ? gameType.charAt(0).toUpperCase() + gameType.slice(1) : 'Unknown'
     }
@@ -363,7 +363,7 @@ const GameHistoryTable: React.FC<GameHistoryTableProps> = ({
                 className="w-full bg-tarkov-dark border border-tarkov-primary rounded-md px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-tarkov-accent"
               >
                 <option value="all">All Games</option>
-                <option value="roulette">Roulette</option>
+                <option value="wheel_of_chance">Wheel of Chance</option>
                 <option value="case_opening">Case Opening</option>
               </select>
             </div>
@@ -529,8 +529,8 @@ const GameHistoryTable: React.FC<GameHistoryTableProps> = ({
                     <td className="py-3 px-2 text-gray-400 text-sm">
                       {game.result_data && (
                         <>
-                          {game.gameType === 'roulette' && game.result_data.winning_number !== undefined && (
-                            <span>Number: {game.result_data.winning_number}</span>
+                          {game.gameType === 'wheel_of_chance' && game.result_data.winning_segment !== undefined && (
+                            <span>Segment: {game.result_data.winning_segment}</span>
                           )}
                           {false && game.result_data.action && (
                             <span>{game.result_data.action.toUpperCase()}: {game.result_data.shares} shares @ ${game.result_data.price}</span>

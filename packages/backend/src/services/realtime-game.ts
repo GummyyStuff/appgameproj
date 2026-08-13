@@ -5,7 +5,7 @@
  */
 
 import { GameResult } from './game-engine/types'
-import { GameHistory, RouletteResult } from '../types/database'
+import { RouletteResult } from '../types/database'
 
 export interface GameStateUpdate {
   userId: string
@@ -186,7 +186,7 @@ export class RealtimeGameService {
    * Subscribe to database changes for game history
    * NOTE: Disabled for Appwrite migration - use Appwrite Realtime on client side
    */
-  async subscribeToGameHistory(userId: string, callback: (gameHistory: GameHistory) => void) {
+  async subscribeToGameHistory(userId: string, callback: (gameHistory: any) => void) {
     const channelName = `game-history-${userId}`
     
     if (this.channels.has(channelName)) {

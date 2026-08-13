@@ -1,14 +1,12 @@
-import { describe, test, expect, beforeAll, beforeEach } from 'bun:test'
-import '../test-utils/setup' // Setup test environment
+import { describe, test, expect, beforeAll, beforeEach } from 'vitest'
+import '../test-utils/setup'
 import { Hono } from 'hono'
 import { validationMiddleware, InputSanitizer, ThreatDetector } from '../middleware/validation'
 import { errorHandler } from '../middleware/error'
 import { z } from 'zod'
 
 describe('Security Hardening', () => {
-  beforeAll(async () => {
-    // Setup test environment
-  })
+  beforeAll(async () => {})
 
   describe('Input Sanitization', () => {
     test('should sanitize strings', () => {
@@ -56,7 +54,7 @@ describe('Security Hardening', () => {
 
       const sanitized = InputSanitizer.sanitizeObject(obj)
       expect(sanitized.name).toBe('<script>alert(1)</script>')
-      expect(sanitized.age).toBe('25') // String values are sanitized, not converted to numbers
+      expect(sanitized.age).toBe('25')
       expect(sanitized.nested.value).toBe('testnull')
       expect(sanitized.array[0]).toBe('item1')
       expect(sanitized.array[1]).toBe('item2')
@@ -130,7 +128,7 @@ describe('Security Hardening', () => {
     test('should analyze input for multiple threats', () => {
       const maliciousInput = "'; DROP TABLE users; <script>alert(1)</script> ../../../etc/passwd"
       const threats = ThreatDetector.analyzeInput(maliciousInput)
-      
+
       expect(threats).toContain('sql_injection')
       expect(threats).toContain('xss')
       expect(threats).toContain('path_traversal')
@@ -143,7 +141,6 @@ describe('Security Hardening', () => {
     beforeEach(() => {
       app = new Hono()
 
-      // Add error handler (required for HTTPException handling)
       app.onError(errorHandler)
 
       const schema = z.object({
@@ -171,7 +168,7 @@ describe('Security Hardening', () => {
 
       const res = await app.fetch(req)
       expect(res.status).toBe(200)
-      
+
       const body = await res.json()
       expect(body.data.email).toBe('test@example.com')
       expect(body.data.username).toBe('testuser')
@@ -184,8 +181,8 @@ describe('Security Hardening', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: 'invalid-email',
-          username: 'ab', // too short
-          age: -5 // invalid age
+          username: 'ab',
+          age: -5
         })
       })
 
@@ -210,7 +207,7 @@ describe('Security Hardening', () => {
 
       const res = await app.fetch(req)
       expect(res.status).toBe(400)
-      
+
       const body = await res.json()
       expect(body.error.message).toBe('Invalid input detected')
     })

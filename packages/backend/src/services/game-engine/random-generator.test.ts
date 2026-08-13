@@ -1,9 +1,4 @@
-/**
- * Tests for SecureRandomGenerator
- * Validates cryptographic security and provably fair algorithms
- */
-
-import { describe, test, expect, beforeEach } from 'bun:test'
+import { describe, test, expect, beforeEach } from 'vitest'
 import { SecureRandomGenerator } from './random-generator'
 import { ProvablyFairSeed } from './types'
 
@@ -24,9 +19,8 @@ describe('SecureRandomGenerator', () => {
         results.push(random)
       }
 
-      // Check for reasonable distribution (not all the same)
       const unique = new Set(results)
-      expect(unique.size).toBeGreaterThan(50) // Should have good variety
+      expect(unique.size).toBeGreaterThan(50)
     })
 
     test('should generate different values on subsequent calls', async () => {
@@ -62,7 +56,6 @@ describe('SecureRandomGenerator', () => {
         results.push(random)
       }
 
-      // Check that all values 1-6 appear
       const unique = new Set(results)
       expect(unique.size).toBe(6)
       expect(Array.from(unique).sort()).toEqual([1, 2, 3, 4, 5, 6])
@@ -87,7 +80,7 @@ describe('SecureRandomGenerator', () => {
     test('should generate hex string of correct length', async () => {
       const seed = await generator.generateSeed()
       expect(typeof seed).toBe('string')
-      expect(seed.length).toBe(64) // 32 bytes = 64 hex chars
+      expect(seed.length).toBe(64)
       expect(/^[0-9a-f]+$/.test(seed)).toBe(true)
     })
 
@@ -191,8 +184,7 @@ describe('SecureRandomGenerator', () => {
       }
 
       const result = await generator.generateProvablyFairResult(seed)
-      
-      // Tamper with the result
+
       const tamperedResult = { ...result, randomValue: 0.5 }
       const isValid = await generator.verifyProvablyFairResult(tamperedResult)
       expect(isValid).toBe(false)
@@ -212,8 +204,7 @@ describe('SecureRandomGenerator', () => {
 
       expect(values1).toEqual(values2)
       expect(values1.length).toBe(5)
-      
-      // All values should be between 0 and 1
+
       values1.forEach(value => {
         expect(value).toBeGreaterThanOrEqual(0)
         expect(value).toBeLessThan(1)
@@ -229,8 +220,7 @@ describe('SecureRandomGenerator', () => {
 
       const values = await generator.generateMultipleFromSeed(seed, 10)
       const unique = new Set(values)
-      
-      // Should have good variety (not all identical)
+
       expect(unique.size).toBeGreaterThan(5)
     })
   })
@@ -240,16 +230,16 @@ describe('SecureRandomGenerator', () => {
       const seed = 'test_server_seed'
       const hash1 = generator.hashServerSeed(seed)
       const hash2 = generator.hashServerSeed(seed)
-      
+
       expect(hash1).toBe(hash2)
       expect(typeof hash1).toBe('string')
-      expect(hash1.length).toBe(64) // SHA256 hex length
+      expect(hash1.length).toBe(64)
     })
 
     test('should generate different hashes for different seeds', () => {
       const hash1 = generator.hashServerSeed('seed1')
       const hash2 = generator.hashServerSeed('seed2')
-      
+
       expect(hash1).not.toBe(hash2)
     })
   })

@@ -1,7 +1,67 @@
 import type { Context, Next } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { logSecurityEvent } from './logger'
-import { config, isProduction } from '../config/env'
+import { config, isProduction, env } from '../config/env'
+
+/**
+ * Build the connect-src CSP directive from environment configuration.
+ * Derives allowed origins from Appwrite endpoint, Sentry DSN, and user-provided extras.
+ */
+function buildConnectSrc(): string {
+  const sources: string[] = ["'self'"]
+
+  // Local dev
+  sources.push('http://localhost:3000', 'http://127.0.0.1:3000')
+
+  // Helper: add both HTTPS and WSS origins for a URL (Appwrite realtime needs WSS)
+  const addEndpointOrigins = (url: string) => {
+    try {
+      const parsed = new URL(url)
+      sources.push(parsed.origin) // https://...
+      if (parsed.protocol === 'https:') {
+        sources.push('wss://' + parsed.host) // wss://...
+      } else if (parsed.protocol === 'http:') {
+        sources.push('ws://' + parsed.host) // ws://...
+      }
+    } catch { /* ignore invalid URLs */ }
+  }
+
+  // Frontend Appwrite endpoint (browser calls this directly)
+  const fwEndpoint = process.env.VITE_APPWRITE_ENDPOINT || process.env.APPWRITE_ENDPOINT
+  if (fwEndpoint) {
+    addEndpointOrigins(fwEndpoint)
+  }
+
+  // Backend Appwrite endpoint
+  if (process.env.APPWRITE_ENDPOINT) {
+    addEndpointOrigins(process.env.APPWRITE_ENDPOINT)
+  }
+
+  // Appwrite cloud fallbacks (realtime WS + EU region)
+  sources.push('wss://cloud.appwrite.io', 'https://eu.cloud.appwrite.io')
+
+  // Sentry ingest origin (derived from DSN)
+  if (env.SENTRY_DSN) {
+    try {
+      sources.push(new URL(env.SENTRY_DSN).origin)
+    } catch { /* ignore */ }
+  }
+
+  // Cloudflare Insights (only if SENTRY_DSN is set, as it indicates monitoring is active)
+  if (env.SENTRY_DSN) {
+    sources.push('https://static.cloudflareinsights.com')
+  }
+
+  // User-provided extra origins (comma-separated)
+  if (env.CSP_CONNECT_EXTRA) {
+    for (const s of env.CSP_CONNECT_EXTRA.split(',').map(s => s.trim())) {
+      if (s) sources.push(s)
+    }
+  }
+
+  // Deduplicate while preserving order
+  return 'connect-src ' + [...new Set(sources)].join(' ')
+}
 
 /**
  * Security headers middleware
@@ -14,12 +74,12 @@ export function securityHeadersMiddleware() {
     // Content Security Policy
     const csp = [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com", // Allow inline scripts for React and Cloudflare
-      "worker-src 'self' blob:", // Allow Sentry Session Replay Web Workers
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com", // Allow inline styles for Tailwind and Google Fonts
+      "script-src 'self' https://static.cloudflareinsights.com",
+      "worker-src 'self' blob:",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "img-src 'self' data: https:",
-      "font-src 'self' data: https://fonts.gstatic.com", // Allow Google Fonts
-      "connect-src 'self' wss: https: https://static.cloudflareinsights.com https://*.ingest.sentry.io https://o4510190949695488.ingest.us.sentry.io", // Allow Cloudflare Insights and Sentry
+      "font-src 'self' data: https://fonts.gstatic.com",
+      buildConnectSrc(),
       "media-src 'self'",
       "object-src 'none'",
       "base-uri 'self'",

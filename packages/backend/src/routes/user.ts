@@ -41,7 +41,7 @@ userRoutes.get('/profile', asyncHandler(async (c) => {
         username: profile.username || user.email || `user_${user.id.substring(0, 8)}`,
         displayName: profile.displayName || profile.username || user.email || 'Anonymous User',
         balance: profile.balance,
-        created_at: profile.createdAt,
+        created_at: profile.$createdAt,
         is_moderator: profile.isModerator,
         avatar_path: profile.avatarPath,
         // Statistics fields for profile page
@@ -267,7 +267,7 @@ userRoutes.put('/profile', asyncHandler(async (c) => {
           username: result.profile!.username,
           displayName: result.profile!.displayName,
           balance: result.profile!.balance,
-          created_at: result.profile!.createdAt
+          created_at: result.profile!.$createdAt
         }
       })
     }

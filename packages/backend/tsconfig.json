@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "ESNext",
+    "target": "ESNext",
+    "module": "Preserve",
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "noEmit": true,
@@ -16,7 +16,6 @@
     "declarationMap": true,
     "outDir": "./dist",
     "rootDir": "./src",
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     }

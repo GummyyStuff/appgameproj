@@ -1,34 +1,21 @@
-import { describe, test, expect } from 'bun:test'
-
-// Set test environment variables
-process.env.NODE_ENV = 'test'
-process.env.SUPABASE_URL = 'http://localhost:54321'
-process.env.SUPABASE_ANON_KEY = 'test-anon-key'
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key'
-process.env.JWT_SECRET = 'test-jwt-secret'
-process.env.STARTING_BALANCE = '10000'
-process.env.DAILY_BONUS = '1000'
+import { describe, test, expect } from 'vitest'
 
 describe('Currency API Integration', () => {
   describe('API Endpoint Validation', () => {
     test('should validate balance request parameters', () => {
       const { z } = require('zod')
-      
+
       const balanceValidationSchema = z.object({
         amount: z.number().positive('Amount must be positive')
       })
 
-      // Valid request
       expect(() => balanceValidationSchema.parse({ amount: 1000 })).not.toThrow()
-      
-      // Invalid requests
       expect(() => balanceValidationSchema.parse({ amount: -100 })).toThrow()
       expect(() => balanceValidationSchema.parse({ amount: 0 })).toThrow()
       expect(() => balanceValidationSchema.parse({})).toThrow()
     })
 
     test('should validate transaction history query parameters', () => {
-      // Simulate query parameter parsing
       const parseQueryParams = (query: Record<string, string>) => {
         const limit = parseInt(query.limit || '50')
         const offset = parseInt(query.offset || '0')
@@ -49,12 +36,10 @@ describe('Currency API Integration', () => {
         return { limit, offset, gameType }
       }
 
-      // Valid parameters
       expect(() => parseQueryParams({ limit: '25', offset: '10' })).not.toThrow()
       expect(() => parseQueryParams({ game_type: 'roulette' })).not.toThrow()
-      expect(() => parseQueryParams({})).not.toThrow() // defaults
+      expect(() => parseQueryParams({})).not.toThrow()
 
-      // Invalid parameters
       expect(() => parseQueryParams({ limit: '0' })).toThrow()
       expect(() => parseQueryParams({ limit: '101' })).toThrow()
       expect(() => parseQueryParams({ offset: '-1' })).toThrow()
@@ -182,19 +167,18 @@ describe('Currency API Integration', () => {
         if (error.message.includes('already claimed')) {
           return { status: 400, message: error.message }
         }
-        
+
         if (error.message.includes('Insufficient balance')) {
           return { status: 400, message: error.message }
         }
-        
+
         if (error.message.includes('not found')) {
           return { status: 404, message: 'User not found' }
         }
-        
+
         return { status: 500, message: 'Internal server error' }
       }
 
-      // Test different error scenarios
       expect(handleCurrencyError(new Error('Daily bonus already claimed'))).toEqual({
         status: 400,
         message: 'Daily bonus already claimed'
@@ -221,19 +205,17 @@ describe('Currency API Integration', () => {
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
           throw new Error('Missing or invalid authorization header')
         }
-        
+
         const token = authHeader.substring(7)
         if (!token || token.length < 10) {
           throw new Error('Invalid token format')
         }
-        
+
         return { userId: 'test-user-id', email: 'test@example.com' }
       }
 
-      // Valid auth
       expect(() => requireAuth('Bearer valid-jwt-token-here')).not.toThrow()
 
-      // Invalid auth
       expect(() => requireAuth()).toThrow('Missing or invalid authorization header')
       expect(() => requireAuth('Invalid header')).toThrow('Missing or invalid authorization header')
       expect(() => requireAuth('Bearer ')).toThrow('Invalid token format')

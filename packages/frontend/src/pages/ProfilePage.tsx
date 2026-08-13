@@ -94,6 +94,7 @@ const ProfilePage: React.FC = () => {
         headers: {
           'Content-Type': 'application/json',
           'X-Appwrite-User-Id': user.id,
+          'X-Requested-With': 'XMLHttpRequest',
         },
       });
       
@@ -145,6 +146,7 @@ const ProfilePage: React.FC = () => {
         headers: {
           'Content-Type': 'application/json',
           'X-Appwrite-User-Id': user.id,
+          'X-Requested-With': 'XMLHttpRequest',
         },
         body: JSON.stringify({ username }),
       });
@@ -359,7 +361,7 @@ const ProfilePage: React.FC = () => {
                       'first-win': FontAwesomeSVGIcons.Heart,
                       'high-roller': FontAwesomeSVGIcons.RubleSign,
                       'lucky-seven': FontAwesomeSVGIcons.Bolt,
-                      'roulette-master': FontAwesomeSVGIcons.Circle,
+                      'wheel-master': FontAwesomeSVGIcons.Clover,
                       'stock-trader': FontAwesomeSVGIcons.ChartLine
                     }
                     return iconMap[achievementId] || FontAwesomeSVGIcons.Shield
@@ -428,7 +430,7 @@ const ProfilePage: React.FC = () => {
                           'first-win': FontAwesomeSVGIcons.Heart,
                           'high-roller': FontAwesomeSVGIcons.RubleSign,
                           'lucky-seven': FontAwesomeSVGIcons.Bolt,
-                          'roulette-master': FontAwesomeSVGIcons.Circle,
+                          'wheel-master': FontAwesomeSVGIcons.Clover,
                           'stock-trader': FontAwesomeSVGIcons.ChartLine
                         }
                         return iconMap[achievementId] || FontAwesomeSVGIcons.Shield

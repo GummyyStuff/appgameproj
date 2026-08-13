@@ -75,7 +75,6 @@ async function createUsersCollection() {
     );
 
     // Add attributes (required ones CANNOT have defaults in Appwrite 1.7.4)
-    await databases.createStringAttribute(DATABASE_ID, COLLECTION_IDS.USERS, 'userId', 36, true);
     await databases.createStringAttribute(DATABASE_ID, COLLECTION_IDS.USERS, 'username', 50, true);
     await databases.createStringAttribute(DATABASE_ID, COLLECTION_IDS.USERS, 'displayName', 100, false);
     await databases.createFloatAttribute(DATABASE_ID, COLLECTION_IDS.USERS, 'balance', false, 10000); // Optional with default
@@ -88,8 +87,7 @@ async function createUsersCollection() {
     await databases.createIntegerAttribute(DATABASE_ID, COLLECTION_IDS.USERS, 'chatRulesVersion', false, 1); // Optional with default
     await databases.createDatetimeAttribute(DATABASE_ID, COLLECTION_IDS.USERS, 'chatRulesAcceptedAt', false);
     await databases.createBooleanAttribute(DATABASE_ID, COLLECTION_IDS.USERS, 'isActive', false, true); // Optional with default
-    await databases.createDatetimeAttribute(DATABASE_ID, COLLECTION_IDS.USERS, 'createdAt', true);
-    await databases.createDatetimeAttribute(DATABASE_ID, COLLECTION_IDS.USERS, 'updatedAt', true);
+    // $createdAt and $updatedAt are provided automatically by Appwrite
 
     // Create indexes
     await databases.createIndex(DATABASE_ID, COLLECTION_IDS.USERS, 'username_idx', 'unique', ['username']);
@@ -118,10 +116,10 @@ async function createGameHistoryCollection() {
     await databases.createFloatAttribute(DATABASE_ID, COLLECTION_IDS.GAME_HISTORY, 'winAmount', false, 0); // Optional with default
     await databases.createStringAttribute(DATABASE_ID, COLLECTION_IDS.GAME_HISTORY, 'resultData', 10000, true);
     await databases.createIntegerAttribute(DATABASE_ID, COLLECTION_IDS.GAME_HISTORY, 'gameDuration', false);
-    await databases.createDatetimeAttribute(DATABASE_ID, COLLECTION_IDS.GAME_HISTORY, 'createdAt', true);
+    // $createdAt is provided automatically by Appwrite
 
     await databases.createIndex(DATABASE_ID, COLLECTION_IDS.GAME_HISTORY, 'userId_idx', 'key', ['userId']);
-    await databases.createIndex(DATABASE_ID, COLLECTION_IDS.GAME_HISTORY, 'createdAt_idx', 'key', ['createdAt']);
+    await databases.createIndex(DATABASE_ID, COLLECTION_IDS.GAME_HISTORY, 'createdAt_idx', 'key', ['$createdAt']);
     await databases.createIndex(DATABASE_ID, COLLECTION_IDS.GAME_HISTORY, 'gameType_idx', 'key', ['gameType']);
 
     console.log('✅ Game history collection created');
@@ -173,8 +171,7 @@ async function createCaseTypesCollection() {
     await databases.createStringAttribute(DATABASE_ID, COLLECTION_IDS.CASE_TYPES, 'imageUrl', 500, false); // Use string instead of url
     await databases.createStringAttribute(DATABASE_ID, COLLECTION_IDS.CASE_TYPES, 'rarityDistribution', 500, true);
     await databases.createBooleanAttribute(DATABASE_ID, COLLECTION_IDS.CASE_TYPES, 'isActive', false, true); // Optional with default
-    await databases.createDatetimeAttribute(DATABASE_ID, COLLECTION_IDS.CASE_TYPES, 'createdAt', true);
-    await databases.createDatetimeAttribute(DATABASE_ID, COLLECTION_IDS.CASE_TYPES, 'updatedAt', true);
+    // $createdAt and $updatedAt are provided automatically by Appwrite
 
     await databases.createIndex(DATABASE_ID, COLLECTION_IDS.CASE_TYPES, 'name_idx', 'unique', ['name']);
 
@@ -202,7 +199,7 @@ async function createTarkovItemsCollection() {
     await databases.createStringAttribute(DATABASE_ID, COLLECTION_IDS.TARKOV_ITEMS, 'imageUrl', 500, false); // Use string instead of url
     await databases.createStringAttribute(DATABASE_ID, COLLECTION_IDS.TARKOV_ITEMS, 'description', 1000, false);
     await databases.createBooleanAttribute(DATABASE_ID, COLLECTION_IDS.TARKOV_ITEMS, 'isActive', false, true); // Optional with default
-    await databases.createDatetimeAttribute(DATABASE_ID, COLLECTION_IDS.TARKOV_ITEMS, 'createdAt', true);
+    // $createdAt is provided automatically by Appwrite
 
     await databases.createIndex(DATABASE_ID, COLLECTION_IDS.TARKOV_ITEMS, 'name_idx', 'unique', ['name']);
     await databases.createIndex(DATABASE_ID, COLLECTION_IDS.TARKOV_ITEMS, 'rarity_idx', 'key', ['rarity']);
@@ -228,7 +225,7 @@ async function createCaseItemPoolsCollection() {
     await databases.createStringAttribute(DATABASE_ID, COLLECTION_IDS.CASE_ITEM_POOLS, 'itemId', 36, true);
     await databases.createFloatAttribute(DATABASE_ID, COLLECTION_IDS.CASE_ITEM_POOLS, 'weight', false, 1.0); // Optional with default
     await databases.createFloatAttribute(DATABASE_ID, COLLECTION_IDS.CASE_ITEM_POOLS, 'valueMultiplier', false, 1.0); // Optional with default
-    await databases.createDatetimeAttribute(DATABASE_ID, COLLECTION_IDS.CASE_ITEM_POOLS, 'createdAt', true);
+    // $createdAt is provided automatically by Appwrite
     await databases.createStringAttribute(DATABASE_ID, COLLECTION_IDS.CASE_ITEM_POOLS, 'caseItemKey', 100, true);
 
     await databases.createIndex(DATABASE_ID, COLLECTION_IDS.CASE_ITEM_POOLS, 'caseItemKey_idx', 'unique', ['caseItemKey']);
@@ -261,11 +258,10 @@ async function createChatMessagesCollection() {
     await databases.createBooleanAttribute(DATABASE_ID, COLLECTION_IDS.CHAT_MESSAGES, 'isDeleted', false, false); // Optional with default
     await databases.createDatetimeAttribute(DATABASE_ID, COLLECTION_IDS.CHAT_MESSAGES, 'deletedAt', false);
     await databases.createStringAttribute(DATABASE_ID, COLLECTION_IDS.CHAT_MESSAGES, 'deletedBy', 36, false);
-    await databases.createDatetimeAttribute(DATABASE_ID, COLLECTION_IDS.CHAT_MESSAGES, 'createdAt', true);
-    await databases.createDatetimeAttribute(DATABASE_ID, COLLECTION_IDS.CHAT_MESSAGES, 'updatedAt', true);
+    // $createdAt and $updatedAt are provided automatically by Appwrite
 
     await databases.createIndex(DATABASE_ID, COLLECTION_IDS.CHAT_MESSAGES, 'userId_idx', 'key', ['userId']);
-    await databases.createIndex(DATABASE_ID, COLLECTION_IDS.CHAT_MESSAGES, 'createdAt_idx', 'key', ['createdAt']);
+    await databases.createIndex(DATABASE_ID, COLLECTION_IDS.CHAT_MESSAGES, 'createdAt_idx', 'key', ['$createdAt']);
 
     console.log('✅ Chat messages collection created');
   } catch (error: any) {
@@ -329,6 +325,71 @@ async function createAuditLogsCollection() {
   }
 }
 
+async function createAchievementDefinitionsCollection() {
+  console.log('\n🏆 Creating achievement_definitions collection...');
+  
+  try {
+    await databases.createCollection(
+      DATABASE_ID,
+      COLLECTION_IDS.ACHIEVEMENT_DEFINITIONS,
+      'Achievement Definitions',
+      [Permission.read(Role.any())] // Public read
+    );
+
+    await databases.createStringAttribute(DATABASE_ID, COLLECTION_IDS.ACHIEVEMENT_DEFINITIONS, 'achievementId', 100, true);
+    await databases.createStringAttribute(DATABASE_ID, COLLECTION_IDS.ACHIEVEMENT_DEFINITIONS, 'title', 100, true);
+    await databases.createStringAttribute(DATABASE_ID, COLLECTION_IDS.ACHIEVEMENT_DEFINITIONS, 'description', 500, true);
+    await databases.createEnumAttribute(DATABASE_ID, COLLECTION_IDS.ACHIEVEMENT_DEFINITIONS, 'category', ['gameplay', 'progression', 'special', 'social'], true);
+    await databases.createEnumAttribute(DATABASE_ID, COLLECTION_IDS.ACHIEVEMENT_DEFINITIONS, 'rarity', ['common', 'rare', 'epic', 'legendary'], true);
+    await databases.createIntegerAttribute(DATABASE_ID, COLLECTION_IDS.ACHIEVEMENT_DEFINITIONS, 'maxProgress', true);
+    await databases.createEnumAttribute(DATABASE_ID, COLLECTION_IDS.ACHIEVEMENT_DEFINITIONS, 'rewardType', ['currency', 'title', 'cosmetic'], true);
+    await databases.createIntegerAttribute(DATABASE_ID, COLLECTION_IDS.ACHIEVEMENT_DEFINITIONS, 'rewardAmount', false);
+    await databases.createStringAttribute(DATABASE_ID, COLLECTION_IDS.ACHIEVEMENT_DEFINITIONS, 'rewardItem', 100, false);
+    await databases.createBooleanAttribute(DATABASE_ID, COLLECTION_IDS.ACHIEVEMENT_DEFINITIONS, 'isActive', false, true);
+    // $createdAt is provided automatically by Appwrite
+
+    await databases.createIndex(DATABASE_ID, COLLECTION_IDS.ACHIEVEMENT_DEFINITIONS, 'achievementId_idx', 'unique', ['achievementId']);
+
+    console.log('✅ Achievement definitions collection created');
+  } catch (error: any) {
+    console.error('❌ Error creating achievement_definitions collection:', error.message);
+  }
+}
+
+async function createUserAchievementsCollection() {
+  console.log('\n👤 Creating user_achievements collection...');
+  
+  try {
+    await databases.createCollection(
+      DATABASE_ID,
+      COLLECTION_IDS.USER_ACHIEVEMENTS,
+      'User Achievements',
+      [
+        Permission.read(Role.users()),
+        Permission.update(Role.users()),
+      ]
+    );
+
+    await databases.createStringAttribute(DATABASE_ID, COLLECTION_IDS.USER_ACHIEVEMENTS, 'userId', 36, true);
+    await databases.createStringAttribute(DATABASE_ID, COLLECTION_IDS.USER_ACHIEVEMENTS, 'achievementId', 100, true);
+    await databases.createIntegerAttribute(DATABASE_ID, COLLECTION_IDS.USER_ACHIEVEMENTS, 'progress', false, 0);
+    await databases.createBooleanAttribute(DATABASE_ID, COLLECTION_IDS.USER_ACHIEVEMENTS, 'unlocked', false, false);
+    await databases.createDatetimeAttribute(DATABASE_ID, COLLECTION_IDS.USER_ACHIEVEMENTS, 'unlockedAt', false);
+    await databases.createBooleanAttribute(DATABASE_ID, COLLECTION_IDS.USER_ACHIEVEMENTS, 'claimed', false, false);
+    await databases.createDatetimeAttribute(DATABASE_ID, COLLECTION_IDS.USER_ACHIEVEMENTS, 'claimedAt', false);
+    // $createdAt and $updatedAt are provided automatically by Appwrite
+    await databases.createStringAttribute(DATABASE_ID, COLLECTION_IDS.USER_ACHIEVEMENTS, 'userAchievementKey', 200, true);
+
+    await databases.createIndex(DATABASE_ID, COLLECTION_IDS.USER_ACHIEVEMENTS, 'userAchievementKey_idx', 'unique', ['userAchievementKey']);
+    await databases.createIndex(DATABASE_ID, COLLECTION_IDS.USER_ACHIEVEMENTS, 'userId_idx', 'key', ['userId']);
+    await databases.createIndex(DATABASE_ID, COLLECTION_IDS.USER_ACHIEVEMENTS, 'achievementId_idx', 'key', ['achievementId']);
+
+    console.log('✅ User achievements collection created');
+  } catch (error: any) {
+    console.error('❌ Error creating user_achievements collection:', error.message);
+  }
+}
+
 async function main() {
   console.log('🚀 Starting Appwrite collection setup...');
   console.log('=====================================\n');
@@ -344,6 +405,8 @@ async function main() {
     await createChatMessagesCollection();
     await createChatPresenceCollection();
     await createAuditLogsCollection();
+    await createAchievementDefinitionsCollection();
+    await createUserAchievementsCollection();
 
     console.log('\n=====================================');
     console.log('✅ All collections created successfully!');

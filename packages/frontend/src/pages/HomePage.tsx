@@ -22,11 +22,11 @@ const HomePage: React.FC = () => {
 
   const games = [
     {
-      name: 'Roulette',
-      icon: FontAwesomeSVGIcons.DiceD6,
-      description: 'Classic casino roulette with Tarkov theming',
-      path: '/roulette',
-      color: 'from-red-900 to-red-700',
+      name: 'Wheel of Chance',
+      icon: FontAwesomeSVGIcons.Target,
+      description: 'Spin the industrial wheel and bet on multipliers and specials',
+      path: '/wheel',
+      color: 'from-orange-900 to-orange-700',
     },
     {
       name: 'Case Opening',

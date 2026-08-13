@@ -88,6 +88,5 @@ After maintenance tasks:
 - Ensure all logs are normal
 
 ## Related Processes
-- [Deployment Guide](./deployment/deployment.md)
-- [Backup Procedures](../database/backup-recovery.md)
-- [Health Check Documentation](../frontend/README.md#health-checks)
+- [Deployment Guide](../deployment/deployment.md)
+- [Developer Guide](../README.md)

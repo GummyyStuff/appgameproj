@@ -59,20 +59,14 @@ export const useCaseOpening = (): UseCaseOpeningReturn => {
 
   const completeCase = useCallback(async (data: CaseOpeningData): Promise<CaseOpeningResult | null> => {
     // With the simplified API, completion is already handled in openCase
-    // This method is kept for backward compatibility but now just returns the predetermined winner
+    // This method just returns the predetermined winner from the opening response
     if (data.predeterminedWinner) {
       return data.predeterminedWinner
     }
 
-    // Fallback: try to get the result via preview (for legacy support)
-    try {
-      const caseType = { id: data.caseTypeId } as CaseType
-      const result = await caseOpeningApi.previewCase(caseType)
-      return result.opening_result
-    } catch (err) {
-      console.error('Complete case error:', err)
-      return null
-    }
+    // No predetermined winner available - this should not happen in normal flow
+    console.error('completeCase called without predeterminedWinner')
+    return null
   }, [])
 
   const loadCaseItems = useCallback(async (caseTypeId: string): Promise<any[]> => {

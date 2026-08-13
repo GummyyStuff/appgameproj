@@ -1,9 +1,4 @@
-/**
- * Tests for GameStateManager
- * Validates game state lifecycle management
- */
-
-import { describe, test, expect, beforeEach } from 'bun:test'
+import { describe, test, expect, beforeEach } from 'vitest'
 import { GameStateManager } from './game-state-manager'
 import { GameBet, GameResult } from './types'
 
@@ -197,7 +192,7 @@ describe('GameStateManager', () => {
     test('should return completed games for user', async () => {
       const bet: GameBet = { userId: 'user1', amount: 100, gameType: 'roulette' }
       const gameState = await manager.createGameState(bet)
-      
+
       const result: GameResult = {
         success: true,
         winAmount: 200,
@@ -220,7 +215,6 @@ describe('GameStateManager', () => {
         resultData: {} as any
       }
 
-      // Create multiple completed games
       for (let i = 0; i < 5; i++) {
         const state = await manager.createGameState(bet)
         await manager.completeGame(state.gameId, result)
@@ -240,14 +234,14 @@ describe('GameStateManager', () => {
 
       const state1 = await manager.createGameState(bet)
       await manager.completeGame(state1.gameId, result)
-      
-      await new Promise(resolve => setTimeout(resolve, 10)) // Small delay
-      
+
+      await new Promise(resolve => setTimeout(resolve, 10))
+
       const state2 = await manager.createGameState(bet)
       await manager.completeGame(state2.gameId, result)
 
       const history = await manager.getGameHistoryForUser('user1')
-      expect(history[0].gameId).toBe(state2.gameId) // More recent first
+      expect(history[0].gameId).toBe(state2.gameId)
       expect(history[1].gameId).toBe(state1.gameId)
     })
   })
@@ -256,7 +250,7 @@ describe('GameStateManager', () => {
     test('should clean up old completed games', async () => {
       const bet: GameBet = { userId: 'user1', amount: 100, gameType: 'roulette' }
       const gameState = await manager.createGameState(bet)
-      
+
       const result: GameResult = {
         success: true,
         winAmount: 200,
@@ -264,8 +258,7 @@ describe('GameStateManager', () => {
       }
 
       await manager.completeGame(gameState.gameId, result)
-      
-      // Clean up games older than 0 hours (should clean everything)
+
       const cleanedCount = await manager.cleanupOldStates(0)
       expect(cleanedCount).toBe(1)
 
@@ -276,7 +269,7 @@ describe('GameStateManager', () => {
     test('should not clean up recent games', async () => {
       const bet: GameBet = { userId: 'user1', amount: 100, gameType: 'roulette' }
       const gameState = await manager.createGameState(bet)
-      
+
       const result: GameResult = {
         success: true,
         winAmount: 200,
@@ -284,8 +277,7 @@ describe('GameStateManager', () => {
       }
 
       await manager.completeGame(gameState.gameId, result)
-      
-      // Clean up games older than 24 hours (should not clean recent games)
+
       const cleanedCount = await manager.cleanupOldStates(24)
       expect(cleanedCount).toBe(0)
 
@@ -297,7 +289,7 @@ describe('GameStateManager', () => {
       const bet: GameBet = { userId: 'user1', amount: 100, gameType: 'roulette' }
       const gameState = await manager.createGameState(bet)
       await manager.updateGameState(gameState.gameId, { status: 'active' })
-      
+
       const cleanedCount = await manager.cleanupOldStates(0)
       expect(cleanedCount).toBe(0)
 

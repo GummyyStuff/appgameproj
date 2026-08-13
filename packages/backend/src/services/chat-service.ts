@@ -25,14 +25,11 @@ export class ChatService {
       return { success: false, error: 'Message content exceeds 500 characters' };
     }
 
-    const now = new Date().toISOString();
-    const messageData: Omit<ChatMessage, '$id'> = {
+    const messageData: Omit<ChatMessage, '$id' | '$createdAt' | '$updatedAt'> = {
       userId,
       username,
       content: content.trim(),
       isDeleted: false,
-      createdAt: now,
-      updatedAt: now,
     };
 
     const { data, error } = await appwriteDb.createDocument<ChatMessage>(
@@ -60,10 +57,10 @@ export class ChatService {
    * Get recent messages
    */
   static async getMessages(limit: number = 50, before?: string) {
-    const queries = [appwriteDb.equal('isDeleted', false), appwriteDb.orderDesc('createdAt')];
+    const queries = [appwriteDb.equal('isDeleted', false), appwriteDb.orderDesc('$createdAt')];
 
     if (before) {
-      queries.push(appwriteDb.lessThan('createdAt', before));
+      queries.push(appwriteDb.lessThan('$createdAt', before));
     }
 
     queries.push(appwriteDb.limit(limit));
@@ -111,7 +108,6 @@ export class ChatService {
         isDeleted: true,
         deletedAt: new Date().toISOString(),
         deletedBy: moderatorId,
-        updatedAt: new Date().toISOString(),
       }
     );
 

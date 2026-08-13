@@ -1,9 +1,4 @@
-/**
- * Tests for PayoutCalculator
- * Validates payout calculations for all casino games
- */
-
-import { describe, test, expect, beforeEach } from 'bun:test'
+import { describe, test, expect, beforeEach } from 'vitest'
 import { PayoutCalculator } from './payout-calculator'
 
 describe('PayoutCalculator', () => {
@@ -17,7 +12,7 @@ describe('PayoutCalculator', () => {
     describe('number bets', () => {
       test('should calculate correct payout for winning number bet', () => {
         const payout = calculator.calculateRoulettePayout('number', 7, 7, 100)
-        expect(payout).toBe(3500) // 35:1 payout
+        expect(payout).toBe(3500)
       })
 
       test('should return 0 for losing number bet', () => {
@@ -27,24 +22,24 @@ describe('PayoutCalculator', () => {
 
       test('should handle zero bet', () => {
         const payout = calculator.calculateRoulettePayout('number', 0, 0, 50)
-        expect(payout).toBe(1750) // 35:1 payout
+        expect(payout).toBe(1750)
       })
     })
 
     describe('color bets', () => {
       test('should calculate correct payout for winning red bet', () => {
-        const payout = calculator.calculateRoulettePayout('red', 'red', 1, 100) // 1 is red
-        expect(payout).toBe(100) // 1:1 payout
+        const payout = calculator.calculateRoulettePayout('red', 'red', 1, 100)
+        expect(payout).toBe(100)
       })
 
       test('should return 0 for losing red bet', () => {
-        const payout = calculator.calculateRoulettePayout('red', 'red', 2, 100) // 2 is black
+        const payout = calculator.calculateRoulettePayout('red', 'red', 2, 100)
         expect(payout).toBe(0)
       })
 
       test('should calculate correct payout for winning black bet', () => {
-        const payout = calculator.calculateRoulettePayout('black', 'black', 2, 100) // 2 is black
-        expect(payout).toBe(100) // 1:1 payout
+        const payout = calculator.calculateRoulettePayout('black', 'black', 2, 100)
+        expect(payout).toBe(100)
       })
 
       test('should return 0 for color bets on zero', () => {
@@ -58,7 +53,7 @@ describe('PayoutCalculator', () => {
     describe('odd/even bets', () => {
       test('should calculate correct payout for winning odd bet', () => {
         const payout = calculator.calculateRoulettePayout('odd', 'odd', 7, 100)
-        expect(payout).toBe(100) // 1:1 payout
+        expect(payout).toBe(100)
       })
 
       test('should return 0 for losing odd bet', () => {
@@ -68,7 +63,7 @@ describe('PayoutCalculator', () => {
 
       test('should calculate correct payout for winning even bet', () => {
         const payout = calculator.calculateRoulettePayout('even', 'even', 8, 100)
-        expect(payout).toBe(100) // 1:1 payout
+        expect(payout).toBe(100)
       })
 
       test('should return 0 for odd/even bets on zero', () => {
@@ -82,7 +77,7 @@ describe('PayoutCalculator', () => {
     describe('high/low bets', () => {
       test('should calculate correct payout for winning low bet', () => {
         const payout = calculator.calculateRoulettePayout('low', 'low', 10, 100)
-        expect(payout).toBe(100) // 1:1 payout
+        expect(payout).toBe(100)
       })
 
       test('should return 0 for losing low bet', () => {
@@ -92,7 +87,7 @@ describe('PayoutCalculator', () => {
 
       test('should calculate correct payout for winning high bet', () => {
         const payout = calculator.calculateRoulettePayout('high', 'high', 25, 100)
-        expect(payout).toBe(100) // 1:1 payout
+        expect(payout).toBe(100)
       })
 
       test('should return 0 for high/low bets on zero', () => {
@@ -106,17 +101,17 @@ describe('PayoutCalculator', () => {
     describe('dozen bets', () => {
       test('should calculate correct payout for winning first dozen', () => {
         const payout = calculator.calculateRoulettePayout('dozen', 1, 5, 100)
-        expect(payout).toBe(200) // 2:1 payout
+        expect(payout).toBe(200)
       })
 
       test('should calculate correct payout for winning second dozen', () => {
         const payout = calculator.calculateRoulettePayout('dozen', 2, 15, 100)
-        expect(payout).toBe(200) // 2:1 payout
+        expect(payout).toBe(200)
       })
 
       test('should calculate correct payout for winning third dozen', () => {
         const payout = calculator.calculateRoulettePayout('dozen', 3, 30, 100)
-        expect(payout).toBe(200) // 2:1 payout
+        expect(payout).toBe(200)
       })
 
       test('should return 0 for losing dozen bet', () => {
@@ -127,13 +122,13 @@ describe('PayoutCalculator', () => {
 
     describe('column bets', () => {
       test('should calculate correct payout for winning column bets', () => {
-        const column1Payout = calculator.calculateRoulettePayout('column', 1, 1, 100) // 1 is in column 1
-        const column2Payout = calculator.calculateRoulettePayout('column', 2, 2, 100) // 2 is in column 2
-        const column3Payout = calculator.calculateRoulettePayout('column', 3, 3, 100) // 3 is in column 3
-        
-        expect(column1Payout).toBe(200) // 2:1 payout
-        expect(column2Payout).toBe(200) // 2:1 payout
-        expect(column3Payout).toBe(200) // 2:1 payout
+        const column1Payout = calculator.calculateRoulettePayout('column', 1, 1, 100)
+        const column2Payout = calculator.calculateRoulettePayout('column', 2, 2, 100)
+        const column3Payout = calculator.calculateRoulettePayout('column', 3, 3, 100)
+
+        expect(column1Payout).toBe(200)
+        expect(column2Payout).toBe(200)
+        expect(column3Payout).toBe(200)
       })
 
       test('should return 0 for losing column bet', () => {
@@ -160,32 +155,32 @@ describe('PayoutCalculator', () => {
   describe('calculateBlackjackPayout', () => {
     test('should calculate correct payout for blackjack', () => {
       const payout = calculator.calculateBlackjackPayout('blackjack', 100)
-      expect(payout).toBe(150) // 3:2 payout
+      expect(payout).toBe(150)
     })
 
     test('should calculate correct payout for regular win', () => {
       const payout = calculator.calculateBlackjackPayout('player_win', 100)
-      expect(payout).toBe(100) // 1:1 payout
+      expect(payout).toBe(100)
     })
 
     test('should return 0 for push (tie)', () => {
       const payout = calculator.calculateBlackjackPayout('push', 100)
-      expect(payout).toBe(0) // Return original bet
+      expect(payout).toBe(0)
     })
 
     test('should return 0 for dealer win', () => {
       const payout = calculator.calculateBlackjackPayout('dealer_win', 100)
-      expect(payout).toBe(0) // Lose bet
+      expect(payout).toBe(0)
     })
 
     test('should return 0 for bust', () => {
       const payout = calculator.calculateBlackjackPayout('bust', 100)
-      expect(payout).toBe(0) // Lose bet
+      expect(payout).toBe(0)
     })
 
     test('should return 0 for dealer blackjack', () => {
       const payout = calculator.calculateBlackjackPayout('dealer_blackjack', 100)
-      expect(payout).toBe(0) // Lose bet
+      expect(payout).toBe(0)
     })
 
     test('should return 0 for invalid result', () => {
@@ -193,8 +188,6 @@ describe('PayoutCalculator', () => {
       expect(payout).toBe(0)
     })
   })
-
-
 
   describe('getHouseEdge', () => {
     test('should return correct house edges for different games', () => {

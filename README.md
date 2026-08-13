@@ -2,7 +2,7 @@
 
 A Tarkov-themed casino gaming website offering classic casino games with virtual currency for entertainment purposes only.
 
-## 🎮 Features
+## Features
 
 - **Roulette**: Classic casino roulette with Tarkov theming
 - **Blackjack**: Strategic card gameplay
@@ -13,7 +13,7 @@ A Tarkov-themed casino gaming website offering classic casino games with virtual
 - **Provably Fair Gaming**: Cryptographically secure random number generation
 - **High-Performance Caching**: Dragonfly (25x faster than Redis) for sub-millisecond response times
 
-## 🏗️ Architecture
+## Architecture
 
 This is a monorepo containing:
 
@@ -23,12 +23,9 @@ This is a monorepo containing:
 - **Cache**: Dragonfly (Redis-compatible) for high-performance caching
 - **Real-time**: Appwrite Realtime via WebSocket
 - **Testing**: Bun Test with comprehensive test suites
-- **Security**: Provably fair algorithms with secure random generation
-- **Monitoring**: Performance metrics, health checks, and fairness validation
 - **Deployment**: Docker + Coolify
-- **AI Configuration**: Unified AI tools configuration in `docs/ai/`
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 tarkov-casino/
@@ -36,418 +33,104 @@ tarkov-casino/
 │   ├── frontend/          # React frontend application
 │   │   ├── src/
 │   │   ├── public/
-│   │   ├── package.json
-│   │   └── vite.config.ts
+│   │   └── package.json
 │   └── backend/           # Bun + Hono backend API
 │       ├── src/
 │       │   ├── services/  # Redis, cache, game logic
 │       │   ├── routes/    # API endpoints
 │       │   ├── middleware/# Auth, validation, rate limiting
 │       │   └── config/    # Environment, Appwrite setup
-│       ├── package.json
-│       └── tsconfig.json
+│       └── package.json
 ├── docs/                  # Comprehensive documentation
-│   ├── ai/                # Unified AI configuration and steering rules
-│   ├── backend/           # Backend guides (Redis, database, etc.)
+│   ├── backend/           # Backend guides
 │   ├── frontend/          # Frontend architecture
 │   ├── api/               # API documentation
 │   ├── deployment/        # Deployment guides
-│   └── game-rules/        # Game mechanics and rules
-├── Dockerfile             # Production deployment
-├── coolify.json           # Coolify deployment config
+│   ├── game-rules/        # Game mechanics
+│   └── testing/           # Testing strategy
+├── Dockerfile
 └── README.md
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
 - [Bun](https://bun.sh/) (latest version)
-- [Docker](https://docker.com/) (for local Dragonfly cache - optional)
+- [Docker](https://docker.com/) (optional, for local Dragonfly cache)
 
 ### Installation
 
-1. **Clone and install dependencies:**
-   ```bash
-   git clone <repository-url>
-   cd tarkov-casino
-   bun install
-   ```
+```bash
+git clone <repository-url>
+cd tarkov-casino
+bun install
+```
 
-2. **Install package dependencies:**
-   ```bash
-   # Backend dependencies
-   cd packages/backend
-   bun install
-   
-   # Frontend dependencies
-   cd ../frontend
-   bun install
-   cd ../..
-   ```
+### Environment
 
-3. **Set up environment variables:**
-   ```bash
-   cp .env.example .env
-   # Edit .env with your Appwrite credentials
-   ```
-   
-   > Get your Appwrite credentials from your Appwrite project dashboard
+Copy `.env.example` to `.env` and configure your Appwrite credentials.
 
 ### Development
 
-1. **Start Dragonfly (optional, for caching):**
-   ```bash
-   docker run -d \
-     --name dragonfly \
-     -p 6379:6379 \
-     --ulimit memlock=-1 \
-     docker.dragonflydb.io/dragonflydb/dragonfly
-   ```
+```bash
+bun run dev   # builds frontend in dev mode + starts backend
+```
 
-2. **Start backend development server:**
-   ```bash
-   cd packages/backend
-   bun run dev
-   ```
+Access at http://localhost:3000. The dev frontend build enables a test login UI.
 
-3. **Build frontend:**
-   ```bash
-   cd packages/frontend
-   bun run build
-   cd ../..
-   ```
+Create a test account:
+```bash
+bun run scripts/create-test-account.ts test@example.com password123 "Test User"
+```
 
-4. **Start unified development server:**
-   ```bash
-   # This automatically builds frontend in dev mode and starts backend
-   bun run dev
-   ```
-   
-   > **Note:** The `bun run dev` command automatically builds the frontend in development mode, which enables the test login UI. If you build the frontend manually, use `bun run build:frontend:dev` to enable test accounts.
-
-5. **Access the application:**
-   - Frontend + Backend: http://localhost:3000
-   - API Health: http://localhost:3000/api/health
-   - Detailed Health: http://localhost:3000/api/health/detailed
-   - API Metrics: http://localhost:3000/api/metrics
-
-6. **Create a test account (optional):**
-   ```bash
-   # Create test account for local development (no Discord OAuth needed)
-   bun run scripts/create-test-account.ts
-   
-   # Or with custom credentials
-   bun run scripts/create-test-account.ts test@example.com password123 "Test User"
-   ```
-   
-   Then log in at http://localhost:3000/login using the test login form.
-   
-   📖 See [Test Accounts Guide](./docs/development/TEST_ACCOUNTS.md) for more details.
-
-> **Note:** Dragonfly is optional for local development. The app works fine without caching (uses database fallback). See [Redis/Dragonfly documentation](./docs/backend/redis-README.md) for more details.
-
-> **Migration Note:** We've migrated from Vite to Bun's native bundler for faster builds and simpler deployment. The frontend now builds with `bun build index.html`, which processes all assets automatically.
+Dragonfly is optional for local development — the app falls back to the database if cache is unavailable.
 
 ### Building for Production
 
-1. **Build entire project:**
-   ```bash
-   bun run build
-   # This builds both frontend (Bun bundler) and backend (Bun bytecode)
-   ```
+```bash
+bun run build   # builds both frontend and backend
+```
 
-2. **Or build individually:**
-   ```bash
-   bun run build:frontend  # Bundles React app
-   bun run build:backend   # Compiles backend
-   ```
-
-3. **Build Docker image:**
-   ```bash
-   docker build -t tarkov-casino .
-   ```
-
-## 🐳 Docker Deployment
-
-### Local Docker Development
+## Docker Deployment
 
 ```bash
-# Build and run with Docker Compose
-docker-compose up --build
-
-# Or run just the application
 docker build -t tarkov-casino .
 docker run -p 3000:3000 tarkov-casino
 ```
 
-### Production Deployment
+For production deployment with Coolify, see the [Deployment Guide](./docs/deployment/deployment.md).
 
-For detailed production deployment instructions, see [DEPLOYMENT.md](./docs/deployment/deployment.md).
+## Documentation
 
-#### Quick Deployment with Coolify
+Comprehensive documentation is available in the [docs/](./docs/README.md) directory:
 
-1. **Prepare for deployment:**
-   ```bash
-   bun run deploy:prepare
-   ```
+- [Developer Guide](./docs/README.md) — architecture, setup, commands, testing, deployment
+- [API Reference](./docs/api/README.md) — all API endpoints
+- [Backend Guides](./docs/backend/) — Appwrite, database, caching, statistics
+- [Frontend Architecture](./docs/frontend/README.md)
+- [Game Rules](./docs/game-rules/) — roulette, blackjack, case opening
+- [Deployment](./docs/deployment/deployment.md)
+- [Testing](./docs/testing/testing.md)
 
-2. **Validate production configuration:**
-   ```bash
-   bun run deploy:validate
-   ```
+## Security
 
-3. **Configure Coolify service:**
-   - Repository: Your Git repository URL
-   - Build Pack: Docker
-   - Dockerfile: `Dockerfile`
-   - Port: `3000`
+- Appwrite Authentication with secure user sessions
+- Role-based Access Control via Appwrite permissions
+- Zod schema validation on all endpoints
+- Rate limiting powered by Dragonfly cache
+- Cryptographically secure RNG with provably fair verification
+- Complete transaction audit logging
 
-4. **Add Dragonfly service in Coolify:**
-   - Add a new service: Dragonfly
-   - Link it to your application
-   - Note the connection URL provided by Coolify
+## Performance
 
-5. **Set environment variables in Coolify:**
-   ```env
-   NODE_ENV=production
-   
-   # Appwrite Configuration
-   APPWRITE_ENDPOINT=https://<REGION>.cloud.appwrite.io/v1
-   APPWRITE_PROJECT_ID=your_project_id
-   APPWRITE_API_KEY=your_api_key
-   APPWRITE_DATABASE_ID=tarkov_casino
-   
-   # Dragonfly/Redis (Optional)
-   REDIS_ENABLED=true
-   REDIS_URL=redis://default:PASSWORD@dragonfly-service:6379/0
-   ```
+- Dragonfly in-memory cache (25x faster than Redis)
+- Bun runtime for fast JavaScript/TypeScript execution
+- Automatic pipelining and connection pooling
+- Graceful degradation to database if cache unavailable
+- Sub-millisecond typical cache response time
 
-6. **Deploy and monitor:**
-   ```bash
-   # Check health after deployment
-   bun run health:check:prod
-   ```
-   
-   The health endpoint will show:
-   - ✅ Appwrite connectivity (Auth, Database, Storage)
-   - ✅ Dragonfly cache status (if enabled)
-   - ✅ Overall system health
-   - ✅ Game services status
-
-#### Deployment Scripts
-
-- `bun run deploy:prepare` - Build and test Docker image locally
-- `bun run deploy:validate` - Validate production environment
-- `bun run health:check` - Check local application health
-- `bun run health:check:prod` - Check production health
-- `bun run docker:build` - Build Docker image only
-- `bun run docker:test` - Test Docker image only
-
-## 🔧 Configuration
-
-### Environment Variables
-
-#### Backend (.env)
-```env
-# Application
-PORT=3000
-NODE_ENV=development
-
-# Appwrite Configuration (Primary Database & Services)
-APPWRITE_ENDPOINT=https://<REGION>.cloud.appwrite.io/v1
-APPWRITE_PROJECT_ID=your_project_id
-APPWRITE_API_KEY=your_api_key
-# Database and Table IDs
-APPWRITE_DATABASE_ID=tarkov_casino
-APPWRITE_USERS_TABLE_ID=user_profiles
-APPWRITE_GAMES_TABLE_ID=game_history
-APPWRITE_TRANSACTIONS_TABLE_ID=transactions
-
-# Redis/Dragonfly Configuration (Optional Caching)
-REDIS_ENABLED=true
-REDIS_URL=redis://default:PASSWORD@dragonfly:6379/0
-# Cache TTLs (seconds)
-CACHE_USER_PROFILE_TTL=300
-CACHE_BALANCE_TTL=60
-CACHE_LEADERBOARD_TTL=30
-CACHE_STATS_TTL=120
-
-# Game Settings
-STARTING_BALANCE=10000
-DAILY_BONUS=1000
-```
-
-#### Frontend (Vite)
-```env
-VITE_APPWRITE_ENDPOINT=https://<REGION>.cloud.appwrite.io/v1
-VITE_APPWRITE_PROJECT_ID=your_project_id
-VITE_API_URL=http://localhost:3000
-```
-
-## 📚 Documentation
-
-Comprehensive documentation is now available in the `/docs` directory:
-
-### Backend
-- [Appwrite Integration](./docs/backend/appwrite-README.md) - Complete Appwrite setup and usage guide
-- [Database Guide](./docs/backend/database-README.md) - Database schema and operations
-- [Appwrite Realtime](./docs/backend/appwrite-realtime.md) - Real-time features and subscriptions
-- [Redis/Dragonfly Caching](./docs/backend/redis-README.md) - Caching implementation and best practices
-- [Statistics System](./docs/backend/statistics-README.md) - Analytics and statistics
-
-### API
-- [API Reference](./docs/api/README.md) - Complete API endpoint documentation
-
-### Deployment
-- [Deployment Guide](./docs/deployment/deployment.md) - Production deployment with Coolify
-
-### Frontend
-- [Frontend Architecture](./docs/frontend/README.md) - Frontend structure and components
-- [Performance Optimization](./docs/frontend/performance-optimization.md) - Frontend performance tips
-
-### Game Rules
-- [Roulette](./docs/game-rules/roulette.md) - Roulette game mechanics
-- [Blackjack](./docs/game-rules/blackjack.md) - Blackjack rules and strategy
-- [Case Opening](./docs/game-rules/case-opening.md) - Provably fair case opening
-
-> **Note**: All previous documentation has been archived in `/docs/archive/v0.1/`. The new documentation structure follows v0.1 standards with improved templates and AI agent optimization.
-
-## 🧪 Testing
-
-```bash
-# Run backend tests
-cd packages/backend
-bun test
-
-# Run frontend tests
-cd packages/frontend
-bun run test
-```
-
-## 📚 API Documentation
-
-### Health & Monitoring
-- **GET** `/api/health` - Basic service health status
-- **GET** `/api/health/detailed` - Detailed system information
-- **GET** `/api/ready` - Kubernetes-style readiness probe
-- **GET** `/api/live` - Kubernetes-style liveness probe
-- **GET** `/api/metrics` - Prometheus-compatible metrics
-
-### Authentication
-- **POST** `/api/auth/register` - User registration
-- **POST** `/api/auth/login` - User login
-- **POST** `/api/auth/logout` - User logout
-- **POST** `/api/auth/reset-password` - Password reset
-- **POST** `/api/auth/refresh` - Refresh authentication token
-
-### User
-- **GET** `/api/user/profile` - Get user profile
-- **GET** `/api/user/balance` - Get current balance
-- **GET** `/api/user/history` - Get user game history
-- **GET** `/api/user/stats` - Get user statistics
-- **GET** `/api/user/transactions` - Get transaction history
-- **PUT** `/api/user/profile` - Update user profile
-- **POST** `/api/user/validate-balance` - Validate sufficient balance
-- **POST** `/api/user/daily-bonus` - Claim daily bonus
-
-### Games
-- **GET** `/api/games` - List all available games
-- **GET** `/api/games/roulette` - Get roulette game information
-- **POST** `/api/games/roulette/bet` - Place roulette bet
-- **GET** `/api/games/blackjack` - Get blackjack game information
-- **POST** `/api/games/blackjack/start` - Start blackjack hand
-- **POST** `/api/games/blackjack/action` - Perform blackjack action (hit, stand, double, split)
-- **GET** `/api/games/cases` - Get available case types
-- **GET** `/api/games/cases/:caseTypeId` - Get specific case details
-- **POST** `/api/games/cases/start` - Start case opening (deduct price)
-- **POST** `/api/games/cases/complete` - Complete case opening (credit winnings)
-- **POST** `/api/games/cases/open` - One-step case opening
-- **GET** `/api/games/cases/stats/:userId?` - Get case opening statistics
-
-### Statistics
-- **GET** `/api/statistics/basic` - Get basic game statistics
-- **GET** `/api/statistics/advanced` - Get comprehensive game statistics
-- **GET** `/api/statistics/history` - Get filtered game history
-- **GET** `/api/statistics/time-series` - Get time series data for charts
-- **GET** `/api/statistics/game-breakdown` - Get statistics by game type
-- **GET** `/api/statistics/streaks` - Get winning/losing streak data
-- **GET** `/api/statistics/betting-patterns` - Get betting pattern analysis
-- **GET** `/api/statistics/playing-habits` - Get playing habit statistics
-- **GET** `/api/statistics/global` - Get global platform statistics
-- **GET** `/api/statistics/export` - Export user statistics
-
-
-## 🎨 Theming
-
-The application uses a custom Tarkov-inspired theme with:
-
-- **Colors**: Dark military-style palette
-- **Typography**: Roboto Condensed font family
-- **Assets**: Tarkov currency symbols and iconography
-- **Animations**: Tactical-style transitions and effects
-
-## 🔒 Security
-
-- **Appwrite Authentication**: Secure user sessions with built-in auth
-- **Role-based Access Control**: Appwrite permissions and teams
-- **Input Validation**: Zod schema validation on all endpoints
-- **Rate Limiting**: API endpoint protection (powered by Dragonfly cache)
-- **Secure RNG**: Cryptographically secure random number generation
-- **Provably Fair**: Transparent algorithms with verification
-- **Audit Logging**: Complete transaction history in Appwrite
-- **Data Isolation**: Row-level permissions via Appwrite
-
-## ⚡ Performance
-
-- **Dragonfly Cache**: Redis-compatible in-memory cache (25x faster than Redis)
-- **Bun Runtime**: Ultra-fast JavaScript/TypeScript runtime
-- **Native Redis Client**: Zero-dependency caching with automatic pipelining
-- **Connection Pooling**: Efficient database connection reuse
-- **Graceful Degradation**: Automatic fallback to database if cache unavailable
-- **Sub-millisecond Cache Hits**: Typical cache response time < 1ms
-
-## 📈 Monitoring
-
-The application includes comprehensive monitoring capabilities:
-
-### Health Check Endpoints
-
-- **GET** `/api/health` - Basic health status
-- **GET** `/api/health/detailed` - Detailed system information
-- **GET** `/api/ready` - Kubernetes-style readiness probe
-- **GET** `/api/live` - Kubernetes-style liveness probe
-- **GET** `/api/metrics` - Prometheus-compatible metrics
-
-### Logging
-
-- **Structured Logging**: JSON format in production
-- **Request Logging**: HTTP requests with performance metrics
-- **Game Logging**: Game actions and events
-- **Security Logging**: Authentication and security events
-- **Error Tracking**: Comprehensive error reporting with request IDs
-
-### Monitoring Tools
-
-```bash
-# Check application health
-curl http://localhost:3000/api/health
-
-# Get detailed health information
-curl http://localhost:3000/api/health/detailed
-
-# View metrics (if enabled)
-curl http://localhost:3000/api/metrics
-```
-
-### Production Monitoring
-
-- **Coolify Integration**: Automatic health checks and monitoring
-- **Log Aggregation**: Structured logs for analysis
-- **Performance Metrics**: Response times and resource usage
-- **Error Tracking**: Automatic error detection and alerting
-
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch
@@ -455,17 +138,17 @@ curl http://localhost:3000/api/metrics
 4. Add tests for new functionality
 5. Submit a pull request
 
-## 📄 License
+## License
 
 This project is for educational and entertainment purposes only. No real money gambling is involved.
 
-## 🎯 Roadmap
+## Roadmap
 
 - [x] Roulette game implementation
-- [x] Blackjack game implementation  
+- [x] Blackjack game implementation
 - [x] Case opening game with fairness algorithms
 - [x] Comprehensive statistics and analytics
-- [x] Real-time features via Socket.io
+- [x] Real-time features via Appwrite Realtime
 - [x] Performance monitoring and health checks
 - [ ] Mobile app development
 - [ ] Additional casino games

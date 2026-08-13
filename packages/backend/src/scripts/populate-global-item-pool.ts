@@ -127,10 +127,9 @@ async function populateGlobalItemPool() {
             {
               caseTypeId: caseType.$id,
               itemId: item.$id,
-              weight: 1.0,  // Not used in rarity-based selection
+              weight: 1.0,
               valueMultiplier: valueMultiplier,
               caseItemKey: caseItemKey,
-              createdAt: new Date().toISOString()
             }
           );
 

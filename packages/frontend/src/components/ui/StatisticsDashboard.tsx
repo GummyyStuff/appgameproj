@@ -193,7 +193,7 @@ const StatisticsDashboard: React.FC = () => {
       })).filter(item => item.games > 0)
     } else {
       // Fallback to calculating from game history
-      const gameTypes = ['roulette', 'case_opening']
+      const gameTypes = ['wheel_of_chance', 'case_opening']
       gameBreakdown = gameTypes.map(gameType => {
         const games = gameHistory.filter(game => game.gameType === gameType)
         const gamesCount = games.length
@@ -316,7 +316,7 @@ const StatisticsDashboard: React.FC = () => {
 
   const getGameIcon = (gameType: string) => {
     switch (gameType) {
-      case 'roulette': return <FontAwesomeSVGIcons.Circle size={16} />
+      case 'wheel_of_chance': return <FontAwesomeSVGIcons.Clover size={16} />
       case 'case_opening': return <FontAwesomeSVGIcons.Square size={16} />
       default: return <FontAwesomeSVGIcons.Gamepad size={16} />
     }
@@ -324,7 +324,7 @@ const StatisticsDashboard: React.FC = () => {
 
   const getGameColor = (gameType: string) => {
     switch (gameType) {
-      case 'roulette': return '#ef4444'
+      case 'wheel_of_chance': return '#f97316'
       case 'case_opening': return '#f59e0b'
       default: return '#6b7280'
     }

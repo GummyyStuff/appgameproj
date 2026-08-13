@@ -234,14 +234,35 @@ export function validationMiddleware<T>(schema: ZodSchema<T>, options?: {
       }
       
       // Validate with Zod schema
-      const validatedData = schema.parse(body)
+      let validatedData: T
+      try {
+        validatedData = schema.parse(body)
+      } catch (validationError) {
+        if (process.env.NODE_ENV !== 'test') {
+          console.log('[Validation] Failed to parse body:', {
+            path: c.req.path,
+            method: c.req.method,
+            bodyKeys: Object.keys(body),
+            error: validationError instanceof Error ? validationError.message : String(validationError)
+          })
+        }
+        throw validationError
+      }
       
       // Store validated data in context
       c.set('validatedData', validatedData)
       
       await next()
     } catch (error) {
-      if (error && typeof error === 'object' && 'errors' in error && Array.isArray(error.errors)) {
+      const isZodError = error && typeof error === 'object' &&
+        (('issues' in error && Array.isArray(error.issues)) || ('errors' in error && Array.isArray(error.errors)))
+
+      if (isZodError) {
+        const issues = ('issues' in (error as any) ? (error as any).issues : (error as any).errors) as Array<{
+          path: (string | number)[]
+          message: string
+        }>
+
         // Skip security logging in test environment to avoid environment access issues
         if (process.env.NODE_ENV !== 'test') {
           const user = c.get('user')
@@ -250,23 +271,15 @@ export function validationMiddleware<T>(schema: ZodSchema<T>, options?: {
           logSecurityEvent('validation_failed', user?.id, ip, {
             path: c.req.path,
             method: c.req.method,
-            errors: error.errors.map(e => ({
+            errors: issues.map(e => ({
               path: e.path.join('.'),
-              message: e.message,
-              code: e.code
+              message: e.message
             }))
           })
         }
 
-        throw new HTTPException(400, {
-          message: 'Validation failed',
-          cause: {
-            errors: error.errors.map(e => ({
-              field: e.path.join('.'),
-              message: e.message
-            }))
-          }
-        })
+        // Let the central error handler format this as VALIDATION_ERROR
+        throw error
       }
       
       throw error
@@ -340,6 +353,6 @@ export const commonSchemas = {
   betAmount: z.number().min(1).max(100000).int(),
   gameId: z.string().min(10).max(200).regex(/^[a-zA-Z0-9\-_]+$/, 'Invalid game ID format'),
   riskLevel: z.enum(['low', 'medium', 'high']),
-  gameType: z.enum(['roulette', 'blackjack', 'case_opening']),
+  gameType: z.enum(['roulette', 'blackjack', 'case_opening', 'wheel_of_chance']),
   blackjackAction: z.enum(['hit', 'stand', 'double', 'split'])
 }

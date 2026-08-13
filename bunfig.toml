@@ -43,26 +43,11 @@ scopeHoist = true
 save = true
 
 # ====================
-# TEST CONFIGURATION
+# RUN SETTINGS
 # ====================
-[test]
-# Root-level test setup
-preload = ["./happydom.ts", "./test-setup.ts"]
-
-# Enable code coverage by default
-coverage = true
-
-# Coverage threshold (percentage)
-coverageThreshold = 75
-
-# Test timeout (milliseconds)
-timeout = 10000
-
-# Don't bail on first failure (run all tests)
-bail = false
-
-# Test file patterns
-testNamePattern = ["**/*.test.ts", "**/*.test.tsx"]
+[run]
+# Show all output, don't truncate
+elide-lines = 0
 
 # ====================
 # RUNTIME OPTIMIZATIONS

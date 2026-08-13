@@ -40,7 +40,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       try {
         // Check Appwrite session first
         const appwriteUser = await account.get();
-        
+
         // Check if session needs refresh (within 1 day of expiry)
         try {
           const session = await account.getSession('current');
@@ -48,7 +48,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           const now = new Date();
           const timeUntilExpiry = expiry.getTime() - now.getTime();
           const oneDayInMs = 86400000; // 24 hours
-          
+
           // Refresh if expiring within 1 day
           if (timeUntilExpiry < oneDayInMs && timeUntilExpiry > 0) {
             console.log('🔄 Refreshing OAuth session (expires soon)');
@@ -60,7 +60,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           // This is non-critical, log and continue
           console.warn('⚠️ Session refresh failed:', refreshError);
         }
-        
+
         // Get full user profile from backend (includes balance, stats, etc.)
         const response = await fetch(`${API_URL}/auth/me`, {
           credentials: 'include',
@@ -72,7 +72,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         if (response.ok) {
           const userData = await response.json();
           setUser(userData);
-          
+
           // Set user context in Sentry
           setUserContext(userData.id, {
             email: userData.email,
@@ -86,7 +86,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
             name: appwriteUser.name,
           };
           setUser(newUser);
-          
+
           // Set user context in Sentry
           setUserContext(newUser.id, {
             email: newUser.email,
@@ -94,9 +94,28 @@ export function AuthProvider({ children }: AuthProviderProps) {
           });
         }
       } catch (error) {
-        // No session
-        setUser(null);
-        clearUserContext();
+        // Appwrite SDK has no session (or can't reach Appwrite directly due to cert issues)
+        // Fall back to backend session cookie (test login / server-side session)
+        try {
+          const backendResponse = await fetch(`${API_URL}/auth/me`, {
+            credentials: 'include',
+          });
+
+          if (backendResponse.ok) {
+            const userData = await backendResponse.json();
+            setUser(userData);
+            setUserContext(userData.id, {
+              email: userData.email,
+              username: userData.username || userData.name,
+            });
+          } else {
+            setUser(null);
+            clearUserContext();
+          }
+        } catch (backendError) {
+          setUser(null);
+          clearUserContext();
+        }
       } finally {
         setLoading(false);
       }
@@ -148,24 +167,63 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const signOut = useCallback(async () => {
     try {
-      // Delete Appwrite session
-      await account.deleteSession('current');
-      
-      // Also notify backend (optional, for cleanup)
-      await fetch(`${API_URL}/auth/logout`, {
-        method: 'POST',
-        credentials: 'include',
-      }).catch(() => {}); // Ignore errors
-      
+      // Get current user ID before clearing state
+      const currentUserId = user?.id;
+
+      // Delete ALL Appwrite sessions for the user
+      try {
+        await account.deleteSessions();
+      } catch (sessionError) {
+        console.warn('Appwrite session deletion failed:', sessionError);
+      }
+
+      // Notify backend to delete all sessions and clear cookie
+      // Use currentUserId since user state may be cleared
+      try {
+        const headers: Record<string, string> = { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' };
+        if (currentUserId) {
+          headers['X-Appwrite-User-Id'] = currentUserId;
+        }
+        await fetch(`${API_URL}/auth/logout`, {
+          method: 'POST',
+          credentials: 'include',
+          headers,
+        });
+      } catch (backendError) {
+        console.warn('Backend logout failed:', backendError);
+      }
+
+      // Explicitly clear Appwrite session cookie as fallback
+      // Cookie name format: a_session_<projectId>
+      const projectId = import.meta.env.VITE_APPWRITE_PROJECT_ID;
+      if (projectId) {
+        const cookieName = `a_session_${projectId}`;
+        document.cookie = `${cookieName}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;`;
+        document.cookie = `${cookieName}_legacy=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;`;
+      }
+
       // Clear user context from Sentry
       clearUserContext();
-      
+
+      // Clear all stored user data
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+
       setUser(null);
-      window.location.href = '/login';
+
+      // Small delay to ensure cookies are cleared before redirect
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 100);
     } catch (error) {
       console.error('Logout failed:', error);
+      clearUserContext();
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      setUser(null);
+      window.location.href = '/login';
     }
-  }, []);
+  }, [user]);
 
   const refreshUser = useCallback(async () => {
     try {

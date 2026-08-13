@@ -1,10 +1,9 @@
-import { describe, test, expect } from 'bun:test'
+import { describe, test, expect } from 'vitest'
 
-// Standalone security functions for testing (copied from middleware)
 class TestInputSanitizer {
   static sanitizeString(input: string): string {
     if (typeof input !== 'string') return ''
-    
+
     return input
       .trim()
       .replace(/\0/g, '')
@@ -14,7 +13,7 @@ class TestInputSanitizer {
 
   static escapeHtml(input: string): string {
     if (typeof input !== 'string') return ''
-    
+
     return input
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
@@ -26,7 +25,7 @@ class TestInputSanitizer {
 
   static sanitizeEmail(email: string): string {
     if (typeof email !== 'string') return ''
-    
+
     return email
       .toLowerCase()
       .trim()
@@ -35,7 +34,7 @@ class TestInputSanitizer {
 
   static sanitizeUsername(username: string): string {
     if (typeof username !== 'string') return ''
-    
+
     return username
       .trim()
       .replace(/[^a-zA-Z0-9_-]/g, '')
@@ -79,12 +78,12 @@ class TestThreatDetector {
 
   static analyzeInput(input: string): string[] {
     const threats: string[] = []
-    
+
     if (this.detectSqlInjection(input)) threats.push('sql_injection')
     if (this.detectXss(input)) threats.push('xss')
     if (this.detectPathTraversal(input)) threats.push('path_traversal')
     if (this.detectCommandInjection(input)) threats.push('command_injection')
-    
+
     return threats
   }
 }
@@ -175,14 +174,6 @@ describe('Security Hardening - Standalone Tests', () => {
         expect(TestThreatDetector.detectXss(xss)).toBe(true)
       })
 
-      const safeInputs = [
-        'normal text',
-        'This is a safe paragraph',
-        'user@example.com',
-        '<p>Safe HTML content</p>' // This would be flagged as false positive, which is acceptable for security
-      ]
-
-      // Note: Some safe inputs might be flagged as XSS due to conservative detection
       expect(TestThreatDetector.detectXss('normal text')).toBe(false)
       expect(TestThreatDetector.detectXss('user@example.com')).toBe(false)
     })
@@ -245,7 +236,7 @@ describe('Security Hardening - Standalone Tests', () => {
     test('should analyze input for multiple threat types', () => {
       const multiThreatInput = "'; DROP TABLE users; <script>alert(1)</script> ../../../etc/passwd && rm -rf /"
       const threats = TestThreatDetector.analyzeInput(multiThreatInput)
-      
+
       expect(threats).toContain('sql_injection')
       expect(threats).toContain('xss')
       expect(threats).toContain('path_traversal')
@@ -268,37 +259,34 @@ describe('Security Hardening - Standalone Tests', () => {
 
   describe('Rate Limiting Logic', () => {
     test('should implement basic rate limiting logic', () => {
-      // Simple rate limiter simulation
       const rateLimiter = new Map<string, { count: number; resetTime: number }>()
-      const windowMs = 1000 // 1 second
+      const windowMs = 1000
       const maxRequests = 3
-      
+
       function checkRateLimit(key: string): boolean {
         const now = Date.now()
         let entry = rateLimiter.get(key)
-        
+
         if (!entry) {
           entry = { count: 0, resetTime: now + windowMs }
           rateLimiter.set(key, entry)
         }
-        
+
         if (entry.resetTime <= now) {
           entry.count = 0
           entry.resetTime = now + windowMs
         }
-        
+
         entry.count++
         return entry.count <= maxRequests
       }
-      
+
       const key = 'test-ip'
-      
-      // First 3 requests should pass
+
       expect(checkRateLimit(key)).toBe(true)
       expect(checkRateLimit(key)).toBe(true)
       expect(checkRateLimit(key)).toBe(true)
-      
-      // 4th request should fail
+
       expect(checkRateLimit(key)).toBe(false)
     })
   })
@@ -310,11 +298,11 @@ describe('Security Hardening - Standalone Tests', () => {
         createdAt: number
         lastActivity: number
       }
-      
+
       const sessions = new Map<string, Session>()
-      const maxAge = 24 * 60 * 60 * 1000 // 24 hours
-      const idleTimeout = 2 * 60 * 60 * 1000 // 2 hours
-      
+      const maxAge = 24 * 60 * 60 * 1000
+      const idleTimeout = 2 * 60 * 60 * 1000
+
       function createSession(sessionId: string, userId: string): void {
         const now = Date.now()
         sessions.set(sessionId, {
@@ -323,39 +311,36 @@ describe('Security Hardening - Standalone Tests', () => {
           lastActivity: now
         })
       }
-      
+
       function isSessionValid(sessionId: string): boolean {
         const session = sessions.get(sessionId)
         if (!session) return false
-        
+
         const now = Date.now()
         const isExpiredByAge = (now - session.createdAt) > maxAge
         const isExpiredByIdle = (now - session.lastActivity) > idleTimeout
-        
+
         return !isExpiredByAge && !isExpiredByIdle
       }
-      
+
       function updateActivity(sessionId: string): void {
         const session = sessions.get(sessionId)
         if (session) {
           session.lastActivity = Date.now()
         }
       }
-      
+
       const sessionId = 'test-session'
       const userId = 'test-user'
-      
-      // Create session
+
       createSession(sessionId, userId)
       expect(isSessionValid(sessionId)).toBe(true)
-      
-      // Update activity
+
       updateActivity(sessionId)
       expect(isSessionValid(sessionId)).toBe(true)
-      
-      // Test with expired session
+
       const expiredSession = sessions.get(sessionId)!
-      expiredSession.createdAt = Date.now() - (25 * 60 * 60 * 1000) // 25 hours ago
+      expiredSession.createdAt = Date.now() - (25 * 60 * 60 * 1000)
       expect(isSessionValid(sessionId)).toBe(false)
     })
   })
@@ -363,55 +348,47 @@ describe('Security Hardening - Standalone Tests', () => {
 
 describe('Security Integration', () => {
   test('should demonstrate complete security pipeline', () => {
-    // Simulate a complete security check pipeline
     function securityPipeline(input: any): { valid: boolean; threats: string[]; sanitized: any } {
-      // Step 1: Basic type checking
       if (typeof input !== 'object' || input === null) {
         return { valid: false, threats: ['invalid_input'], sanitized: null }
       }
-      
-      // Step 2: Sanitize all string values
+
       const sanitized: any = {}
       const allThreats: string[] = []
-      
+
       for (const [key, value] of Object.entries(input)) {
         if (typeof value === 'string') {
-          // Check for threats
           const threats = TestThreatDetector.analyzeInput(value)
           allThreats.push(...threats)
-          
-          // Sanitize the value
+
           sanitized[key] = TestInputSanitizer.sanitizeString(value)
         } else {
           sanitized[key] = value
         }
       }
-      
-      // Step 3: Determine if input is valid
+
       const valid = allThreats.length === 0
-      
+
       return { valid, threats: allThreats, sanitized }
     }
-    
-    // Test with safe input
+
     const safeInput = {
       username: 'testuser',
       email: 'test@example.com',
       age: 25
     }
-    
+
     const safeResult = securityPipeline(safeInput)
     expect(safeResult.valid).toBe(true)
     expect(safeResult.threats).toEqual([])
     expect(safeResult.sanitized.username).toBe('testuser')
-    
-    // Test with malicious input
+
     const maliciousInput = {
       username: "'; DROP TABLE users; --",
       email: '<script>alert(1)</script>@example.com',
       comment: '../../../etc/passwd'
     }
-    
+
     const maliciousResult = securityPipeline(maliciousInput)
     expect(maliciousResult.valid).toBe(false)
     expect(maliciousResult.threats.length).toBeGreaterThan(0)

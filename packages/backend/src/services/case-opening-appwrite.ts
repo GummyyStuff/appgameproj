@@ -14,7 +14,6 @@ export interface CaseType {
   description: string;
   image_url?: string;
   rarity_distribution: RarityDistribution;
-  value_multiplier: number; // Default reward multiplier for this case
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -317,6 +316,14 @@ export class CaseOpeningService {
       };
     }
 
+    // Validate case price is positive
+    if (caseType.price <= 0) {
+      return {
+        isValid: false,
+        error: 'Invalid case price',
+      };
+    }
+
     // Validate case has items
     try {
       const itemPool = await this.getItemPool(caseTypeId);
@@ -373,7 +380,7 @@ export class CaseOpeningService {
       );
 
       // Generate unique opening ID
-      const openingId = `case_${Date.now()}_${userId.slice(-8)}`;
+      const openingId = `case_${crypto.randomUUID()}`;
 
       // Create result object
       const result: CaseOpeningResult = {
@@ -442,7 +449,7 @@ export class CaseOpeningService {
               case_name: caseName,
               item_name: resultData.item_name,
               profit,
-              timestamp: game.createdAt,
+              timestamp: game.$createdAt,
             };
           }
         } catch (e) {
@@ -470,17 +477,24 @@ export class CaseOpeningService {
    * Transform Appwrite CaseType to expected format
    */
   private static transformCaseType(appwriteCase: AppwriteCaseType & { $id: string }): CaseType {
+    let rarityDistribution: RarityDistribution;
+    try {
+      rarityDistribution = JSON.parse(appwriteCase.rarityDistribution);
+    } catch (error) {
+      console.error('Failed to parse rarityDistribution for case', appwriteCase.$id, error);
+      rarityDistribution = { common: 60, uncommon: 25, rare: 10, epic: 4, legendary: 1 };
+    }
+
     return {
       id: appwriteCase.$id,
       name: appwriteCase.name,
       price: appwriteCase.price,
       description: appwriteCase.description,
       image_url: appwriteCase.imageUrl,
-      rarity_distribution: JSON.parse(appwriteCase.rarityDistribution),
-      value_multiplier: 1.0, // Fixed value - item boosts are applied via base_value, not multipliers
+      rarity_distribution: rarityDistribution,
       is_active: appwriteCase.isActive,
-      created_at: appwriteCase.createdAt,
-      updated_at: appwriteCase.updatedAt,
+      created_at: appwriteCase.$createdAt,
+      updated_at: appwriteCase.$updatedAt,
     };
   }
 
@@ -497,8 +511,8 @@ export class CaseOpeningService {
       image_url: appwriteItem.imageUrl,
       description: appwriteItem.description,
       is_active: appwriteItem.isActive,
-      created_at: appwriteItem.createdAt,
-      updated_at: appwriteItem.createdAt, // Use createdAt as Appwrite doesn't have updatedAt for items
+      created_at: appwriteItem.$createdAt,
+      updated_at: appwriteItem.$updatedAt || appwriteItem.$createdAt,
     };
   }
 }

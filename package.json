@@ -9,24 +9,24 @@
   ],
   "catalogs": {
     "default": {
-      "typescript": "^5.9.2",
+      "typescript": "^7.0.2",
       "@types/bun": "latest",
-      "appwrite": "^18.0.0",
-      "node-appwrite": "^17.2.0",
-      "react": "^19.1.1",
-      "react-dom": "^19.1.1",
-      "@types/react": "^19.1.13",
-      "@types/react-dom": "^19.1.9",
+      "appwrite": "26.2.0",
+      "node-appwrite": "27.1.0",
+      "react": "^19.2.8",
+      "react-dom": "^19.2.8",
+      "@types/react": "^19.2.3",
+      "@types/react-dom": "^19.1.5",
       "hono": "^4.9.8",
       "zod": "^4.1.11",
       "@testing-library/react": "^16.3.0",
       "@testing-library/jest-dom": "^6.8.0",
-      "happy-dom": "^18.0.1",
-      "@happy-dom/global-registrator": "^18.0.1"
+      "happy-dom": "^20.11.2",
+      "@happy-dom/global-registrator": "^20.11.2"
     }
   },
   "scripts": {
-    "dev": "bun run build:frontend:dev && bun run --filter @tarkov-casino/backend dev",
+    "dev": "bun run build:frontend:dev && cd packages/backend && bun run src/index.ts",
     "dev:all": "bun --filter '*' dev",
     "build": "bun run build:frontend && bun run build:backend",
     "build:frontend": "cd packages/frontend && bun run build",
@@ -34,11 +34,9 @@
     "build:backend": "cd packages/backend && bun run build",
     "build:all": "bun --filter '*' build",
     "start": "bun run dist/index.js",
-    "test": "bun test",
+    "test": "vitest",
     "test:all": "bun --filter '*' test",
-    "test:coverage": "bun test --coverage",
-    "test:balance": "cd packages/backend && bun run test:balance",
-    "test:constraints": "cd packages/backend && bun run test:constraints",
+    "test:coverage": "vitest --coverage",
     "benchmark": "bun run scripts/benchmark.ts",
     "benchmark:old": "bun run scripts/benchmark-bun.ts",
     "analyze": "bun run scripts/analyze-bundle.ts",
@@ -48,19 +46,24 @@
     "type-check": "tsc --noEmit",
     "deploy:prepare": "./scripts/deploy.sh",
     "deploy:validate": "./scripts/validate-production.sh",
-    "deploy:verify-balance": "bun run test:balance",
     "health:check": "./scripts/health-check.sh",
     "health:check:prod": "./scripts/health-check.sh -u https://tarkov.juanis.cool",
     "docker:build": "./scripts/deploy.sh build",
     "docker:test": "./scripts/deploy.sh test"
   },
   "devDependencies": {
-    "@happy-dom/global-registrator": "catalog:default",
-    "@playwright/test": "1.56.1",
-    "@types/bun": "catalog:default",
+    "@happy-dom/global-registrator": "20.11.2",
+    "@playwright/test": "1.62.1",
+    "@testing-library/dom": "10.4.1",
+    "@testing-library/user-event": "14.6.4",
+    "@types/bun": "1.3.14",
+    "@vitest/coverage-v8": "4.1.10",
+    "jsdom": "30.0.1",
+    "msw": "2.15.0",
     "playwright": "1.56.1",
     "shadcn": "3.4.0",
-    "typescript": "catalog:default"
+    "typescript": "7.0.2",
+    "vitest": "4.1.10"
   },
   "peerDependencies": {
     "typescript": "catalog:default"
@@ -69,10 +72,12 @@
     "@sentry/bun": "10.19.0",
     "@sentry/node": "10.19.0",
     "@sentry/react": "10.19.0",
+    "appwrite": "26.2.0",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
+    "hono": "4.13.1",
     "lucide-react": "0.545.0",
-    "node-appwrite": "catalog:default",
+    "node-appwrite": "27.1.0",
     "tailwind-merge": "3.3.1",
     "tw-animate-css": "1.4.0"
   }
