@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect, Suspense, lazy, FC } from 'react'
+import { useState, useRef, useCallback, useEffect, useMemo, Suspense, lazy, FC } from 'react'
 import * as Sentry from '@sentry/react'
 import { useAuth } from '../hooks/useAuth'
 import { useBalance, useBalanceUpdates } from '../hooks/useBalance'
@@ -12,19 +12,24 @@ import type {
   WheelSegment,
   WheelBetPlacement,
   WheelOfChanceResult,
-  WheelGameResponse
+  WheelGameResponse,
+  EnvironmentState
 } from '../types/wheel'
+import { applyEnvironmentModifiers } from '../utils/wheel-layout'
 import type { WheelSpinnerHandle } from '../components/games/WheelSpinner'
 
 const LazyWheelSpinner = lazy(() => import('../components/games/WheelSpinner'))
 const LazyWheelBettingPanel = lazy(() => import('../components/games/WheelBettingPanel'))
 const LazyWheelResultDisplay = lazy(() => import('../components/games/WheelResultDisplay'))
 const LazyWheelHistoryStrip = lazy(() => import('../components/games/WheelHistoryStrip'))
+const LazyWheelEnvironmentBar = lazy(() => import('../components/games/WheelEnvironmentBar'))
+const LazyWheelBonusAnimation = lazy(() => import('../components/games/WheelBonusAnimation'))
 const LazyAnimatePresence = lazy(() =>
   import('framer-motion').then(module => ({ default: module.AnimatePresence }))
 )
 
 const RESET_DELAY_MS = 3000
+const BONUS_TRANSFORM_MS = 1600
 
 const WheelOfChancePage: FC = () => {
   const { user } = useAuth()
@@ -47,16 +52,39 @@ const WheelOfChancePage: FC = () => {
   const [selectedDenomination, setSelectedDenomination] = useState(100)
   const [pacing, setPacing] = useState<'normal' | 'slow'>('normal')
   const [error, setError] = useState<string | null>(null)
+  const [environmentState, setEnvironmentState] = useState<EnvironmentState | null>(null)
+  const [bonusLayout, setBonusLayout] = useState<WheelSegment[] | null>(null)
+  const [bonusActive, setBonusActive] = useState(false)
+  const [showBonusAnimation, setShowBonusAnimation] = useState(false)
 
   const wheelRef = useRef<WheelSpinnerHandle>(null)
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const bonusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastResultRef = useRef<WheelOfChanceResult | null>(null)
   lastResultRef.current = lastResult
+
+  const displaySegments = useMemo(() => {
+    if (bonusLayout) return bonusLayout
+    if (!environmentState) return segments
+    return applyEnvironmentModifiers(segments, environmentState)
+  }, [segments, environmentState, bonusLayout])
+
+  const highlightedSegments = useMemo(
+    () => environmentState?.modifiers.map(m => m.segmentIndex) ?? [],
+    [environmentState]
+  )
 
   const clearResetTimer = useCallback(() => {
     if (resetTimerRef.current) {
       clearTimeout(resetTimerRef.current)
       resetTimerRef.current = null
+    }
+  }, [])
+
+  const clearBonusTimer = useCallback(() => {
+    if (bonusTimerRef.current) {
+      clearTimeout(bonusTimerRef.current)
+      bonusTimerRef.current = null
     }
   }, [])
 
@@ -77,6 +105,11 @@ const WheelOfChancePage: FC = () => {
       }
       setSegments(data.wheel_layout)
       setLayoutSignature(data.layout_signature)
+      if (data.environment_state) {
+        setEnvironmentState(data.environment_state)
+      }
+      setBonusLayout(null)
+      setBonusActive(false)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load wheel layout'
       Sentry.captureException(err, { tags: { game: 'wheel_of_chance', action: 'layout_fetch' } })
@@ -89,6 +122,13 @@ const WheelOfChancePage: FC = () => {
   useEffect(() => {
     fetchWheelLayout()
   }, [fetchWheelLayout])
+
+  useEffect(() => {
+    return () => {
+      clearResetTimer()
+      clearBonusTimer()
+    }
+  }, [clearResetTimer, clearBonusTimer])
 
   const handleSegmentClick = useCallback((index: number) => {
     if (isSpinning) return
@@ -135,11 +175,13 @@ const WheelOfChancePage: FC = () => {
   const handleSpinComplete = useCallback(() => {
     setIsSpinning(false)
     setShowResult(true)
+    setBonusLayout(null)
+    setBonusActive(false)
 
     const result = lastResultRef.current
     if (result) {
       trackGamePlayed(result.total_bet, result.total_win, 'wheel_of_chance')
-      
+
       if (result.total_win > 0) {
         toast.success('You won!', `₽${result.total_win.toLocaleString()}`, { duration: 4000 })
         updateAchievementProgress('wheel-master', 1)
@@ -158,6 +200,14 @@ const WheelOfChancePage: FC = () => {
     }, RESET_DELAY_MS)
   }, [trackGamePlayed, updateAchievementProgress, playGameSound, toast, fetchWheelLayout])
 
+  const handleBonusSecondSpin = useCallback((gameResult: WheelOfChanceResult) => {
+    clearBonusTimer()
+    bonusTimerRef.current = setTimeout(() => {
+      setShowBonusAnimation(false)
+      wheelRef.current?.settleTo(gameResult.winning_segment, handleSpinComplete)
+    }, BONUS_TRANSFORM_MS)
+  }, [clearBonusTimer, handleSpinComplete])
+
   const placeBet = useCallback(async () => {
     if (!user || isSpinning || betPlacements.length === 0) return
 
@@ -173,6 +223,7 @@ const WheelOfChancePage: FC = () => {
 
     setError(null)
     clearResetTimer()
+    clearBonusTimer()
     setShowResult(false)
     setIsSpinning(true)
     playGameSound('spin')
@@ -216,12 +267,25 @@ const WheelOfChancePage: FC = () => {
       const result: WheelGameResponse = await response.json()
       const gameResult = result.game_result
 
-      setSegments(gameResult.wheel_layout)
       setLastResult(gameResult)
-      setHistory(prev => [{ ...gameResult, uid: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}` }, ...prev].slice(0,20))
+      setEnvironmentState(gameResult.environment_state)
+      setHistory(prev => [{ ...gameResult, uid: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}` }, ...prev].slice(0, 20))
       updateBalance(result.new_balance)
-      
-      wheelRef.current?.settleTo(gameResult.winning_segment, handleSpinComplete)
+
+      const isBonus = gameResult.special_triggered === 'bonus_wheel' && gameResult.bonus_wheel_layout
+
+      if (isBonus) {
+        const firstSpin = gameResult.spin_sequence[0]
+        wheelRef.current?.settleTo(firstSpin.winning_segment, () => {
+          setBonusActive(true)
+          setBonusLayout(gameResult.bonus_wheel_layout)
+          setShowBonusAnimation(true)
+          playGameSound('jackpot')
+          handleBonusSecondSpin(gameResult)
+        })
+      } else {
+        wheelRef.current?.settleTo(gameResult.winning_segment, handleSpinComplete)
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to spin'
       Sentry.captureException(err, {
@@ -233,7 +297,7 @@ const WheelOfChancePage: FC = () => {
       toast.error('Spin failed', errorMessage)
       setIsSpinning(false)
     }
-  }, [user, isSpinning, betPlacements, balance, clearResetTimer, updateBalance, toast, playGameSound, layoutSignature, segments, handleSpinComplete])
+  }, [user, isSpinning, betPlacements, balance, clearResetTimer, clearBonusTimer, updateBalance, toast, playGameSound, layoutSignature, segments, handleSpinComplete, handleBonusSecondSpin])
 
   useGameShortcuts({
     placeBet: !isSpinning && betPlacements.length > 0 ? placeBet : undefined,
@@ -278,6 +342,13 @@ const WheelOfChancePage: FC = () => {
           </div>
         </div>
 
+        <Suspense fallback={null}>
+          <LazyWheelEnvironmentBar
+            environment={environmentState}
+            bonusActive={bonusActive}
+          />
+        </Suspense>
+
         {error && (
           <div className="w-full max-w-md mb-4 bg-tarkov-danger/20 border border-tarkov-danger rounded-lg p-3 text-tarkov-danger text-sm text-center">
             {error}
@@ -301,13 +372,15 @@ const WheelOfChancePage: FC = () => {
         }>
           <LazyWheelSpinner
             ref={wheelRef}
-            segments={segments}
+            segments={displaySegments}
             isSpinning={isSpinning}
             onSegmentClick={handleSegmentClick}
             onTick={handleWheelTick}
             onSpinClick={placeBet}
             betPlacements={betPlacements}
             pacing={pacing}
+            highlightedSegments={highlightedSegments}
+            bonusActive={bonusActive}
           />
         </Suspense>
 
@@ -342,7 +415,7 @@ const WheelOfChancePage: FC = () => {
             <div className="bg-tarkov-dark rounded-lg p-4 h-64 animate-pulse" />
           }>
             <LazyWheelBettingPanel
-              segments={segments}
+              segments={displaySegments}
               selectedDenomination={selectedDenomination}
               onDenominationChange={setSelectedDenomination}
               betPlacements={betPlacements}
@@ -361,6 +434,10 @@ const WheelOfChancePage: FC = () => {
             <LazyWheelHistoryStrip history={history} />
           </Suspense>
         </div>
+
+        <Suspense fallback={null}>
+          <LazyWheelBonusAnimation visible={showBonusAnimation} />
+        </Suspense>
 
         <Suspense fallback={null}>
           <LazyAnimatePresence>

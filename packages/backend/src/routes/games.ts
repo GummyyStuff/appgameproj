@@ -19,6 +19,7 @@ import { CurrencyService } from '../services/currency'
 import { realtimeGameService } from '../services/realtime-game'
 import { appwriteClient } from '../config/appwrite'
 import { requestDeduplication } from '../services/request-deduplication'
+import { wheelEnvironmentStateService } from '../services/wheel-environment-state'
 
 export const gameRoutes = new Hono()
 
@@ -33,7 +34,7 @@ gameRoutes.use('/wheel-of-chance/spin', gameBetRateLimit)
 const wheelBetSchema = z.object({
   amount: commonSchemas.betAmount,
   bets: z.array(z.object({
-    segmentIndex: z.number().int().min(0).max(11),
+    segmentIndex: z.number().int().min(0).max(9),
     amount: z.number().int().min(1)
   })).min(1).max(10),
   wheel_layout: z.array(z.object({
@@ -45,7 +46,7 @@ const wheelBetSchema = z.object({
     startAngle: z.number(),
     endAngle: z.number(),
     bettable: z.boolean()
-  })).length(12),
+  })).length(10),
   layout_signature: z.string().min(16)
 })
 
@@ -69,13 +70,27 @@ gameRoutes.get('/', asyncHandler(async (c: Context) => {
 gameRoutes.get('/wheel-of-chance', asyncHandler(async (c: Context) => {
   const wheelLayout = generateWheelLayout()
   const signature = signWheelLayout(wheelLayout)
+
+  const user = c.get('user')
+  let environmentState: unknown = null
+  if (user?.id) {
+    try {
+      environmentState = await wheelEnvironmentStateService.getWheelEnvironment(user.id)
+    } catch (error) {
+      logger.error('Failed to load environment for wheel info', {
+        user_id: user.id,
+        error: error instanceof Error ? error.message : 'unknown'
+      })
+    }
+  }
+
   return c.json({
     message: 'Wheel of Chance game information',
     wheel_layout: wheelLayout,
     layout_signature: signature,
+    environment_state: environmentState,
     segment_count: WheelOfChanceGame.getSegmentCount(),
     multiplier_pool: WheelOfChanceGame.getMultiplierPool(),
-    special_pool: WheelOfChanceGame.getSpecialPool(),
     min_bet: 1,
     max_bet: 10000
   })
@@ -161,6 +176,8 @@ gameRoutes.post('/wheel-of-chance/spin',
 
         await auditLog.gamePlayStarted(user.id, 'wheel_of_chance', amount, ip)
 
+        const environmentState = await wheelEnvironmentStateService.getWheelEnvironment(user.id)
+
         const wheelGame = new WheelOfChanceGame()
 
         const bet = {
@@ -168,7 +185,8 @@ gameRoutes.post('/wheel-of-chance/spin',
           amount,
           gameType: 'wheel_of_chance' as const,
           bets,
-          wheel_layout
+          wheel_layout,
+          environment_state: environmentState
         }
 
         const gameId = `wheel-${Date.now()}-${user.id}`
@@ -205,6 +223,14 @@ gameRoutes.post('/wheel-of-chance/spin',
             error: result.error
           });
           return c.json({ error: result.error || 'Game failed' }, 400)
+        }
+
+        const updatedEnvironment = (result.resultData as { environment_state?: unknown }).environment_state
+        if (updatedEnvironment && typeof updatedEnvironment === 'object') {
+          await wheelEnvironmentStateService.saveWheelEnvironment(
+            user.id,
+            updatedEnvironment as Parameters<typeof wheelEnvironmentStateService.saveWheelEnvironment>[1]
+          )
         }
 
         const transactionResult = await startSpan(

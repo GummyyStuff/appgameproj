@@ -59,9 +59,8 @@ vi.mock('../services/currency', () => ({
 
 vi.mock('../services/game-engine/wheel-of-chance-game', () => {
   class MockWheelOfChanceGame {
-    static getSegmentCount() { return 12 }
+    static getSegmentCount() { return 10 }
     static getMultiplierPool() { return [0, 0.5, 1, 1.5, 2, 3, 5, 10, 50] }
-    static getSpecialPool() { return ['free_spin', 'double_bet', 'double_winnings', 'jackpot'] }
     play = vi.fn().mockResolvedValue({
       success: true,
       winAmount: 200,
@@ -74,11 +73,24 @@ vi.mock('../services/game-engine/wheel-of-chance-game', () => {
         special_triggered: null,
         wheel_layout: [],
         bets: [],
+        spin_sequence: [{ winning_segment: 3, segment_type: 'multiplier', multiplier: 2 }],
+        environment_state: { type: 'clear_skies', spins_remaining: 2, modifiers: [] },
       },
     })
   }
   return { WheelOfChanceGame: MockWheelOfChanceGame }
 })
+
+vi.mock('../services/wheel-environment-state', () => ({
+  wheelEnvironmentStateService: {
+    getWheelEnvironment: vi.fn().mockResolvedValue({
+      type: 'clear_skies',
+      spins_remaining: 3,
+      modifiers: [],
+    }),
+    saveWheelEnvironment: vi.fn().mockResolvedValue(undefined),
+  },
+}))
 
 vi.mock('../services/game-engine/wheel-layout', () => ({
   generateWheelLayout: vi.fn(() => [{ index: 0, type: 'multiplier', label: '0x', multiplier: 0, color: '#000', startAngle: 0, endAngle: 35, bettable: true }]),
@@ -191,18 +203,16 @@ describe('Games API', () => {
 
   describe('POST /wheel-of-chance/spin', () => {
     const validLayout = [
-      { index: 0, type: 'multiplier', label: '0x', multiplier: 0, color: '#4a4a4a', startAngle: 0, endAngle: 35, bettable: true },
-      { index: 1, type: 'free_spin', label: 'FREE', multiplier: 1, color: '#06b6d4', startAngle: 35, endAngle: 50, bettable: false },
-      { index: 2, type: 'multiplier', label: '0.5x', multiplier: 0.5, color: '#6b7280', startAngle: 50, endAngle: 85, bettable: true },
-      { index: 3, type: 'multiplier', label: '1x', multiplier: 1, color: '#3b82f6', startAngle: 85, endAngle: 120, bettable: true },
-      { index: 4, type: 'double_bet', label: '2x BET', multiplier: 2, color: '#f97316', startAngle: 120, endAngle: 135, bettable: false },
-      { index: 5, type: 'multiplier', label: '1.5x', multiplier: 1.5, color: '#8b5cf6', startAngle: 135, endAngle: 170, bettable: true },
-      { index: 6, type: 'multiplier', label: '2x', multiplier: 2, color: '#10b981', startAngle: 170, endAngle: 205, bettable: true },
-      { index: 7, type: 'jackpot', label: 'JACKPOT', multiplier: 100, color: '#fbbf24', startAngle: 205, endAngle: 220, bettable: false },
-      { index: 8, type: 'multiplier', label: '3x', multiplier: 3, color: '#f59e0b', startAngle: 220, endAngle: 255, bettable: true },
-      { index: 9, type: 'multiplier', label: '5x', multiplier: 5, color: '#ef4444', startAngle: 255, endAngle: 290, bettable: true },
-      { index: 10, type: 'multiplier', label: '10x', multiplier: 10, color: '#ec4899', startAngle: 290, endAngle: 325, bettable: true },
-      { index: 11, type: 'multiplier', label: '50x', multiplier: 50, color: '#fbbf24', startAngle: 325, endAngle: 360, bettable: true }
+      { index: 0, type: 'multiplier', label: '0x', multiplier: 0, color: '#4a4a4a', startAngle: 0, endAngle: 38.333333333333336, bettable: true },
+      { index: 1, type: 'multiplier', label: '0.5x', multiplier: 0.5, color: '#6b7280', startAngle: 38.333333333333336, endAngle: 76.66666666666667, bettable: true },
+      { index: 2, type: 'multiplier', label: '1x', multiplier: 1, color: '#3b82f6', startAngle: 76.66666666666667, endAngle: 115, bettable: true },
+      { index: 3, type: 'multiplier', label: '1.5x', multiplier: 1.5, color: '#8b5cf6', startAngle: 115, endAngle: 153.33333333333334, bettable: true },
+      { index: 4, type: 'multiplier', label: '2x', multiplier: 2, color: '#10b981', startAngle: 153.33333333333334, endAngle: 191.66666666666669, bettable: true },
+      { index: 5, type: 'multiplier', label: '3x', multiplier: 3, color: '#f59e0b', startAngle: 191.66666666666669, endAngle: 230, bettable: true },
+      { index: 6, type: 'multiplier', label: '5x', multiplier: 5, color: '#ef4444', startAngle: 230, endAngle: 268.33333333333337, bettable: true },
+      { index: 7, type: 'multiplier', label: '10x', multiplier: 10, color: '#ec4899', startAngle: 268.33333333333337, endAngle: 306.6666666666667, bettable: true },
+      { index: 8, type: 'multiplier', label: '50x', multiplier: 50, color: '#fbbf24', startAngle: 306.6666666666667, endAngle: 345, bettable: true },
+      { index: 9, type: 'bonus_wheel', label: 'BONUS', multiplier: 0, color: '#fbbf24', startAngle: 345, endAngle: 360, bettable: false }
     ]
 
     test('should return 400 when bet amount exceeds balance', async () => {

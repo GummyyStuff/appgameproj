@@ -1,20 +1,19 @@
 import { createHmac, timingSafeEqual } from 'crypto'
-import type { WheelSegment, WheelSegmentType } from '../../types/database'
+import type { WheelSegment } from '../../types/database'
 import { env } from '../../config/env'
 
 export const BASE_MULTIPLIERS = [0, 0.5, 1, 1.5, 2, 3, 5, 10, 50] as const
-export const SPECIAL_TYPES: readonly WheelSegmentType[] = ['free_spin', 'double_bet', 'double_winnings', 'jackpot'] as const
-export const BONUS_SLOT_POSITIONS = [1, 4, 7] as const
-export const BASE_ANGLE = 35
 export const BONUS_ANGLE = 15
-export const SEGMENT_COUNT = 12
+export const BASE_TOTAL_ANGLE = 360 - BONUS_ANGLE
+export const BASE_ANGLE = BASE_TOTAL_ANGLE / 9
+export const BONUS_SEGMENT_INDEX = 9
+export const SEGMENT_COUNT = 10
 
-const SPECIAL_CONFIG: Record<WheelSegmentType, { label: string; multiplier: number; color: string }> = {
-  free_spin: { label: 'FREE', multiplier: 1, color: '#06b6d4' },
-  double_bet: { label: '2x BET', multiplier: 2, color: '#f97316' },
-  double_winnings: { label: '2x WIN', multiplier: 1, color: '#a855f7' },
-  jackpot: { label: 'JACKPOT', multiplier: 100, color: '#fbbf24' },
-  multiplier: { label: '', multiplier: 0, color: '' }
+const BONUS_CONFIG = {
+  type: 'bonus_wheel' as const,
+  label: 'BONUS',
+  multiplier: 0,
+  color: '#fbbf24'
 }
 
 const BASE_CONFIG: { multiplier: number; label: string; color: string }[] = [
@@ -29,70 +28,40 @@ const BASE_CONFIG: { multiplier: number; label: string; color: string }[] = [
   { multiplier: 50, label: '50x', color: '#fbbf24' }
 ]
 
-class SeededRandom {
-  private seed: number
-
-  constructor(seed: number) {
-    this.seed = seed % 2147483647
-    if (this.seed <= 0) this.seed += 2147483646
-  }
-
-  next(): number {
-    this.seed = (this.seed * 16807) % 2147483647
-    return (this.seed - 1) / 2147483646
-  }
-
-  nextInt(min: number, max: number): number {
-    return Math.floor(this.next() * (max - min + 1)) + min
-  }
+export function getBaseSegmentAngles(baseOrdinal: number): { startAngle: number; endAngle: number } {
+  const start = baseOrdinal * BASE_ANGLE
+  const end = baseOrdinal === 8 ? BASE_TOTAL_ANGLE : (baseOrdinal + 1) * BASE_ANGLE
+  return { startAngle: start, endAngle: end }
 }
 
-export function generateWheelLayout(seed?: number): WheelSegment[] {
-  const rng = new SeededRandom(seed ?? Math.floor(Math.random() * 2147483647))
-
-  const bonusTypes: WheelSegmentType[] = []
-  for (let i = 0; i < BONUS_SLOT_POSITIONS.length; i++) {
-    const idx = rng.nextInt(0, SPECIAL_TYPES.length - 1)
-    bonusTypes.push(SPECIAL_TYPES[idx] as WheelSegmentType)
-  }
-
+export function generateWheelLayout(_seed?: number): WheelSegment[] {
   const segments: WheelSegment[] = []
-  let currentAngle = 0
-  let baseIndex = 0
-  let bonusIndex = 0
 
-  for (let pos = 0; pos < SEGMENT_COUNT; pos++) {
-    if (BONUS_SLOT_POSITIONS.includes(pos as (typeof BONUS_SLOT_POSITIONS)[number])) {
-      const type = bonusTypes[bonusIndex]
-      const config = SPECIAL_CONFIG[type]
-      segments.push({
-        index: pos,
-        type,
-        label: config.label,
-        multiplier: config.multiplier,
-        color: config.color,
-        startAngle: currentAngle,
-        endAngle: currentAngle + BONUS_ANGLE,
-        bettable: false
-      })
-      currentAngle += BONUS_ANGLE
-      bonusIndex++
-    } else {
-      const config = BASE_CONFIG[baseIndex]
-      segments.push({
-        index: pos,
-        type: 'multiplier',
-        label: config.label,
-        multiplier: config.multiplier,
-        color: config.color,
-        startAngle: currentAngle,
-        endAngle: currentAngle + BASE_ANGLE,
-        bettable: true
-      })
-      currentAngle += BASE_ANGLE
-      baseIndex++
-    }
+  for (let i = 0; i < 9; i++) {
+    const config = BASE_CONFIG[i]
+    const { startAngle, endAngle } = getBaseSegmentAngles(i)
+    segments.push({
+      index: i,
+      type: 'multiplier',
+      label: config.label,
+      multiplier: config.multiplier,
+      color: config.color,
+      startAngle,
+      endAngle,
+      bettable: true
+    })
   }
+
+  segments.push({
+    index: BONUS_SEGMENT_INDEX,
+    type: BONUS_CONFIG.type,
+    label: BONUS_CONFIG.label,
+    multiplier: BONUS_CONFIG.multiplier,
+    color: BONUS_CONFIG.color,
+    startAngle: BASE_TOTAL_ANGLE,
+    endAngle: 360,
+    bettable: false
+  })
 
   return segments
 }
@@ -100,39 +69,30 @@ export function generateWheelLayout(seed?: number): WheelSegment[] {
 export function validateWheelLayout(layout: unknown): layout is WheelSegment[] {
   if (!Array.isArray(layout) || layout.length !== SEGMENT_COUNT) return false
 
-  let currentAngle = 0
-  let baseIndex = 0
-  let bonusIndex = 0
-
   for (let pos = 0; pos < SEGMENT_COUNT; pos++) {
     const seg = layout[pos] as WheelSegment
     if (!seg || typeof seg !== 'object') return false
     if (seg.index !== pos) return false
     if (typeof seg.startAngle !== 'number' || typeof seg.endAngle !== 'number') return false
 
-    if (BONUS_SLOT_POSITIONS.includes(pos as (typeof BONUS_SLOT_POSITIONS)[number])) {
-      const expectedType = seg.type
-      if (!SPECIAL_TYPES.includes(expectedType as WheelSegmentType)) return false
-      const config = SPECIAL_CONFIG[expectedType as WheelSegmentType]
+    if (pos === BONUS_SEGMENT_INDEX) {
+      if (seg.type !== BONUS_CONFIG.type) return false
       if (seg.bettable !== false) return false
-      if (seg.label !== config.label) return false
-      if (seg.multiplier !== config.multiplier) return false
-      if (seg.startAngle !== currentAngle || seg.endAngle !== currentAngle + BONUS_ANGLE) return false
-      currentAngle += BONUS_ANGLE
-      bonusIndex++
-    } else {
-      const expected = BASE_CONFIG[baseIndex]
-      if (seg.type !== 'multiplier') return false
-      if (seg.bettable !== true) return false
-      if (seg.label !== expected.label) return false
-      if (seg.multiplier !== expected.multiplier) return false
-      if (seg.startAngle !== currentAngle || seg.endAngle !== currentAngle + BASE_ANGLE) return false
-      currentAngle += BASE_ANGLE
-      baseIndex++
+      if (seg.label !== BONUS_CONFIG.label) return false
+      if (seg.multiplier !== BONUS_CONFIG.multiplier) return false
+      if (seg.startAngle !== BASE_TOTAL_ANGLE || seg.endAngle !== 360) return false
+      continue
     }
+
+    const expected = BASE_CONFIG[pos]
+    if (seg.type !== 'multiplier') return false
+    if (seg.bettable !== true) return false
+    if (seg.label !== expected.label) return false
+    if (seg.multiplier !== expected.multiplier) return false
+    const { startAngle, endAngle } = getBaseSegmentAngles(pos)
+    if (seg.startAngle !== startAngle || seg.endAngle !== endAngle) return false
   }
 
-  if (currentAngle !== 360 || baseIndex !== 9 || bonusIndex !== 3) return false
   return true
 }
 

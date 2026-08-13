@@ -79,6 +79,8 @@ bun run docker:test         # test Docker image
 
 **Coolify**: Docker build pack, `Dockerfile` at root, port `3000`. See `coolify.json` for full config.
 
+**Alternative (plain Docker, no Coolify)**: `docker compose up -d --build` using `docker-compose.yml` and the root `.env` (needs the `VITE_*` build vars).
+
 ## Health Checks
 ```bash
 bun run health:check              # localhost

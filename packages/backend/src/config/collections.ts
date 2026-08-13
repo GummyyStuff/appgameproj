@@ -17,6 +17,7 @@ export const COLLECTION_IDS = {
   AUDIT_LOGS: 'audit_logs',
   ACHIEVEMENT_DEFINITIONS: 'achievement_definitions',
   USER_ACHIEVEMENTS: 'user_achievements',
+  WHEEL_ENVIRONMENTS: 'wheel_environments',
 } as const;
 
 export type CollectionId = typeof COLLECTION_IDS[keyof typeof COLLECTION_IDS];
@@ -163,5 +164,15 @@ export interface UserAchievement {
   claimed: boolean; // True when reward has been claimed
   claimedAt?: string; // ISO 8601 datetime when reward was claimed
   userAchievementKey: string; // Composite unique key: `${userId}_${achievementId}`
+}
+
+export interface WheelEnvironmentRecord {
+  $id?: string;
+  $createdAt?: string;
+  $updatedAt?: string;
+  userId: string;
+  environmentType: string; // EnvironmentType
+  spinsRemaining: number;
+  modifiers: string; // JSON string of EnvironmentSegmentModifier[]
 }
 

@@ -7,8 +7,8 @@
   "scripts": {
     "dev": "bun run src/index.ts",
   "dev:watch": "bun run --watch --no-clear src/index.ts",
-    "build": "bun build src/index.ts --outdir ./dist --target bun --bytecode --minify --sourcemap --external node-appwrite --external pg --external socket.io --external hono --external zod --external hono-rate-limiter --external @sentry/bun --external @sentry/node",
-    "build:dev": "bun build src/index.ts --outdir ./dist --target bun --external node-appwrite --external pg --external socket.io --external hono --external zod --external hono-rate-limiter --external @sentry/bun --external @sentry/node",
+    "build": "bun build src/index.ts --outdir ./dist --target bun --bytecode --minify --sourcemap --external node-appwrite --external hono --external zod --external hono-rate-limiter --external @sentry/bun --external @sentry/node",
+    "build:dev": "bun build src/index.ts --outdir ./dist --target bun --external node-appwrite --external hono --external zod --external hono-rate-limiter --external @sentry/bun --external @sentry/node",
     "build:standalone": "bun build --compile --minify --sourcemap --bytecode src/index.ts --outfile ../../tarkov-casino-server",
     "start": "bun run dist/index.js",
     "test": "vitest",
@@ -29,20 +29,16 @@
     "seed:achievements": "bun run src/scripts/seed-achievements.ts"
   },
   "dependencies": {
-    "@types/pg": "^8.16.0",
     "bun-plugin-tailwind": "^0.1.2",
     "decimal.js": "10.6.0",
-    "dotenv": "17.2.3",
     "hono": "catalog:default",
     "hono-rate-limiter": "^0.4.2",
     "node-appwrite": "catalog:default",
-    "pg": "^8.16.3",
     "zod": "catalog:default"
   },
   "devDependencies": {
     "@types/bun": "catalog:default",
     "@types/decimal.js": "7.4.3",
-    "@types/dotenv": "8.2.3",
     "typescript": "catalog:default"
   }
 }

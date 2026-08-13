@@ -1,0 +1,22 @@
+# Tarkov Casino - simple single-container deployment.
+# Usage:  docker compose up -d --build
+#
+# This is the plain-Docker alternative to Coolify: same image, no dashboard.
+# Runtime config comes from .env; build-time VITE_* vars can live there too.
+
+services:
+  app:
+    build:
+      context: .
+      args:
+        VITE_APPWRITE_ENDPOINT: ${VITE_APPWRITE_ENDPOINT}
+        VITE_APPWRITE_PROJECT_ID: ${VITE_APPWRITE_PROJECT_ID}
+        VITE_APPWRITE_DATABASE_ID: ${VITE_APPWRITE_DATABASE_ID}
+        VITE_API_URL: ${VITE_API_URL:-/api}
+        VITE_SENTRY_DSN: ${VITE_SENTRY_DSN}
+    env_file: .env
+    environment:
+      NODE_ENV: production
+    ports:
+      - "${PORT:-3000}:3000"
+    restart: unless-stopped

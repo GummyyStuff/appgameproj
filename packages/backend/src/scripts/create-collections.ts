@@ -390,6 +390,30 @@ async function createUserAchievementsCollection() {
   }
 }
 
+async function createWheelEnvironmentsCollection() {
+  console.log('\n🎡 Creating wheel_environments collection...');
+
+  try {
+    await databases.createCollection(
+      DATABASE_ID,
+      COLLECTION_IDS.WHEEL_ENVIRONMENTS,
+      'Wheel Environments',
+      [] // Server-side only
+    );
+
+    await databases.createStringAttribute(DATABASE_ID, COLLECTION_IDS.WHEEL_ENVIRONMENTS, 'userId', 36, true);
+    await databases.createStringAttribute(DATABASE_ID, COLLECTION_IDS.WHEEL_ENVIRONMENTS, 'environmentType', 50, true);
+    await databases.createIntegerAttribute(DATABASE_ID, COLLECTION_IDS.WHEEL_ENVIRONMENTS, 'spinsRemaining', false, 0, 3, 3);
+    await databases.createStringAttribute(DATABASE_ID, COLLECTION_IDS.WHEEL_ENVIRONMENTS, 'modifiers', 2000, false);
+
+    await databases.createIndex(DATABASE_ID, COLLECTION_IDS.WHEEL_ENVIRONMENTS, 'userId_idx', 'unique', ['userId']);
+
+    console.log('✅ Wheel environments collection created');
+  } catch (error: any) {
+    console.error('❌ Error creating wheel_environments collection:', error.message);
+  }
+}
+
 async function main() {
   console.log('🚀 Starting Appwrite collection setup...');
   console.log('=====================================\n');
@@ -407,6 +431,7 @@ async function main() {
     await createAuditLogsCollection();
     await createAchievementDefinitionsCollection();
     await createUserAchievementsCollection();
+    await createWheelEnvironmentsCollection();
 
     console.log('\n=====================================');
     console.log('✅ All collections created successfully!');

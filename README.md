@@ -94,8 +94,20 @@ bun run build   # builds both frontend and backend
 
 ## Docker Deployment
 
+Simplest way (single command, needs the `VITE_*` vars in `.env`):
+
 ```bash
-docker build -t tarkov-casino .
+docker compose up -d --build
+```
+
+Or build and run manually (build-time vars must be passed explicitly):
+
+```bash
+docker build \
+  --build-arg VITE_APPWRITE_ENDPOINT=https://.../v1 \
+  --build-arg VITE_APPWRITE_PROJECT_ID=... \
+  --build-arg VITE_APPWRITE_DATABASE_ID=... \
+  -t tarkov-casino .
 docker run -p 3000:3000 tarkov-casino
 ```
 

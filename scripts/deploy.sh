@@ -38,7 +38,7 @@ log_error() {
 # Check if required tools are installed
 check_dependencies() {
     log_info "Checking dependencies..."
-    
+
     if ! command -v docker &> /dev/null; then
         log_error "Docker is not installed or not in PATH"
         exit 1
@@ -57,9 +57,11 @@ validate_environment() {
     log_info "Validating environment variables..."
     
     local required_vars=(
-        "SUPABASE_URL"
-        "SUPABASE_ANON_KEY"
-        "SUPABASE_SERVICE_ROLE_KEY"
+        "APPWRITE_ENDPOINT"
+        "APPWRITE_PROJECT_ID"
+        "APPWRITE_API_KEY"
+        "VITE_APPWRITE_ENDPOINT"
+        "VITE_APPWRITE_PROJECT_ID"
         "JWT_SECRET"
     )
     
@@ -93,7 +95,15 @@ validate_environment() {
 build_image() {
     log_info "Building Docker image..."
     
-    if docker build -t "$DOCKER_IMAGE_NAME:latest" .; then
+    local build_args=(
+        --build-arg "VITE_APPWRITE_ENDPOINT=${VITE_APPWRITE_ENDPOINT:-${APPWRITE_ENDPOINT:-}}"
+        --build-arg "VITE_APPWRITE_PROJECT_ID=${VITE_APPWRITE_PROJECT_ID:-${APPWRITE_PROJECT_ID:-}}"
+        --build-arg "VITE_APPWRITE_DATABASE_ID=${VITE_APPWRITE_DATABASE_ID:-${APPWRITE_DATABASE_ID:-}}"
+        --build-arg "VITE_API_URL=${VITE_API_URL:-/api}"
+        --build-arg "VITE_SENTRY_DSN=${VITE_SENTRY_DSN:-${SENTRY_DSN:-}}"
+    )
+
+    if docker build "${build_args[@]}" -t "$DOCKER_IMAGE_NAME:latest" .; then
         log_success "Docker image built successfully"
     else
         log_error "Failed to build Docker image"
@@ -206,7 +216,7 @@ generate_summary() {
     echo "Docker Image: $DOCKER_IMAGE_NAME:latest"
     echo "Environment: ${NODE_ENV:-production}"
     echo "Port: ${PORT:-3000}"
-    echo "Supabase URL: ${SUPABASE_URL}"
+    echo "Appwrite Endpoint: ${APPWRITE_ENDPOINT}"
     echo "===================="
     echo ""
     log_info "Next steps:"

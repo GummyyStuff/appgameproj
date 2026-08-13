@@ -4,25 +4,34 @@ import {
   WheelSegmentType,
   WheelBetPlacement,
   WheelOfChanceResult,
+  WheelSpinSequenceEntry,
+  WheelOfChanceVerification,
+  EnvironmentState,
   GameResultData
 } from '../../types/database'
-import { ProvablyFairService, ProvablyFairContext } from './provably-fair-service'
-import { BASE_MULTIPLIERS, SPECIAL_TYPES, SEGMENT_COUNT } from './wheel-layout'
+import { ProvablyFairService } from './provably-fair-service'
+import { BASE_MULTIPLIERS, SEGMENT_COUNT, BONUS_SEGMENT_INDEX } from './wheel-layout'
+import {
+  applyEnvironmentModifiers,
+  transformLayoutForBonusWheel,
+  generateNewEnvironment,
+  isValidEnvironmentState,
+  MAX_BONUS_RESPINS
+} from './wheel-environment'
 
 export interface WheelBet extends GameBet {
   gameType: 'wheel_of_chance'
   bets: WheelBetPlacement[]
   wheel_layout?: WheelSegment[]
+  environment_state?: EnvironmentState
 }
-
-const JACKPOT_MULTIPLIER = 100
 
 export class WheelOfChanceGame extends BaseGame {
   private provablyFair: ProvablyFairService
 
-  constructor() {
+  constructor(provablyFair?: ProvablyFairService) {
     super('wheel_of_chance', 1, 10000)
-    this.provablyFair = new ProvablyFairService()
+    this.provablyFair = provablyFair || new ProvablyFairService()
   }
 
   static getSegmentCount(): number {
@@ -31,10 +40,6 @@ export class WheelOfChanceGame extends BaseGame {
 
   static getMultiplierPool(): number[] {
     return [...BASE_MULTIPLIERS]
-  }
-
-  static getSpecialPool(): string[] {
-    return [...SPECIAL_TYPES]
   }
 
   async play(bet: WheelBet): Promise<GameResult> {
@@ -61,77 +66,119 @@ export class WheelOfChanceGame extends BaseGame {
         }
       }
 
-      const spinContext = await this.provablyFair.createContext()
-      const spinOutcome = await this.provablyFair.generateOutcome(spinContext)
-
-      const weights = wheelLayout.map(seg => seg.endAngle - seg.startAngle)
-      const totalWeight = weights.reduce((s, w) => s + w, 0)
-      if (!Number.isFinite(totalWeight) || totalWeight <= 0) {
-        return { success: false, winAmount: 0, resultData: {} as GameResultData, error: 'Invalid wheel layout weights' }
-      }
-      const roll = spinOutcome.randomValue * totalWeight
-      let cumulative = 0
-      let winningIndex = 0
-      for (let i = 0; i < weights.length; i++) {
-        cumulative += weights[i]
-        if (roll < cumulative) {
-          winningIndex = i
-          break
-        }
+      const providedEnvironment = bet.environment_state
+      if (providedEnvironment && !isValidEnvironmentState(providedEnvironment)) {
+        return { success: false, winAmount: 0, resultData: {} as GameResultData, error: 'Invalid environment state' }
       }
 
-      const segment = wheelLayout[winningIndex]
-      let totalWin = 0
-      let specialTriggered: WheelSegmentType | null = null
-      let effectiveMultiplier = segment.multiplier
-
-      if (segment.type === 'multiplier') {
-        const segmentBets = bet.bets.filter(b => b.segmentIndex === winningIndex)
-        const segmentBetTotal = segmentBets.reduce((sum, b) => sum + b.amount, 0)
-        totalWin = segmentBetTotal * segment.multiplier
+      let environment: EnvironmentState
+      let environmentVerification: WheelOfChanceVerification | undefined
+      if (providedEnvironment && providedEnvironment.spins_remaining > 0) {
+        environment = providedEnvironment
       } else {
-        specialTriggered = segment.type
-        switch (segment.type) {
-          case 'free_spin':
-            totalWin = totalBet
-            effectiveMultiplier = 1
-            break
-          case 'double_bet':
-            totalWin = totalBet * 2
-            effectiveMultiplier = 2
-            break
-          case 'double_winnings': {
-            const normalWins = bet.bets.reduce((sum, b) => {
-              const seg = wheelLayout[b.segmentIndex]
-              return sum + (seg && seg.type === 'multiplier' ? b.amount * seg.multiplier : 0)
-            }, 0)
-            totalWin = normalWins * 2
-            effectiveMultiplier = 2
+        const generated = await generateNewEnvironment(this.provablyFair)
+        environment = generated.state
+        environmentVerification = generated.verification
+      }
+
+      const environmentLayout = applyEnvironmentModifiers(wheelLayout, environment)
+
+      const spinContext = await this.provablyFair.createContext()
+
+      const spinSequence: WheelSpinSequenceEntry[] = []
+      let spinLayout = environmentLayout
+      let doubled = false
+      let finalEntry: WheelSpinSequenceEntry | null = null
+
+      for (let i = 0; i <= MAX_BONUS_RESPINS; i++) {
+        const spinOutcome = await this.provablyFair.generateOutcome({
+          ...spinContext,
+          nonce: spinContext.nonce + i
+        })
+
+        const weights = spinLayout.map(seg => seg.endAngle - seg.startAngle)
+        const totalWeight = weights.reduce((s, w) => s + w, 0)
+        if (!Number.isFinite(totalWeight) || totalWeight <= 0) {
+          return { success: false, winAmount: 0, resultData: {} as GameResultData, error: 'Invalid wheel layout weights' }
+        }
+        const roll = spinOutcome.randomValue * totalWeight
+        let cumulative = 0
+        let winningIndex = 0
+        for (let w = 0; w < weights.length; w++) {
+          cumulative += weights[w]
+          if (roll < cumulative) {
+            winningIndex = w
             break
           }
-          case 'jackpot':
-            totalWin = totalBet * JACKPOT_MULTIPLIER
-            effectiveMultiplier = JACKPOT_MULTIPLIER
-            break
         }
+
+        const segment = spinLayout[winningIndex]
+        const entry: WheelSpinSequenceEntry = {
+          winning_segment: winningIndex,
+          segment_type: segment.type,
+          multiplier: segment.multiplier,
+          verification: {
+            server_seed: spinContext.serverSeed,
+            server_seed_hash: this.provablyFair.hashServerSeed(spinContext.serverSeed),
+            client_seed: spinContext.clientSeed,
+            nonce: spinContext.nonce + i,
+            random_value: spinOutcome.randomValue
+          }
+        }
+        spinSequence.push(entry)
+
+        if (segment.type === 'multiplier') {
+          finalEntry = entry
+          break
+        }
+
+        if (!doubled) {
+          spinLayout = transformLayoutForBonusWheel(spinLayout)
+          doubled = true
+        }
+      }
+
+      if (!finalEntry) {
+        const lastEntry = spinSequence[spinSequence.length - 1]
+        finalEntry = lastEntry
+      }
+
+      const finalLayout = spinLayout
+      let totalWin = 0
+      if (finalEntry.segment_type === 'multiplier') {
+        const segmentBets = bet.bets.filter(b => b.segmentIndex === finalEntry.winning_segment)
+        const segmentBetTotal = segmentBets.reduce((sum, b) => sum + b.amount, 0)
+        totalWin = segmentBetTotal * finalEntry.multiplier
+      }
+
+      const bonusTriggered = spinSequence.length > 1
+
+      const nextEnvironment: EnvironmentState = {
+        ...environment,
+        spins_remaining: environment.spins_remaining - 1
+      }
+      if (nextEnvironment.spins_remaining <= 0) {
+        const regenerated = await generateNewEnvironment(this.provablyFair)
+        nextEnvironment.type = regenerated.state.type
+        nextEnvironment.spins_remaining = regenerated.state.spins_remaining
+        nextEnvironment.modifiers = regenerated.state.modifiers
+        environmentVerification = regenerated.verification
       }
 
       const resultData: WheelOfChanceResult = {
-        wheel_layout: wheelLayout,
+        wheel_layout: environmentLayout,
+        bonus_wheel_layout: bonusTriggered ? finalLayout : undefined,
         bets: bet.bets,
-        winning_segment: winningIndex,
-        segment_type: segment.type,
-        multiplier: effectiveMultiplier,
+        winning_segment: finalEntry.winning_segment,
+        segment_type: finalEntry.segment_type,
+        multiplier: finalEntry.multiplier,
         total_bet: totalBet,
         total_win: totalWin,
-        special_triggered: specialTriggered,
-        verification: {
-          server_seed: spinContext.serverSeed,
-          server_seed_hash: this.provablyFair.hashServerSeed(spinContext.serverSeed),
-          client_seed: spinContext.clientSeed,
-          nonce: spinContext.nonce,
-          random_value: spinOutcome.randomValue
-        }
+        special_triggered: bonusTriggered ? 'bonus_wheel' : null,
+        spin_sequence: spinSequence,
+        environment_state: nextEnvironment,
+        environment_verification: environmentVerification,
+        verification: finalEntry.verification
       }
 
       return {

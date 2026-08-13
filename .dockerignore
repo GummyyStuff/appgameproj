@@ -44,10 +44,6 @@ dist
 !README.md
 docs
 
-# Font Awesome Pro - Downloaded from bucket during Docker build
-# Do not copy from local filesystem (licensed content)
-packages/frontend/public/assets/fa-v5-pro
-
 # Development files
 .prettierrc
 .eslintrc

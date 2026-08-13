@@ -107,7 +107,7 @@ describe('Game Fairness Testing', () => {
   })
 
   describe('Wheel of Chance Fairness Testing', () => {
-    test('winning segments follow their angular weights', async () => {
+    test('initial spins follow their angular weights', async () => {
       const game = new WheelOfChanceGame()
       const layout = generateWheelLayout(1337)
       const simulations = 5000
@@ -119,18 +119,20 @@ describe('Game Fairness Testing', () => {
           amount: 100,
           gameType: 'wheel_of_chance' as const,
           bets: [{ segmentIndex: 0, amount: 100 }],
-          wheel_layout: layout
+          wheel_layout: layout,
+          environment_state: { type: 'clear_skies' as const, spins_remaining: 3, modifiers: [] }
         }
         const result = await game.play(bet)
         if (result.success) {
-          counts[(result.resultData as any).winning_segment]++
+          const sequence = (result.resultData as any).spin_sequence
+          counts[sequence[0].winning_segment]++
         }
       }
 
       const totalBonusHits = counts.reduce((sum, count, idx) => sum + (layout[idx].bettable ? 0 : count), 0)
       const totalBaseHits = counts.reduce((sum, count, idx) => sum + (layout[idx].bettable ? count : 0), 0)
 
-      const expectedBonusRatio = (3 * BONUS_ANGLE) / 360
+      const expectedBonusRatio = BONUS_ANGLE / 360
       const expectedBaseRatio = (9 * BASE_ANGLE) / 360
 
       expect(totalBonusHits / simulations).toBeCloseTo(expectedBonusRatio, 1)
@@ -145,7 +147,8 @@ describe('Game Fairness Testing', () => {
         amount: 100,
         gameType: 'wheel_of_chance' as const,
         bets: [{ segmentIndex: 0, amount: 100 }],
-        wheel_layout: layout
+        wheel_layout: layout,
+        environment_state: { type: 'clear_skies' as const, spins_remaining: 3, modifiers: [] }
       }
 
       const result = await game.play(bet)
@@ -176,7 +179,8 @@ describe('Game Fairness Testing', () => {
           amount: 100,
           gameType: 'wheel_of_chance' as const,
           bets: [{ segmentIndex: 0, amount: 100 }],
-          wheel_layout: layout
+          wheel_layout: layout,
+          environment_state: { type: 'clear_skies' as const, spins_remaining: 3, modifiers: [] }
         }
         const result = await game.play(bet)
         if (result.success) {
@@ -184,6 +188,7 @@ describe('Game Fairness Testing', () => {
         }
       }
 
+      // 50x segment doubled by the bonus wheel = 100x theoretical maximum
       expect(maxWin).toBeLessThanOrEqual(100 * 100)
     })
   })

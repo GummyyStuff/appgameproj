@@ -116,10 +116,26 @@ const WheelResultDisplay: React.FC<WheelResultDisplayProps> = ({ result, onDismi
             <span className="text-tarkov-accent font-bold font-tarkov">{result.multiplier}x</span>
           </div>
           {result.special_triggered && (
-            <div className="flex justify-between text-sm">
+            <div className="flex justify-between text-sm" data-testid="wheel-result-special">
               <span className="text-gray-400">Special:</span>
               <span className="text-tarkov-warning font-tarkov capitalize">
                 {result.special_triggered.replace('_', ' ')}
+              </span>
+            </div>
+          )}
+          {result.special_triggered === 'bonus_wheel' && result.spin_sequence && result.spin_sequence.length > 1 && (
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-400">Bonus Spins:</span>
+              <span className="text-tarkov-accent font-tarkov font-bold">
+                {result.spin_sequence.length}× (all multipliers doubled)
+              </span>
+            </div>
+          )}
+          {result.environment_state && result.environment_state.type !== 'clear_skies' && (
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-400">Environment:</span>
+              <span className="text-white font-tarkov capitalize">
+                {result.environment_state.type.replace('_', ' ')}
               </span>
             </div>
           )}

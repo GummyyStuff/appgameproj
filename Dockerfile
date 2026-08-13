@@ -1,111 +1,69 @@
-# Multi-stage Dockerfile optimized for Coolify deployment with Bun 1.3 features
-# Features: Bytecode compilation, minification, source maps
-FROM oven/bun:1.3 AS base
+# Tarkov Casino - production Dockerfile (Coolify / Docker Compose)
+#
+# Stages:
+#   1. build     - install all workspace deps, build frontend + backend
+#   2. prod-deps - install production deps only
+#   3. runtime   - slim image with backend dist + frontend dist + prod deps
+#
+# Backend serves the SPA from packages/frontend/dist (resolved relative to
+# packages/backend/dist at runtime), so the frontend dist must keep that path.
+
+FROM oven/bun:1.3.14 AS build
 WORKDIR /app
 
-# Install dependencies stage
-FROM base AS deps
-COPY package.json bun.lock ./
+# Install workspace dependencies (dev + prod) for building
+COPY package.json bun.lock tsconfig.json ./
 COPY packages/backend/package.json ./packages/backend/
 COPY packages/frontend/package.json ./packages/frontend/
-# Copy workspace structure to ensure Bun workspaces work correctly
-COPY tsconfig.json ./
 RUN bun install --frozen-lockfile
 
-# Build frontend stage
-FROM base AS frontend-build
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-# Bun workspaces hoist dependencies to root node_modules
-# Package-level node_modules may not exist - that's fine, root has everything
-# Cache buster - change this to force rebuild: v1.6-bun1.3-optimized
-COPY packages/frontend/ ./packages/frontend/
-WORKDIR /app/packages/frontend
-
-# Download and extract FontAwesome Pro from bucket (with proper permissions)
-USER root
-RUN apt-get update && apt-get install -y curl unzip && \
-    echo "📦 Downloading FontAwesome Pro from bucket..." && \
-    curl -L -o /tmp/fontawesome.zip "https://db.juanis.cool/v1/storage/buckets/fa5/files/68e81874001eb53ee4e9/download?project=tarkovcas" && \
-    echo "📂 Extracting FontAwesome Pro..." && \
-    unzip -q /tmp/fontawesome.zip -d /tmp/ && \
-    mv /tmp/fontawesome-pro-5.15.4-web ./public/assets/fa-v5-pro && \
-    echo "✅ FontAwesome Pro installed successfully" && \
-    rm /tmp/fontawesome.zip && \
-    apt-get remove -y unzip && \
-    apt-get autoremove -y && \
-    rm -rf /var/lib/apt/lists/* && \
-    chown -R bun:bun /app/packages/frontend
-USER bun
-
-# Set build-time environment variables (Bun auto-inlines them)
+# Build frontend (build.ts inlines these env vars at build time)
 ARG VITE_APPWRITE_ENDPOINT
 ARG VITE_APPWRITE_PROJECT_ID
 ARG VITE_APPWRITE_DATABASE_ID
 ARG VITE_API_URL
 ARG VITE_SENTRY_DSN
 ARG VITE_APP_VERSION
-ENV VITE_APPWRITE_ENDPOINT=${VITE_APPWRITE_ENDPOINT}
-ENV VITE_APPWRITE_PROJECT_ID=${VITE_APPWRITE_PROJECT_ID}
-ENV VITE_APPWRITE_DATABASE_ID=${VITE_APPWRITE_DATABASE_ID}
-ENV VITE_API_URL=${VITE_API_URL}
-ENV VITE_SENTRY_DSN=${VITE_SENTRY_DSN}
-ENV VITE_APP_VERSION=${VITE_APP_VERSION}
-ENV NODE_ENV=production
+ENV VITE_APPWRITE_ENDPOINT=$VITE_APPWRITE_ENDPOINT \
+    VITE_APPWRITE_PROJECT_ID=$VITE_APPWRITE_PROJECT_ID \
+    VITE_APPWRITE_DATABASE_ID=$VITE_APPWRITE_DATABASE_ID \
+    VITE_API_URL=$VITE_API_URL \
+    VITE_SENTRY_DSN=$VITE_SENTRY_DSN \
+    VITE_APP_VERSION=$VITE_APP_VERSION \
+    NODE_ENV=production
 
-# Build with Bun 1.3 optimizations enabled (code splitting + minification)
-# Uses granular minification and external sourcemaps
-RUN bun run build.ts
+COPY packages/frontend/ ./packages/frontend/
+RUN cd packages/frontend && bun run build.ts
 
-# Build backend stage
-FROM base AS backend-build
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-# Bun workspaces hoist dependencies to root node_modules
-# Package-level node_modules may not exist - that's fine, root has everything
+# Build backend (bytecode-compiled, externals resolved from node_modules)
 COPY packages/backend/ ./packages/backend/
-COPY package.json tsconfig.json ./
-WORKDIR /app/packages/backend
-RUN bun run build
+RUN cd packages/backend && bun run build
 
-# Production stage
-FROM oven/bun:1.3-slim AS production
+# Install production dependencies only (workspaces hoisted to root node_modules)
+FROM oven/bun:1.3.14 AS prod-deps
+WORKDIR /app
+COPY package.json bun.lock ./
+COPY packages/backend/package.json ./packages/backend/
+COPY packages/frontend/package.json ./packages/frontend/
+RUN bun install --frozen-lockfile --production
+
+# Runtime image
+FROM oven/bun:1.3.14-slim
 WORKDIR /app
 
-# Install curl for health checks
-USER root
-RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
-
-# Copy all node_modules to maintain workspace structure
-# Bun workspaces hoist dependencies to root node_modules
-# Package-level node_modules may not exist - that's fine, root has everything
-COPY --from=deps /app/node_modules ./node_modules
-
-# Copy built backend in its package location
-COPY --from=backend-build /app/packages/backend/dist ./packages/backend/dist
+COPY --from=prod-deps /app/node_modules ./node_modules
+COPY --from=build /app/packages/backend/dist ./packages/backend/dist
 COPY packages/backend/package.json ./packages/backend/
+# Frontend dist must sit at packages/frontend/dist (see index.ts serveStatic root)
+COPY --from=build /app/packages/frontend/dist ./packages/frontend/dist
 
-# Copy built frontend (served by backend)
-COPY --from=frontend-build /app/packages/frontend/dist ./public
+ENV NODE_ENV=production BUN_ENV=production
 
-# Create non-root user for security
-RUN groupadd --system --gid 1001 nodejs
-RUN useradd --system --uid 1001 --gid nodejs bunjs
-RUN chown -R bunjs:nodejs /app
-USER bunjs
+USER bun
+EXPOSE 3000
 
-# Set Bun 1.3 runtime optimizations
-ENV BUN_RUNTIME_TRANSPILER=0
-ENV BUN_JSC_useJIT=1
-ENV NODE_ENV=production
-ENV BUN_ENV=production
-
-# Expose port (dynamic based on env)
-EXPOSE ${PORT:-3000}
-
-# Enhanced health check for Coolify (uses PORT env var, defaults to 3000)
+# Health check via Bun (no curl/wget needed in the image)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD curl -f http://localhost:${PORT:-3000}/api/health || exit 1
+  CMD ["bun", "-e", "const port = process.env.PORT ?? '3000'; const ok = await fetch(`http://localhost:${port}/api/health`).then(r => r.ok).catch(() => false); process.exit(ok ? 0 : 1)"]
 
-# Start the application from the backend package directory with Bun optimizations
 CMD ["bun", "run", "packages/backend/dist/index.js"]

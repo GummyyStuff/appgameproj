@@ -7,48 +7,49 @@ import {
   SEGMENT_COUNT,
   BASE_ANGLE,
   BONUS_ANGLE,
-  BONUS_SLOT_POSITIONS,
+  BONUS_SEGMENT_INDEX,
   BASE_MULTIPLIERS
 } from './wheel-layout'
 import type { WheelSegment } from '../../types/database'
 
 describe('wheel-layout', () => {
   describe('generateWheelLayout', () => {
-    test('creates 12 segments whose angles sum to exactly 360', () => {
+    test('creates 10 segments whose angles sum to exactly 360', () => {
       const layout = generateWheelLayout(12345)
       expect(layout.length).toBe(SEGMENT_COUNT)
       const total = layout.reduce((sum, seg) => sum + (seg.endAngle - seg.startAngle), 0)
       expect(total).toBe(360)
     })
 
-    test('places bonus slots at positions 1, 4 and 7 with 15 degree spans', () => {
+    test('places a single bonus segment at index 9 with a 15 degree span', () => {
       const layout = generateWheelLayout(42)
-      for (const pos of BONUS_SLOT_POSITIONS) {
-        expect(layout[pos].bettable).toBe(false)
-        expect(layout[pos].endAngle - layout[pos].startAngle).toBe(BONUS_ANGLE)
-      }
+      expect(layout[BONUS_SEGMENT_INDEX].type).toBe('bonus_wheel')
+      expect(layout[BONUS_SEGMENT_INDEX].bettable).toBe(false)
+      expect(layout[BONUS_SEGMENT_INDEX].endAngle - layout[BONUS_SEGMENT_INDEX].startAngle).toBe(BONUS_ANGLE)
+      const bonusCount = layout.filter(seg => !seg.bettable).length
+      expect(bonusCount).toBe(1)
     })
 
-    test('base segments have 35 degree spans and the fixed multiplier pool in order', () => {
+    test('base segments have 38.33 degree spans and the fixed multiplier pool in order', () => {
       const layout = generateWheelLayout(7)
       const base = layout.filter(seg => seg.bettable)
       expect(base.length).toBe(9)
       base.forEach((seg, i) => {
-        expect(seg.endAngle - seg.startAngle).toBe(BASE_ANGLE)
+        expect(seg.endAngle - seg.startAngle).toBeCloseTo(BASE_ANGLE, 6)
         expect(seg.multiplier).toBe(BASE_MULTIPLIERS[i])
       })
     })
 
-    test('is deterministic for the same seed', () => {
+    test('is deterministic across calls', () => {
       const a = generateWheelLayout(99)
       const b = generateWheelLayout(99)
       expect(a).toEqual(b)
     })
 
-    test('produces only valid special types', () => {
+    test('produces only valid segment types', () => {
       const layout = generateWheelLayout(123)
       for (const seg of layout) {
-        expect(['multiplier', 'free_spin', 'double_bet', 'double_winnings', 'jackpot']).toContain(seg.type)
+        expect(['multiplier', 'bonus_wheel']).toContain(seg.type)
       }
     })
   })
@@ -70,7 +71,7 @@ describe('wheel-layout', () => {
     test('rejects tampered multipliers', () => {
       const layout = generateWheelLayout(555)
       const tampered: WheelSegment[] = layout.map(seg =>
-        seg.index === 11 ? { ...seg, multiplier: 100000 } : seg
+        seg.index === 0 ? { ...seg, multiplier: 100000 } : seg
       )
       expect(validateWheelLayout(tampered)).toBe(false)
     })
@@ -86,14 +87,24 @@ describe('wheel-layout', () => {
     test('rejects a bonus segment marked as bettable', () => {
       const layout = generateWheelLayout(555)
       const tampered: WheelSegment[] = layout.map(seg =>
-        seg.index === 1 ? { ...seg, bettable: true } : seg
+        seg.index === BONUS_SEGMENT_INDEX ? { ...seg, bettable: true } : seg
+      )
+      expect(validateWheelLayout(tampered)).toBe(false)
+    })
+
+    test('rejects an old-style special type on the bonus segment', () => {
+      const layout = generateWheelLayout(555)
+      const tampered: WheelSegment[] = layout.map(seg =>
+        seg.index === BONUS_SEGMENT_INDEX
+          ? { ...seg, type: 'jackpot' as never, label: 'JACKPOT', multiplier: 100 }
+          : seg
       )
       expect(validateWheelLayout(tampered)).toBe(false)
     })
 
     test('rejects layouts with the wrong segment count', () => {
       const layout = generateWheelLayout(555)
-      expect(validateWheelLayout(layout.slice(0, 11))).toBe(false)
+      expect(validateWheelLayout(layout.slice(0, 9))).toBe(false)
       expect(validateWheelLayout([...layout, layout[0]])).toBe(false)
     })
 
@@ -115,7 +126,7 @@ describe('wheel-layout', () => {
       const layout = generateWheelLayout(777)
       const signature = signWheelLayout(layout)
       const tampered: WheelSegment[] = layout.map(seg =>
-        seg.index === 1 ? { ...seg, type: 'jackpot', label: 'JACKPOT', multiplier: 100 } : seg
+        seg.index === BONUS_SEGMENT_INDEX ? { ...seg, type: 'multiplier', label: '50x', multiplier: 50 } : seg
       )
       expect(verifyWheelLayoutSignature(tampered, signature)).toBe(false)
     })

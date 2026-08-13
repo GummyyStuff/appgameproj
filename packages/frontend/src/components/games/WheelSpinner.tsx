@@ -10,6 +10,8 @@ interface WheelSpinnerProps {
   onTick?: () => void
   betPlacements?: { segmentIndex: number; amount: number }[]
   pacing?: 'normal' | 'slow'
+  highlightedSegments?: number[]
+  bonusActive?: boolean
 }
 
 export interface WheelSpinnerHandle {
@@ -94,7 +96,9 @@ const WheelSpinnerInner = forwardRef<WheelSpinnerHandle, WheelSpinnerProps>(({
   onSpinClick,
   onTick,
   betPlacements = [],
-  pacing = 'normal'
+  pacing = 'normal',
+  highlightedSegments = [],
+  bonusActive = false
 }, ref) => {
   const wheelRef = useRef<HTMLDivElement>(null)
   const rotationRef = useRef(0)
@@ -398,6 +402,8 @@ const WheelSpinnerInner = forwardRef<WheelSpinnerHandle, WheelSpinnerProps>(({
               const textY = centerY + textRadius * Math.sin(midAngleRad)
               const betAmount = getBetAmount(segment.index)
               const isSpecial = !segment.bettable
+              const isBonusWheel = segment.type === 'bonus_wheel'
+              const isHighlighted = highlightedSegments.includes(segment.index)
               const segAngle = segment.endAngle - segment.startAngle
               const fontSize = segAngle < 20 ? 11 : 16
 
@@ -435,6 +441,25 @@ const WheelSpinnerInner = forwardRef<WheelSpinnerHandle, WheelSpinnerProps>(({
                         fill="rgba(255,255,255,0.06)"
                       />
                     </>
+                  )}
+
+                  {isBonusWheel && (
+                    <path
+                      d={createSegmentPath(segment.startAngle, segment.endAngle)}
+                      fill="none"
+                      stroke="rgba(251,191,36,0.85)"
+                      strokeWidth="3"
+                      className={bonusActive ? 'animate-pulse' : ''}
+                    />
+                  )}
+
+                  {isHighlighted && !isSpecial && (
+                    <path
+                      d={createSegmentPath(segment.startAngle, segment.endAngle)}
+                      fill="none"
+                      stroke="rgba(246,173,85,0.9)"
+                      strokeWidth="2.5"
+                    />
                   )}
 
                   <text
@@ -511,6 +536,18 @@ const WheelSpinnerInner = forwardRef<WheelSpinnerHandle, WheelSpinnerProps>(({
             transition={{ duration: 0.5, repeat: Infinity }}
             style={{
               background: 'radial-gradient(circle, transparent 40%, rgba(246, 173, 85, 0.15) 70%, transparent 100%)'
+            }}
+          />
+        )}
+
+        {bonusActive && (
+          <motion.div
+            className="absolute -inset-2 rounded-full pointer-events-none"
+            data-testid="wheel-bonus-glow"
+            animate={{ opacity: [0.35, 0.8, 0.35] }}
+            transition={{ duration: 1.2, repeat: Infinity }}
+            style={{
+              boxShadow: '0 0 45px 8px rgba(251, 191, 36, 0.55), inset 0 0 45px 8px rgba(251, 191, 36, 0.25)'
             }}
           />
         )}
