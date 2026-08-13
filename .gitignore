@@ -89,6 +89,7 @@ dist
 # Gatsby files
 .cache/
 # Allow frontend public folder EXCEPT Font Awesome Pro (licensed, cannot redistribute)
+packages/frontend/public/fa-v5-pro/
 packages/frontend/public/assets/fa-v5-pro/
 
 # Storybook build outputs
